@@ -1,0 +1,555 @@
+import { useState, useEffect, useCallback } from 'react'
+import api from '@/lib/api'
+
+// 实例类型定义
+export interface Instance {
+  id: string
+  name: string
+  status: 'running' | 'stopped' | 'creating' | 'starting' | 'stopping' | 'error' | 'releasing' | 'released'
+  gpu_model: string
+  gpu_count: number
+  cpu_cores: number
+  memory: number
+  disk: number
+  image_id?: string
+  billing_type: string
+  hourly_price: number
+  ssh_host?: string
+  ssh_port?: number
+  ssh_password?: string
+  created_at: string
+  started_at?: string
+  node_id: string
+  node_type?: string
+  resource_type?: string
+  internal_ip?: string
+  instance_count?: number
+  image_url?: string
+  startup_command?: string
+  env_vars?: string
+  storage_mounts?: string
+  pip_source?: string
+  conda_source?: string
+  apt_source?: string
+  auto_shutdown_type?: string
+  auto_shutdown_minutes?: number
+  auto_release_type?: string
+  auto_release_minutes?: number
+  deployment_yaml?: string
+}
+
+// 镜像类型定义
+export interface Image {
+  id: string
+  name: string
+  tag: string
+  size_gb: number
+  type: 'base' | 'app' | 'community' | 'custom'
+  description?: string
+  image_url?: string
+  created_at: string
+}
+
+// 存储类型定义
+export interface Storage {
+  id: string
+  name: string
+  size_gb: number
+  used_gb: number
+  type: 'ssd' | 'hdd'
+  region: string
+  created_at: string
+}
+
+interface ListResponse<T> { list: T[]; total: number; page: number; size: number }
+
+// ====== 实例相关 hooks ======
+export function useInstances() {
+  const [instances, setInstances] = useState<Instance[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const fetchInstances = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await api.get<ListResponse<Instance>>('/instances')
+      setInstances(data.list || []); setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '获取实例列表失败')
+      setInstances([
+        { id: '1', name: 'GPU-Instance-1', status: 'running', gpu_model: 'RTX 4090', gpu_count: 1, cpu_cores: 16, memory: 64, disk: 50, billing_type: 'hourly', hourly_price: 2.39, ssh_host: '192.168.1.100', ssh_port: 30001, ssh_password: 'abc123xyz', created_at: new Date().toISOString(), node_id: 'node-1', node_type: 'center', resource_type: 'vGPU', internal_ip: '10.42.0.15' },
+        { id: '2', name: 'GPU-Instance-2', status: 'stopped', gpu_model: 'RTX 5090', gpu_count: 2, cpu_cores: 32, memory: 128, disk: 100, billing_type: 'hourly', hourly_price: 6.06, created_at: new Date().toISOString(), node_id: 'node-2', node_type: 'edge', resource_type: 'vGPU', internal_ip: '10.42.0.22' },
+      ])
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchInstances() }, [fetchInstances])
+  const createInstance = async (data: Partial<Instance>) => {
+    const { data: newInstance } = await api.post<Instance>('/instances', data)
+    setInstances(prev => [...prev, newInstance]); return newInstance
+  }
+  const startInstance = async (id: string) => {
+    await api.post(`/instances/${id}/start`)
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'starting' as const } : i))
+  }
+  const stopInstance = async (id: string) => {
+    await api.post(`/instances/${id}/stop`)
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'stopping' as const } : i))
+  }
+  const deleteInstance = async (id: string) => {
+    await api.delete(`/instances/${id}`)
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'releasing' as const } : i))
+  }
+  return { instances, loading, error, refresh: fetchInstances, createInstance, startInstance, stopInstance, deleteInstance }
+}
+
+// ====== 镜像相关 hooks ======
+export function useImages() {
+  const [images, setImages] = useState<Image[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const fetchImages = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await api.get<ListResponse<Image>>('/images')
+      setImages(data.list || []); setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '获取镜像列表失败')
+      setImages([
+        { id: '1', name: 'PyTorch', tag: '2.1-cuda12.1', size_gb: 15, type: 'base', description: 'PyTorch 2.1 with CUDA 12.1', created_at: new Date().toISOString() },
+        { id: '2', name: 'TensorFlow', tag: '2.15-cuda12.1', size_gb: 12, type: 'base', description: 'TensorFlow 2.15', created_at: new Date().toISOString() },
+        { id: '3', name: 'DeepSeek-R1', tag: 'webui-v4', size_gb: 25, type: 'app', description: 'DeepSeek R1 WebUI', created_at: new Date().toISOString() },
+      ])
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchImages() }, [fetchImages])
+  return { images, loading, error, refresh: fetchImages }
+}
+
+// ====== 存储相关 hooks ======
+export function useStorage(region?: string) {
+  const [storages, setStorages] = useState<Storage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const fetchStorage = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (region) params.region = region
+      const { data } = await api.get<ListResponse<Storage>>('/storage', params)
+      setStorages(data.list || []); setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '获取存储列表失败'); setStorages([])
+    } finally { setLoading(false) }
+  }, [region])
+  useEffect(() => { fetchStorage() }, [fetchStorage])
+  return { storages, loading, error, refresh: fetchStorage }
+}
+
+export function useStorageQuota(region?: string) {
+  const [quota, setQuota] = useState<{ used: number; total: number; free: number; paid: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchQuota = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (region) params.region = region
+      const { data } = await api.get<{ used: number; total: number; free: number; paid: number }>('/storage/quota', params)
+      setQuota(data)
+    } catch { setQuota({ used: 8 * 1024, total: 200 * 1024 * 1024 * 1024, free: 20 * 1024 * 1024 * 1024, paid: 0 }) }
+    finally { setLoading(false) }
+  }, [region])
+  useEffect(() => { fetchQuota() }, [fetchQuota])
+  return { quota, loading, refresh: fetchQuota }
+}
+
+export function useBalance() {
+  const [balance, setBalance] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const fetchBalance = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ balance: number }>('/billing/balance'); setBalance(data.balance) }
+    catch { setBalance(156.05) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchBalance() }, [fetchBalance])
+  return { balance, loading, refresh: fetchBalance }
+}
+
+// ====== GPU 市场数据 hooks ======
+export function useMarketMachines(filters?: { region?: string; gpuModel?: string; gpuCount?: number }) {
+  const [machines, setMachines] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchMachines = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = {}
+      if (filters?.region) params.region = filters.region
+      if (filters?.gpuModel) params.gpu_model = filters.gpuModel
+      if (filters?.gpuCount) params.gpu_count = filters.gpuCount
+      const { data } = await api.get<{ list: any[]; total: number }>('/market/machines', params)
+      setMachines(data.list || []); setTotal(data.total || 0)
+    } catch {
+      setMachines([
+        { id: '876机', node_id: 'qvadxau6nv', region: '北京B区', gpu_model: 'RTX 4090D', gpu_memory: '24 GB', gpu_available: 1, gpu_total: 8, cpu_cores: 16, cpu_model: 'Xeon(R) Platinum 8352V', memory: 60, disk: 50, hourly_price: 1.98, member_price: 1.88 },
+        { id: '472机', node_id: '73df479249', region: '北京B区', gpu_model: 'RTX 5090', gpu_memory: '32 GB', gpu_available: 1, gpu_total: 8, cpu_cores: 25, cpu_model: 'Xeon(R) Platinum 8470Q', memory: 90, disk: 50, hourly_price: 3.03, member_price: 2.39 },
+      ]); setTotal(2)
+    } finally { setLoading(false) }
+  }, [filters?.region, filters?.gpuModel, filters?.gpuCount])
+  useEffect(() => { fetchMachines() }, [fetchMachines])
+  return { machines, loading, total, refresh: fetchMachines }
+}
+
+export function useRegions() {
+  const [regions, setRegions] = useState<{ id: string; name: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const f = async () => {
+      try { const { data } = await api.get<{ regions: any[] }>('/market/regions'); setRegions(data.regions || []) }
+      catch { setRegions([{ id: 'beijing-b', name: '北京B区' }, { id: 'beijing-a', name: '北京A区' }, { id: 'northwest-b', name: '西北B区' }]) }
+      finally { setLoading(false) }
+    }; f()
+  }, [])
+  return { regions, loading }
+}
+
+export function useGpuModels() {
+  const [gpuModels, setGpuModels] = useState<{ id: string; name: string; available: number; total: number }[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const f = async () => {
+      try { const { data } = await api.get<{ gpu_models: any[] }>('/market/gpu-models'); setGpuModels(data.gpu_models || []) }
+      catch { setGpuModels([{ id: 'RTX 5090', name: 'RTX 5090', available: 100, total: 200 }, { id: 'RTX 4090', name: 'RTX 4090', available: 50, total: 100 }]) }
+      finally { setLoading(false) }
+    }; f()
+  }, [])
+  return { gpuModels, loading }
+}
+
+export function useOrders(page: number = 1, size: number = 20) {
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await api.get<{ list: any[]; total: number }>('/billing/orders', { page, size })
+      setOrders(data.list || []); setTotal(data.total || 0)
+    } catch {
+      setOrders([
+        { id: '17340085070493927', created_at: '2024-12-12 21:01:47', type: 'create', status: 'pending', amount: 0 },
+        { id: '17340082078379671', created_at: '2024-12-12 20:56:48', type: 'create', status: 'paid', amount: 10.5 },
+      ]); setTotal(2)
+    } finally { setLoading(false) }
+  }, [page, size])
+  useEffect(() => { fetchOrders() }, [fetchOrders])
+  return { orders, loading, total, refresh: fetchOrders }
+}
+
+export function useUserBalance() {
+  const [balance, setBalance] = useState(0)
+  const [frozenBalance, setFrozenBalance] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const fetchBalance = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ balance: number; frozen_balance: number }>('/users/me'); setBalance(data.balance || 0); setFrozenBalance(data.frozen_balance || 0) }
+    catch { setBalance(156.05); setFrozenBalance(0) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchBalance() }, [fetchBalance])
+  return { balance, frozenBalance, loading, refresh: fetchBalance }
+}
+
+// ====== 单个实例详情 hook ======
+export function useInstance(instanceId: string) {
+  const [instance, setInstance] = useState<Instance | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const fetchInstance = useCallback(async () => {
+    if (!instanceId) return
+    try { setLoading(true); const { data } = await api.get<Instance>(`/instances/${instanceId}`); setInstance(data); setError(null) }
+    catch (err) { setError(err instanceof Error ? err.message : '获取实例详情失败') }
+    finally { setLoading(false) }
+  }, [instanceId])
+  useEffect(() => { fetchInstance() }, [fetchInstance])
+  const startInstance = async () => { await api.post(`/instances/${instanceId}/start`); setInstance(prev => prev ? { ...prev, status: 'starting' } : null) }
+  const stopInstance = async () => { await api.post(`/instances/${instanceId}/stop`); setInstance(prev => prev ? { ...prev, status: 'stopping' } : null) }
+  const releaseInstance = async () => { await api.delete(`/instances/${instanceId}`); setInstance(prev => prev ? { ...prev, status: 'releasing' } : null) }
+  return { instance, loading, error, refresh: fetchInstance, startInstance, stopInstance, releaseInstance }
+}
+
+export function useInstanceLogs(instanceId: string, tail: number = 100) {
+  const [logs, setLogs] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  const fetchLogs = useCallback(async () => {
+    if (!instanceId) return
+    try { setLoading(true); const { data } = await api.get<{ logs: string }>(`/instances/${instanceId}/logs`, { tail }); setLogs(data.logs || '') }
+    catch { setLogs('[Error] 获取日志失败') } finally { setLoading(false) }
+  }, [instanceId, tail])
+  useEffect(() => { fetchLogs() }, [fetchLogs])
+  return { logs, loading, refresh: fetchLogs }
+}
+
+export function useInstanceStatus(instanceId: string) {
+  const [podStatus, setPodStatus] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const fetchStatus = useCallback(async () => {
+    if (!instanceId) return
+    try { setLoading(true); const { data } = await api.get<any>(`/instances/${instanceId}/status`); setPodStatus(data) }
+    catch { /* ignore */ } finally { setLoading(false) }
+  }, [instanceId])
+  useEffect(() => { fetchStatus(); const iv = setInterval(fetchStatus, 10000); return () => clearInterval(iv) }, [fetchStatus])
+  return { podStatus, loading, refresh: fetchStatus }
+}
+
+export interface InstanceMetrics {
+  instance_id: string; status: string; cpu_util: number; memory_util: number
+  gpu_util: number; gpu_memory: number; disk_util: number
+  network_in: number; network_out: number; timestamp: string
+}
+
+export function useInstanceMetrics(instanceId: string, refreshInterval: number = 5000) {
+  const [metrics, setMetrics] = useState<InstanceMetrics | null>(null)
+  const [loading, setLoading] = useState(false)
+  const fetchMetrics = useCallback(async () => {
+    if (!instanceId) return
+    try { setLoading(true); const { data } = await api.get<InstanceMetrics>(`/instances/${instanceId}/metrics`); setMetrics(data) }
+    catch { /* ignore */ } finally { setLoading(false) }
+  }, [instanceId])
+  useEffect(() => { fetchMetrics(); const iv = setInterval(fetchMetrics, refreshInterval); return () => clearInterval(iv) }, [fetchMetrics, refreshInterval])
+  return { metrics, loading, refresh: fetchMetrics }
+}
+
+// ====== 当前用户信息 hook ======
+export interface User {
+  id: string; email: string; nickname: string; phone?: string; avatar?: string
+  verified: boolean; balance: number; frozen_balance: number; api_key?: string; created_at: string
+}
+
+export function useCurrentUser() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchUser = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<User>('/users/me'); setUser(data) }
+    catch {
+      setUser({ id: 'usr_5325abc123', email: 'user@example.com', nickname: '炼丹师5325', phone: '138****8888', verified: false, balance: 156.05, frozen_balance: 0, api_key: 'sk-xxxx****xxxx', created_at: '2024-01-15' })
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchUser() }, [fetchUser])
+  const updateProfile = async (data: Partial<User>) => { const { data: updated } = await api.patch<User>('/users/me', data); setUser(updated); return updated }
+  return { user, loading, refresh: fetchUser, updateProfile }
+}
+
+// ====== 管理后台 Hooks ======
+export interface AdminNode {
+  id: string; name: string; cluster: string; status: 'online' | 'offline' | 'busy'
+  node_type: 'edge' | 'cloud'; gpu_model: string; gpu_count: number; gpu_available: number
+  cpu_cores: number; memory: number; hourly_price: number; created_at: string
+}
+
+export function useAdminNodes() {
+  const [nodes, setNodes] = useState<AdminNode[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchNodes = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: AdminNode[]; total: number }>('/admin/nodes'); setNodes(data.list || []); setTotal(data.total || 0) }
+    catch { setNodes([]); setTotal(0) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchNodes() }, [fetchNodes])
+  return { nodes, loading, total, refresh: fetchNodes }
+}
+
+export function useDeleteAdminNode() {
+  const [loading, setLoading] = useState(false)
+  const deleteNode = async (nodeName: string) => { try { setLoading(true); await api.delete(`/admin/nodes/${nodeName}`) } finally { setLoading(false) } }
+  return { deleteNode, loading }
+}
+
+export interface AdminUser {
+  id: string; email: string; nickname: string; balance: number
+  status: 'active' | 'banned' | 'inactive'; verified: boolean; instances: number; created_at: string
+}
+
+export function useAdminUsers(page: number = 1, size: number = 20) {
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchUsers = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: AdminUser[]; total: number }>('/admin/users', { page, size }); setUsers(data.list || []); setTotal(data.total || 0) }
+    catch {
+      setUsers([
+        { id: 'usr-001', email: 'user1@example.com', nickname: '炼丹师5325', balance: 1250.5, status: 'active', verified: true, instances: 3, created_at: '2024-01-05' },
+        { id: 'usr-002', email: 'user2@example.com', nickname: 'AI研究者', balance: 580.0, status: 'active', verified: true, instances: 1, created_at: '2024-01-10' },
+      ]); setTotal(2)
+    } finally { setLoading(false) }
+  }, [page, size])
+  useEffect(() => { fetchUsers() }, [fetchUsers])
+  return { users, loading, total, refresh: fetchUsers }
+}
+
+export interface AdminOrder {
+  id: string; user_id: string; user_email: string; type: string; status: string; amount: number; created_at: string
+}
+
+export function useAdminOrders(page: number = 1, size: number = 20) {
+  const [orders, setOrders] = useState<AdminOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchOrders = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: AdminOrder[]; total: number }>('/admin/orders', { page, size }); setOrders(data.list || []); setTotal(data.total || 0) }
+    catch {
+      setOrders([
+        { id: 'ord-001', user_id: 'usr-001', user_email: 'user1@example.com', type: 'recharge', status: 'paid', amount: 500, created_at: '2024-03-01 10:30:00' },
+        { id: 'ord-002', user_id: 'usr-002', user_email: 'user2@example.com', type: 'instance', status: 'pending', amount: 23.9, created_at: '2024-03-01 09:15:00' },
+      ]); setTotal(2)
+    } finally { setLoading(false) }
+  }, [page, size])
+  useEffect(() => { fetchOrders() }, [fetchOrders])
+  return { orders, loading, total, refresh: fetchOrders }
+}
+
+export function useAdminClusters() {
+  const [clusters, setClusters] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchClusters = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: any[] }>('/admin/clusters'); setClusters(data.list || []) }
+    catch { setClusters([]) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchClusters() }, [fetchClusters])
+  return { clusters, loading, refresh: fetchClusters }
+}
+
+export function useAdminReports() {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchStats = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any>('/admin/reports/stats'); setStats(data) }
+    catch { setStats({ totalUsers: 1250, activeInstances: 86, totalRevenue: 125680.5, todayNewUsers: 12, todayOrders: 45, gpuUtilization: 72.5 }) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchStats() }, [fetchStats])
+  return { stats, loading, refresh: fetchStats }
+}
+
+// ====== WebSocket Hooks ======
+export function useWebSocketStatus(onMessage?: (data: any) => void) {
+  const [connected, setConnected] = useState(false)
+  const [ws, setWs] = useState<WebSocket | null>(null)
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+    const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+    const socket = new WebSocket(`${baseWsUrl}/ws/status?token=${token}`)
+    socket.onopen = () => { setConnected(true) }
+    socket.onmessage = (event) => { try { onMessage?.(JSON.parse(event.data)) } catch (e) { console.error('[WS] Parse error:', e) } }
+    socket.onclose = () => { setConnected(false) }
+    socket.onerror = (error) => { console.error('[WS] Error:', error) }
+    setWs(socket)
+    const pingInterval = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' })) }, 30000)
+    return () => { clearInterval(pingInterval); socket.close() }
+  }, [])
+  const subscribeInstance = useCallback((instanceId: string) => {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'subscribe_instance', instance_id: instanceId }))
+  }, [ws])
+  return { connected, subscribeInstance }
+}
+
+export function useInstanceWebSocket(instanceId: string, onStatusChange?: (status: string, data?: any) => void) {
+  const [connected, setConnected] = useState(false)
+  useEffect(() => {
+    if (!instanceId) return
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+    const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+    const socket = new WebSocket(`${baseWsUrl}/ws/instance/${instanceId}/status?token=${token}`)
+    socket.onopen = () => { setConnected(true) }
+    socket.onmessage = (event) => {
+      try { const data = JSON.parse(event.data); if (data.type === 'instance_status' || data.type === 'connected') onStatusChange?.(data.status || data.current_status, data) }
+      catch (e) { console.error('[WS] Parse error:', e) }
+    }
+    socket.onclose = () => setConnected(false)
+    const pingInterval = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' })) }, 30000)
+    return () => { clearInterval(pingInterval); socket.close() }
+  }, [instanceId, onStatusChange])
+  return { connected }
+}
+
+// ====== 实例续费 ======
+export function useInstanceRenew() {
+  const [loading, setLoading] = useState(false)
+  const renewInstance = async (instanceId: string, durationHours: number, billingType: string = 'hourly') => {
+    try {
+      setLoading(true)
+      const { data } = await api.post<{ message: string; instance_id: string; renew_amount: number; new_expired_at: string; remaining_balance: number }>(
+        `/instances/${instanceId}/renew`, { duration_hours: durationHours, billing_type: billingType }
+      )
+      return data
+    } finally { setLoading(false) }
+  }
+  return { renewInstance, loading }
+}
+
+// ====== 存储文件操作 ======
+export function useStorageFiles(region: string, path: string = '/') {
+  const [files, setFiles] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [currentPath, setCurrentPath] = useState(path)
+  const fetchFiles = useCallback(async (targetPath?: string) => {
+    try {
+      setLoading(true)
+      const p = targetPath || currentPath
+      const { data } = await api.get<{ files: any[]; total: number; current_path: string }>('/storage/files', { region, path: p })
+      setFiles(data.files || []); setCurrentPath(data.current_path || p)
+    } catch { setFiles([]) } finally { setLoading(false) }
+  }, [region, currentPath])
+  useEffect(() => { fetchFiles() }, [fetchFiles])
+  const uploadFile = async (file: File) => {
+    const formData = new FormData(); formData.append('file', file); formData.append('region', region); formData.append('path', currentPath)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: formData })
+    if (!response.ok) throw new Error('Upload failed')
+    const data = await response.json(); fetchFiles(); return data
+  }
+  const deleteFile = async (fileId: string) => { await api.delete(`/storage/files/${fileId}`); fetchFiles() }
+  const downloadFile = (fileId: string, fileName: string) => {
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/storage/files/${fileId}/download?token=${localStorage.getItem('token')}`
+    const a = document.createElement('a'); a.href = url; a.download = fileName; a.click()
+  }
+  const navigateTo = (newPath: string) => { setCurrentPath(newPath); fetchFiles(newPath) }
+  return { files, loading, currentPath, uploadFile, deleteFile, downloadFile, navigateTo, refresh: fetchFiles }
+}
+
+// ====== 可用资源配置 ======
+export function useResourceConfigs(filters?: { gpu_model?: string; node_type?: string; resource_type?: string }) {
+  const [configs, setConfigs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchConfigs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (filters?.gpu_model) params.gpu_model = filters.gpu_model
+      if (filters?.node_type) params.node_type = filters.node_type
+      if (filters?.resource_type) params.resource_type = filters.resource_type
+      const { data } = await api.get<{ list: any[]; total: number }>('/instances/resource-configs', params)
+      setConfigs(data.list || [])
+    } catch {
+      setConfigs([
+        { node_id: 'node-1', node_name: 'gpu-node-01', node_type: 'center', resource_type: 'no_gpu', gpu_model: 'intel', gpu_memory: 0, cpu_model: 'intel 1核', cpu_cores: 1, memory: 2, disk: 30, network_desc: '--', gpu_available: 100, gpu_total: 0, hourly_price: 0.1 },
+        { node_id: 'node-2', node_name: 'gpu-node-02', node_type: 'center', resource_type: 'vGPU', gpu_model: 'NVIDIA-A100-SXM4-80GB', gpu_memory: 20, cpu_model: 'intel 3核', cpu_cores: 3, memory: 25, disk: 50, network_desc: '--', gpu_available: 28, gpu_total: 32, hourly_price: 1.75 },
+        { node_id: 'node-3', node_name: 'gpu-node-03', node_type: 'center', resource_type: 'vGPU', gpu_model: 'NVIDIA-A100-SXM4-80GB', gpu_memory: 40, cpu_model: 'intel 6核', cpu_cores: 6, memory: 50, disk: 50, network_desc: '--', gpu_available: 13, gpu_total: 16, hourly_price: 3.5 },
+        { node_id: 'node-4', node_name: 'edge-node-01', node_type: 'edge', resource_type: 'no_gpu', gpu_model: 'AMD', gpu_memory: 0, cpu_model: 'AMD 1核', cpu_cores: 1, memory: 2, disk: 30, network_desc: '--', gpu_available: 0, gpu_total: 0, hourly_price: 0.1 },
+      ])
+    } finally { setLoading(false) }
+  }, [filters?.gpu_model, filters?.node_type, filters?.resource_type])
+  useEffect(() => { fetchConfigs() }, [fetchConfigs])
+  return { configs, loading, refresh: fetchConfigs }
+}
+
+// ====== 获取实例 Deployment YAML ======
+export function useInstanceYaml(instanceId: string) {
+  const [yaml, setYaml] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  const fetchYaml = useCallback(async () => {
+    if (!instanceId) return
+    try { setLoading(true); const { data } = await api.get<{ yaml: string }>(`/instances/${instanceId}/yaml`); setYaml(data.yaml || '') }
+    catch { setYaml('') } finally { setLoading(false) }
+  }, [instanceId])
+  useEffect(() => { fetchYaml() }, [fetchYaml])
+  return { yaml, loading, refresh: fetchYaml }
+}

@@ -1,0 +1,98 @@
+'use client'
+
+import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { UserNav } from '@/components/layout/user-nav'
+import { Button } from '@/components/ui/button'
+import { Bell, Crown, ChevronDown } from 'lucide-react'
+
+export default function PublicLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const t = useTranslations('header')
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* 顶部公告栏 */}
+      <div className="bg-orange-500 text-white text-sm text-center py-2 px-4">
+        西北B区、北京B区和重庆A区均已上线PRO 6000，关于PRO 6000介绍和性能可 
+        <Link href="#" className="underline mx-1">参考文档</Link>。
+        北京B区将于2月11日上线A800 80GB NVLink版本GPU。
+      </div>
+
+      {/* 顶部导航 */}
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
+        {/* 左侧 Logo + 导航 */}
+        <div className="flex items-center gap-8">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">L</span>
+            </div>
+            <span className="font-semibold text-xl">LMAICloud</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              href="/market/list"
+              className="text-sm font-medium text-foreground transition-colors"
+            >
+              算力市场
+            </Link>
+            <Link
+              href="/ai-apps"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              AI应用
+            </Link>
+            <Link
+              href="/ai-servers"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              AI服务器
+            </Link>
+            <Link
+              href="/private-cloud"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              私有云
+            </Link>
+            <Link
+              href="/docs"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              帮助文档
+            </Link>
+            <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+              更多
+              <ChevronDown className="h-4 w-4" />
+            </div>
+          </nav>
+        </div>
+
+        {/* 右侧工具栏 */}
+        <div className="flex items-center gap-4">
+          {/* 控制台入口 */}
+          <Link href="/instances">
+            <Button variant="ghost" size="sm">
+              控制台
+            </Button>
+          </Link>
+
+          {/* 用户菜单 */}
+          <UserNav />
+        </div>
+      </header>
+
+      {/* 主内容 */}
+      <main className="max-w-7xl mx-auto px-6 py-4">{children}</main>
+
+      {/* 页脚 */}
+      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
+        ©2021-2026 LMAICloud 科技有限公司
+      </footer>
+    </div>
+  )
+}
