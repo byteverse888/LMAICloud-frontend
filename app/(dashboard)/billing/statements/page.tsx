@@ -21,7 +21,7 @@ export default function StatementsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">账单</h1>
+        <h1 className="text-2xl font-bold tracking-tight">账单</h1>
         <Select defaultValue="2024">
           <SelectTrigger className="w-32">
             <Calendar className="h-4 w-4 mr-2" />
@@ -36,48 +36,48 @@ export default function StatementsPage() {
 
       {/* 统计卡片 */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 border-emerald-200 dark:border-emerald-800">
-          <CardContent className="pt-6">
+        <Card className="card-clean">
+          <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">总收入</p>
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">¥{totalIncome.toFixed(2)}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
-          <CardContent className="pt-6">
+        <Card className="card-clean">
+          <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">总支出</p>
                 <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">¥{totalExpense.toFixed(2)}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-orange-500/8 flex items-center justify-center">
                 <TrendingDown className="h-5 w-5 text-orange-500" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
+        <Card className="card-clean">
+          <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">当前余额</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">¥{statements[0]?.balance.toFixed(2) || '0.00'}</p>
+                <p className="text-2xl font-bold">¥{statements[0]?.balance.toFixed(2) || '0.00'}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-blue-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="card-clean overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

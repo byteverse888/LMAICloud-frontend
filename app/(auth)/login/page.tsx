@@ -20,7 +20,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || '/'
   const [isLoading, setIsLoading] = useState(false)
-  const [loginType, setLoginType] = useState<'password' | 'code'>('code')
+  const [loginType, setLoginType] = useState<'password' | 'code'>('password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
@@ -110,9 +110,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* 左侧品牌展示区 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-sky-700 via-primary to-sky-500 p-12 flex-col justify-between relative overflow-hidden">
         {/* 背景装饰 */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-15">
           <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl" />
         </div>
@@ -120,46 +120,46 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">L</span>
+            <div className="w-10 h-10 bg-white/25 backdrop-blur rounded-lg flex items-center justify-center shadow-lg shadow-black/10">
+              <span className="text-xl font-bold text-white">L</span>
             </div>
-            <span className="text-2xl font-bold text-white">LMAICloud</span>
+            <span className="text-xl font-bold text-white drop-shadow-sm">LMAICloud</span>
           </div>
         </div>
 
         {/* 中间内容 */}
         <div className="relative z-10 space-y-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-4">开启您的 AI 算力之旅</h1>
-            <p className="text-white/80 text-lg">专业的 GPU 云计算平台，让 AI 训练更简单</p>
+            <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-md">开启您的 AI 算力之旅</h1>
+            <p className="text-white/90 text-lg drop-shadow-sm">专业的 GPU 云计算平台，让 AI 训练更简单</p>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-              <Cpu className="h-8 w-8 text-white mb-3" />
-              <div className="text-white font-semibold">强大算力</div>
-              <div className="text-white/70 text-sm">RTX 4090/5090 随心用</div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
+              <Cpu className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
+              <div className="text-white font-semibold text-sm">强大算力</div>
+              <div className="text-white/80 text-xs mt-1">RTX 4090/5090 随心用</div>
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-              <Zap className="h-8 w-8 text-white mb-3" />
-              <div className="text-white font-semibold">弹性伸缩</div>
-              <div className="text-white/70 text-sm">按需付费，秒级计费</div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
+              <Zap className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
+              <div className="text-white font-semibold text-sm">弹性伸缩</div>
+              <div className="text-white/80 text-xs mt-1">按需付费，秒级计费</div>
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-              <Server className="h-8 w-8 text-white mb-3" />
-              <div className="text-white font-semibold">稳定可靠</div>
-              <div className="text-white/70 text-sm">99.9% 服务可用性</div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
+              <Server className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
+              <div className="text-white font-semibold text-sm">稳定可靠</div>
+              <div className="text-white/80 text-xs mt-1">99.9% 服务可用性</div>
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-              <Shield className="h-8 w-8 text-white mb-3" />
-              <div className="text-white font-semibold">安全可信</div>
-              <div className="text-white/70 text-sm">数据加密，隔离保护</div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
+              <Shield className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
+              <div className="text-white font-semibold text-sm">安全可信</div>
+              <div className="text-white/80 text-xs mt-1">数据加密，隔离保护</div>
             </div>
           </div>
         </div>
 
         {/* 底部 */}
-        <div className="relative z-10 text-white/60 text-sm">
+        <div className="relative z-10 text-white/70 text-sm">
           © 2026 LMAICloud. All rights reserved.
         </div>
       </div>
@@ -174,8 +174,8 @@ export default function LoginPage() {
         >
           <div className="text-center mb-8">
             <div className="lg:hidden flex justify-center mb-4">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary-foreground">L</span>
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                <span className="text-xl font-bold text-primary">L</span>
               </div>
             </div>
             <h2 className="text-2xl font-bold">欢迎回来</h2>
@@ -183,10 +183,11 @@ export default function LoginPage() {
           </div>
 
           <Tabs value={loginType} onValueChange={(v) => setLoginType(v as 'password' | 'code')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            {/* 验证码登录暂时隐藏 */}
+            {/* <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="code">验证码登录</TabsTrigger>
               <TabsTrigger value="password">密码登录</TabsTrigger>
-            </TabsList>
+            </TabsList> */}
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
@@ -256,7 +257,7 @@ export default function LoginPage() {
                   </div>
                 </TabsContent>
 
-                <Button type="submit" variant="gradient" className="w-full h-11 text-base" disabled={isLoading}>
+                <Button type="submit" className="w-full h-11 text-base rounded-lg" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   登录
                 </Button>

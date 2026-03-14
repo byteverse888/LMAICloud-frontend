@@ -242,7 +242,8 @@
     "docs": "帮助文档",
     "console": "控制台",
     "memberSubscription": "会员订阅",
-    "notifications": "通知"
+    "notifications": "通知",
+    "tickets": "工单"
   },
   "theme": {
     "light": "浅色",

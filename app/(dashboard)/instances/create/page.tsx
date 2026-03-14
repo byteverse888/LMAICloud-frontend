@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useMarketMachines, useRegions, useGpuModels } from '@/hooks/use-api'
+import { Pagination } from '@/components/ui/pagination'
 
 const regions = [
   { id: 'beijing-b', name: '北京B区' },
@@ -119,14 +120,13 @@ export default function ComputeMarketPage() {
   return (
     <div className="space-y-4 animate-fade-in">
       {/* 警告提示 */}
-      <div className="flex items-center gap-2 text-orange-500 text-sm py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+      <div className="flex items-center gap-2.5 text-sm py-2.5 px-4 rounded-lg border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400">
         <AlertTriangle className="h-4 w-4 flex-shrink-0" />
         严禁使用WebUI等算法生成违禁图片、严禁挖矿，一经发现立即封号！
       </div>
 
       {/* 筛选区域 */}
-      <Card className="overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
+      <Card className="card-clean overflow-hidden">
         <CardContent className="p-6 space-y-5">
           {/* 计费方式 */}
           <div className="flex items-center">
@@ -198,7 +198,7 @@ export default function ComputeMarketPage() {
                     className={cn(
                       'h-4 w-4 rounded border flex items-center justify-center transition-colors',
                       (model.id === 'all' && selectedGpuModels.length === 0) || selectedGpuModels.includes(model.id)
-                        ? 'bg-primary border-primary' : 'border-border dark:border-muted'
+                        ? 'bg-primary border-primary' : 'border-muted-foreground/30'
                     )}
                     onClick={() => toggleGpuModel(model.id)}
                   >
@@ -245,7 +245,7 @@ export default function ComputeMarketPage() {
       {/* 机器卡片列表 */}
       <div className="space-y-4">
         {machines.map((machine) => (
-          <Card key={machine.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+          <Card key={machine.id} className="card-clean overflow-hidden">
             <CardContent className="p-5">
               {/* 顶部信息行 */}
               <div className="flex items-center justify-between mb-3">
@@ -272,7 +272,7 @@ export default function ComputeMarketPage() {
               {/* GPU信息行 */}
               <div className="flex items-baseline gap-12 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
                     <Cpu className="h-5 w-5 text-primary" />
                   </div>
                   <div className="text-xl font-semibold">{machine.gpuModel} / {machine.gpuMemory}</div>
@@ -284,20 +284,20 @@ export default function ComputeMarketPage() {
               </div>
 
               {/* 配置详情 */}
-              <div className="flex items-start">
-                <div className="flex-1 grid grid-cols-3 gap-x-8 text-sm">
+              <div className="flex items-start gap-4">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3 text-sm">
                   <div>
-                    <div className="text-muted-foreground mb-1.5">每GPU分配</div>
+                    <div className="text-muted-foreground mb-1.5 font-medium text-xs uppercase tracking-wide">每GPU分配</div>
                     <div>CPU: {machine.cpuCores} 核，{machine.cpuModel}</div>
                     <div>内存: {machine.memory} GB</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1.5">硬盘</div>
+                    <div className="text-muted-foreground mb-1.5 font-medium text-xs uppercase tracking-wide">硬盘</div>
                     <div>系统盘: {machine.systemDisk} GB</div>
                     <div>数据盘: {machine.dataDisk} GB，可扩容 {machine.expandable} GB</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1.5">其它</div>
+                    <div className="text-muted-foreground mb-1.5 font-medium text-xs uppercase tracking-wide">其它</div>
                     <div>GPU驱动: {machine.gpuDriver}</div>
                     <div className="flex items-center gap-1">
                       CUDA版本: {machine.cudaVersion}
@@ -307,7 +307,7 @@ export default function ComputeMarketPage() {
                 </div>
 
                 {/* 价格区 */}
-                <div className="w-40 text-right">
+                <div className="w-44 text-right p-4 -m-1 rounded-xl bg-muted/30">
                   <div>
                     <span className="text-primary text-3xl font-bold">¥{machine.pricePerHour}</span>
                     <span className="text-muted-foreground text-sm">/时</span>
@@ -317,7 +317,7 @@ export default function ComputeMarketPage() {
                   </div>
                   <Button 
                     variant="gradient"
-                    className="mt-3" 
+                    className="mt-3 w-full" 
                     size="sm" 
                     onClick={() => handleRent(machine)}
                   >
@@ -332,75 +332,22 @@ export default function ComputeMarketPage() {
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-center gap-4 py-4">
-        <span className="text-sm text-muted-foreground">共 {total} 条</span>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          {[1, 2, 3, 4, 5, 6].map((page) => (
-            <Button
-              key={page}
-              variant={currentPage === page ? 'default' : 'ghost'}
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </Button>
-          ))}
-          <span className="px-2">...</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => setCurrentPage(totalPages)}
-          >
-            {totalPages}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-        <Select value={pageSize} onValueChange={setPageSize}>
-          <SelectTrigger className="w-24 h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="10">10条/页</SelectItem>
-            <SelectItem value="20">20条/页</SelectItem>
-            <SelectItem value="50">50条/页</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-2 text-sm">
-          <span>前往</span>
-          <input
-            type="number"
-            className="w-12 h-8 px-2 border rounded text-center"
-            min={1}
-            max={totalPages}
-            defaultValue={1}
-          />
-          <span>页</span>
-        </div>
-      </div>
+      <Pagination
+        page={currentPage}
+        pageSize={parseInt(pageSize)}
+        total={total}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setPageSize(String(size)); setCurrentPage(1) }}
+        pageSizeOptions={[10, 20, 50]}
+      />
 
       {/* 右侧悬浮优惠券 */}
-      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-50">
-        <Button variant="destructive" className="flex flex-col h-auto py-3 px-2 text-xs bg-orange-500 hover:bg-orange-600">
-          <Ticket className="h-4 w-4 mb-1" />
+      <div className="fixed right-3 top-1/2 -translate-y-1/2 z-50 group">
+        <Button
+          variant="destructive"
+          className="flex flex-col h-auto py-2.5 px-1.5 text-xs bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/25 opacity-70 hover:opacity-100 transition-all"
+        >
+          <Ticket className="h-3.5 w-3.5 mb-0.5" />
           <span>领</span><span>优</span><span>惠</span><span>券</span>
         </Button>
       </div>

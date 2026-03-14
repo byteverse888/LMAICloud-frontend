@@ -53,16 +53,16 @@ export default function AccountPage() {
         <div className="text-center py-12 text-muted-foreground">加载失败</div>
       ) : (
         <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile">基本信息</TabsTrigger>
-          <TabsTrigger value="security">安全设置</TabsTrigger>
-          <TabsTrigger value="api">API 密钥</TabsTrigger>
-          <TabsTrigger value="notification">通知设置</TabsTrigger>
+        <TabsList className="bg-muted/50 p-1 rounded-full">
+          <TabsTrigger value="profile" className="rounded-full px-4">基本信息</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-full px-4">安全设置</TabsTrigger>
+          <TabsTrigger value="api" className="rounded-full px-4">API 密钥</TabsTrigger>
+          <TabsTrigger value="notification" className="rounded-full px-4">通知设置</TabsTrigger>
         </TabsList>
 
         {/* 基本信息 */}
         <TabsContent value="profile">
-          <Card>
+          <Card className="card-clean">
             <CardHeader>
               <CardTitle className="text-lg">基本信息</CardTitle>
             </CardHeader>
@@ -163,7 +163,7 @@ export default function AccountPage() {
 
         {/* 安全设置 */}
         <TabsContent value="security">
-          <Card>
+          <Card className="card-clean">
             <CardHeader>
               <CardTitle className="text-lg">安全设置</CardTitle>
             </CardHeader>
@@ -224,7 +224,7 @@ export default function AccountPage() {
 
         {/* API密钥 */}
         <TabsContent value="api">
-          <Card>
+          <Card className="card-clean">
             <CardHeader>
               <CardTitle className="text-lg">API 密钥</CardTitle>
             </CardHeader>
@@ -269,7 +269,7 @@ export default function AccountPage() {
 
         {/* 通知设置 */}
         <TabsContent value="notification">
-          <Card>
+          <Card className="card-clean">
             <CardHeader>
               <CardTitle className="text-lg">通知设置</CardTitle>
             </CardHeader>

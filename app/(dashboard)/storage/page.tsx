@@ -121,7 +121,7 @@ export default function StoragePage() {
       {/* 标题和说明 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold gradient-text flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <HardDrive className="h-6 w-6 text-primary" />
             {t('title')}
           </h1>
@@ -130,7 +130,7 @@ export default function StoragePage() {
             {t('mountPath')}
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => refresh()} disabled={filesLoading} className="hover:bg-primary/10">
+        <Button variant="ghost" size="icon" onClick={() => refresh()} disabled={filesLoading} className="hover:bg-muted/80">
           <RefreshCw className={`h-4 w-4 ${filesLoading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
@@ -147,9 +147,9 @@ export default function StoragePage() {
               navigateTo('/')
             }}
             className={cn(
-              "transition-all",
+              "rounded-full transition-all",
               selectedRegion === region.id 
-                ? "shadow-sm shadow-primary/25" 
+                ? "shadow-sm" 
                 : "hover:border-primary/50 hover:bg-primary/5"
             )}
           >
@@ -159,8 +159,7 @@ export default function StoragePage() {
       </div>
 
       {/* 存储信息 */}
-      <Card className="overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-primary via-blue-500 to-cyan-500" />
+      <Card className="card-clean overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -208,8 +207,8 @@ export default function StoragePage() {
       </Card>
 
       {/* 文件列表 */}
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-3 bg-muted/30">
+      <Card className="card-clean overflow-hidden">
+        <CardHeader className="pb-3 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">

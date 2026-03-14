@@ -99,11 +99,11 @@ export default function RegisterPage() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          <Card className="border-0 bg-card/80 backdrop-blur-xl shadow-2xl">
+          <Card className="card-clean shadow-lg">
             <CardHeader className="space-y-1 text-center">
               <div className="flex justify-center mb-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
               </div>
               <CardTitle className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -145,7 +145,7 @@ export default function RegisterPage() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <Link href="/login" className="w-full">
-                <Button variant="gradient" className="w-full h-11 text-base">
+                <Button variant="gradient" className="w-full h-11 text-base rounded-lg">
                   返回登录
                 </Button>
               </Link>
@@ -164,11 +164,11 @@ export default function RegisterPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <Card className="border-0 bg-card/80 backdrop-blur-xl shadow-2xl">
+        <Card className="card-clean shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/25">
-              <span className="text-2xl font-bold text-primary-foreground">L</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <span className="text-xl font-bold text-primary">L</span>
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">{t('register')}</CardTitle>
@@ -181,12 +181,12 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="email">{t('email')}</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
                   placeholder={t('emailPlaceholder')}
-                  className="pl-9"
+                  className="pl-9 h-11"
                   {...form.register('email')}
                 />
               </div>
@@ -197,12 +197,12 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="password">{t('password')}</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
                   placeholder={t('passwordPlaceholder')}
-                  className="pl-9"
+                  className="pl-9 h-11"
                   {...form.register('password')}
                 />
               </div>
@@ -213,12 +213,12 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
                   type="password"
                   placeholder={t('confirmPassword')}
-                  className="pl-9"
+                  className="pl-9 h-11"
                   {...form.register('confirmPassword')}
                 />
               </div>
@@ -231,8 +231,8 @@ export default function RegisterPage() {
                 type="button"
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all ${
                   agreeTerms
-                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 border-indigo-500 shadow-sm shadow-indigo-500/30'
-                    : 'border-gray-300 bg-white dark:bg-transparent dark:border-gray-400 hover:border-indigo-400'
+                    ? 'bg-primary border-primary'
+                    : 'border-muted-foreground/30 bg-background hover:border-primary/50'
                 }`}
                 onClick={handleAgreeTermsChange}
               >
@@ -259,8 +259,7 @@ export default function RegisterPage() {
           <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
-              variant="gradient"
-              className="w-full h-11 text-base"
+              className="w-full h-11 text-base rounded-lg"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -234,7 +234,8 @@
     "docs": "Documentation",
     "console": "Console",
     "memberSubscription": "Subscription",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "tickets": "Tickets"
   },
   "theme": {
     "light": "Light",

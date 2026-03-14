@@ -76,7 +76,7 @@ export default function PublicLayout({
         <div className="flex items-center gap-4">
           {/* 控制台入口 */}
           <Link href="/instances">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm">
               控制台
             </Button>
           </Link>

@@ -166,10 +166,10 @@ export default function TicketsPage() {
 
   const getPriorityBadge = (priority: string) => {
     const colors: Record<string, string> = {
-      low: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-      medium: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-      high: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-      urgent: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+      low: 'bg-slate-100 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400',
+      medium: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
+      high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+      urgent: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     }
     return (
       <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[priority] || colors.medium}`}>
@@ -183,7 +183,7 @@ export default function TicketsPage() {
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold gradient-text flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
             {t('title')}
           </h1>
@@ -204,7 +204,7 @@ export default function TicketsPage() {
       </div>
 
       {/* 筛选 */}
-      <Card>
+      <Card className="card-clean">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
                         <Select value={statusFilter || '__all__'} onValueChange={(v) => setStatusFilter(v === '__all__' ? '' : v)}>
@@ -224,7 +224,7 @@ export default function TicketsPage() {
       </Card>
 
       {/* 工单列表 */}
-      <Card>
+      <Card className="card-clean">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -361,7 +361,7 @@ export default function TicketsPage() {
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               {tc('cancel')}
             </Button>
-            <Button onClick={handleCreateTicket} disabled={creating} className="gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
+            <Button onClick={handleCreateTicket} disabled={creating} className="gap-2">
               {creating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

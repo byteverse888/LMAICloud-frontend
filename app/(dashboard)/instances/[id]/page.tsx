@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +29,9 @@ import {
   MonitorUp,
   Loader2,
   RefreshCw,
+  KeyRound,
+  Save,
+  Pencil,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useInstance, useInstanceLogs, useInstanceStatus, useInstanceWebSocket, useInstanceRenew, useInstanceMetrics } from '@/hooks/use-api'
@@ -58,13 +61,23 @@ export default function InstanceDetailPage() {
   const { metrics } = useInstanceMetrics(instanceId)
   const { renewInstance, loading: renewLoading } = useInstanceRenew()
   
+  // 跟踪上次状态，避免 WebSocket 首次连接时重复弹出 toast
+  const prevStatusRef = useRef<string | null>(null)
+
   // WebSocket实时状态订阅
   const { connected: wsConnected } = useInstanceWebSocket(instanceId, (status) => {
-    if (status && instance) {
+    if (!status) return
+    const prev = prevStatusRef.current
+    prevStatusRef.current = status
+    // 仅在状态真正发生变化时刷新和提示
+    if (prev && prev !== status) {
       refresh()
       if (status === 'running') toast.success('实例已启动')
       else if (status === 'stopped') toast.success('实例已停止')
       else if (status === 'error') toast.error('实例发生异常')
+    } else if (!prev) {
+      // 首次收到状态，静默刷新
+      refresh()
     }
   })
   
@@ -91,39 +104,63 @@ export default function InstanceDetailPage() {
   const handleStop = async () => {
     try {
       await stopInstance()
-      toast.success('实例停止中')
-      setTimeout(refresh, 2000)
+      toast.success('实例已停止')
+      setTimeout(refresh, 1000)
     } catch (e) {
       toast.error('停止失败')
     }
   }
 
+  const [restarting, setRestarting] = useState(false)
+  const handleRestart = async () => {
+    try {
+      setRestarting(true)
+      await stopInstance()
+      // 短暂等待 K8s 确认 replicas=0 后再启动
+      await new Promise(r => setTimeout(r, 1500))
+      await startInstance()
+      toast.success('实例重启中')
+      setTimeout(refresh, 2000)
+    } catch (e) {
+      toast.error('重启失败')
+    } finally {
+      setRestarting(false)
+    }
+  }
+
   const handleRelease = async () => {
-    if (!confirm('确定要释放该实例吗？释放后数据将无法恢复。')) return
+    if (!confirm('确定要删除该实例吗？删除后数据将无法恢复。')) return
     try {
       await releaseInstance()
-      toast.success('实例释放中')
+      toast.success('实例删除中')
       setTimeout(() => router.push('/instances'), 1000)
     } catch (e) {
-      toast.error('释放失败')
+      toast.error('删除失败')
     }
   }
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string; pulse?: boolean }> = {
-      running: { label: '运行中', variant: 'success', dotClass: 'bg-emerald-500', pulse: true },
+    const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string }> = {
+      running: { label: '运行中', variant: 'success', dotClass: 'bg-emerald-500' },
       stopped: { label: '已停止', variant: 'secondary', dotClass: 'bg-gray-400' },
-      creating: { label: '创建中', variant: 'default', dotClass: 'bg-blue-500', pulse: true },
-      starting: { label: '启动中', variant: 'default', dotClass: 'bg-blue-500', pulse: true },
-      stopping: { label: '停止中', variant: 'warning', dotClass: 'bg-amber-500', pulse: true },
-      releasing: { label: '释放中', variant: 'warning', dotClass: 'bg-amber-500', pulse: true },
-      released: { label: '已释放', variant: 'secondary', dotClass: 'bg-gray-400' },
+      creating: { label: '创建中', variant: 'default', dotClass: 'bg-blue-500' },
+      starting: { label: '启动中', variant: 'default', dotClass: 'bg-blue-500' },
+      stopping: { label: '停止中', variant: 'warning', dotClass: 'bg-amber-500' },
+      releasing: { label: '删除中', variant: 'warning', dotClass: 'bg-amber-500' },
+      released: { label: '已删除', variant: 'secondary', dotClass: 'bg-gray-400' },
       error: { label: '异常', variant: 'destructive', dotClass: 'bg-red-500' },
     }
-    const { label, variant, dotClass, pulse } = config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
+    const { label, variant, dotClass } = config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
+    const isTransient = ['creating', 'starting', 'stopping', 'releasing'].includes(status)
+    const isActive = status === 'running'
     return (
       <Badge variant={variant} className="gap-1.5">
-        <span className={`h-1.5 w-1.5 rounded-full ${dotClass} ${pulse ? 'animate-pulse' : ''}`} />
+        <span className="relative flex h-2 w-2">
+          {(isActive || isTransient) && (
+            <span className={`absolute inline-flex h-full w-full rounded-full ${dotClass} ${isTransient ? 'animate-ping' : 'animate-pulse'}`} />
+          )}
+          <span className={`relative inline-flex rounded-full h-2 w-2 ${dotClass}`} />
+        </span>
         {label}
       </Badge>
     )
@@ -162,7 +199,7 @@ export default function InstanceDetailPage() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            实例ID: {instance.id} · 节点: {instance.node_id || '-'}
+            实例ID: {instance.id} · Deployment: {instance.deployment_name || instance.deployment_info?.name || '-'} · 节点: {instance.node_id || instance.pod_info?.[0]?.node_name || '-'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -172,8 +209,8 @@ export default function InstanceDetailPage() {
                 <PowerOff className="h-4 w-4 mr-2" />
                 关机
               </Button>
-              <Button variant="outline">
-                <RotateCcw className="h-4 w-4 mr-2" />
+              <Button variant="outline" onClick={handleRestart} disabled={restarting}>
+                {restarting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
                 重启
               </Button>
             </>
@@ -185,17 +222,19 @@ export default function InstanceDetailPage() {
           ) : null}
           <Button variant="destructive" onClick={handleRelease} disabled={instance.status === 'releasing' || instance.status === 'released'}>
             <Trash2 className="h-4 w-4 mr-2" />
-            释放
+            删除
           </Button>
         </div>
       </div>
 
       {/* 快速连接 */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="card-clean overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Terminal className="h-4 w-4" />
+            <CardTitle className="card-header-bar text-base flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/8">
+                <Terminal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
               SSH 连接
             </CardTitle>
           </CardHeader>
@@ -237,10 +276,12 @@ export default function InstanceDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-clean overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MonitorUp className="h-4 w-4" />
+            <CardTitle className="card-header-bar text-base flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/8">
+                <MonitorUp className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              </div>
               JupyterLab
             </CardTitle>
           </CardHeader>
@@ -258,18 +299,73 @@ export default function InstanceDetailPage() {
 
       {/* 详细信息 */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">概览</TabsTrigger>
-          <TabsTrigger value="monitor">监控</TabsTrigger>
-          <TabsTrigger value="logs">日志</TabsTrigger>
-          <TabsTrigger value="settings">设置</TabsTrigger>
+        <TabsList className="bg-muted/50 p-1 rounded-full">
+          <TabsTrigger value="overview" className="rounded-full px-4">概览</TabsTrigger>
+          <TabsTrigger value="monitor" className="rounded-full px-4">监控</TabsTrigger>
+          <TabsTrigger value="logs" className="rounded-full px-4">日志</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-full px-4">设置</TabsTrigger>
         </TabsList>
 
         {/* 概览 */}
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Deployment 运行状态 */}
+            <Card className="card-clean">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" /> Deployment 状态
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Deployment</span>
+                  <code className="text-sm bg-muted px-2 py-0.5 rounded">{instance.deployment_info?.name || instance.deployment_name || '-'}</code>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">副本就绪</span>
+                  <span className="font-medium">
+                    {instance.deployment_info
+                      ? `${instance.deployment_info.ready_replicas} / ${instance.deployment_info.replicas}`
+                      : instance.ready_replicas != null
+                        ? `${instance.ready_replicas} / ${instance.replicas}`
+                        : '-'}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">镜像</span>
+                  <span className="text-sm max-w-[200px] truncate" title={instance.deployment_info?.images?.[0] || instance.image_url || '-'}>
+                    {instance.deployment_info?.images?.[0] || instance.image_url || '-'}
+                  </span>
+                </div>
+                {instance.pod_info && instance.pod_info.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <span className="text-muted-foreground text-sm">关联 Pod</span>
+                      {instance.pod_info.map((pod, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs">{pod.name}</code>
+                            <Badge variant={pod.status === 'Running' ? 'success' : pod.status === 'Pending' ? 'outline' : 'destructive'} className="text-xs">
+                              {pod.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {pod.ip && <span>IP: {pod.ip}</span>}
+                            {pod.restart_count > 0 && <span className="text-amber-500">重启: {pod.restart_count}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
             {/* 配置信息 */}
-            <Card>
+            <Card className="card-clean">
               <CardHeader>
                 <CardTitle className="text-base">配置信息</CardTitle>
               </CardHeader>
@@ -303,9 +399,11 @@ export default function InstanceDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
             {/* 费用信息 */}
-            <Card>
+            <Card className="card-clean">
               <CardHeader>
                 <CardTitle className="text-base">费用信息</CardTitle>
               </CardHeader>
@@ -333,57 +431,80 @@ export default function InstanceDetailPage() {
                   <span className="text-muted-foreground">启动时间</span>
                   <span className="text-sm">{instance.started_at ? new Date(instance.started_at).toLocaleString() : '-'}</span>
                 </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">镜像</span>
-                  <span className="text-sm">{instance.image_id || '-'}</span>
-                </div>
               </CardContent>
             </Card>
+
+            {/* Deployment Conditions */}
+            {instance.deployment_info?.conditions && instance.deployment_info.conditions.length > 0 && (
+              <Card className="card-clean">
+                <CardHeader>
+                  <CardTitle className="text-base">Deployment Conditions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {instance.deployment_info.conditions.map((cond, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={cond.status === 'True' ? 'success' : 'destructive'} className="text-xs">
+                          {cond.type}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{cond.reason || ''}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground max-w-[200px] truncate" title={cond.message || ''}>
+                        {cond.message || ''}
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
         {/* 监控 */}
         <TabsContent value="monitor" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
+            <Card className="stat-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">GPU 使用率</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Cpu className="h-4 w-4 text-primary" /> GPU 使用率
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>计算</span>
-                    <span className={metrics?.gpu_util && metrics.gpu_util > 80 ? 'text-red-500' : ''}>{metrics?.gpu_util ?? '-'}%</span>
+                    <span className={`font-medium ${metrics?.gpu_util && metrics.gpu_util > 80 ? 'text-red-500' : metrics?.gpu_util && metrics.gpu_util > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.gpu_util ?? '-'}%</span>
                   </div>
                   <Progress value={metrics?.gpu_util ?? 0} className="h-2" />
                 </div>
                 <div className="space-y-2 mt-4">
                   <div className="flex justify-between text-sm">
                     <span>显存</span>
-                    <span className={metrics?.gpu_memory && metrics.gpu_memory > 80 ? 'text-red-500' : ''}>{metrics?.gpu_memory ?? '-'}%</span>
+                    <span className={`font-medium ${metrics?.gpu_memory && metrics.gpu_memory > 80 ? 'text-red-500' : metrics?.gpu_memory && metrics.gpu_memory > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.gpu_memory ?? '-'}%</span>
                   </div>
                   <Progress value={metrics?.gpu_memory ?? 0} className="h-2" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="stat-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">系统资源</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" /> 系统资源
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>CPU</span>
-                    <span className={metrics?.cpu_util && metrics.cpu_util > 80 ? 'text-red-500' : ''}>{metrics?.cpu_util ?? '-'}%</span>
+                    <span className={`font-medium ${metrics?.cpu_util && metrics.cpu_util > 80 ? 'text-red-500' : metrics?.cpu_util && metrics.cpu_util > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.cpu_util ?? '-'}%</span>
                   </div>
                   <Progress value={metrics?.cpu_util ?? 0} className="h-2" />
                 </div>
                 <div className="space-y-2 mt-4">
                   <div className="flex justify-between text-sm">
                     <span>内存</span>
-                    <span className={metrics?.memory_util && metrics.memory_util > 80 ? 'text-red-500' : ''}>{metrics?.memory_util ?? '-'}%</span>
+                    <span className={`font-medium ${metrics?.memory_util && metrics.memory_util > 80 ? 'text-red-500' : metrics?.memory_util && metrics.memory_util > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.memory_util ?? '-'}%</span>
                   </div>
                   <Progress value={metrics?.memory_util ?? 0} className="h-2" />
                 </div>
@@ -392,9 +513,11 @@ export default function InstanceDetailPage() {
           </div>
           
           <div className="grid gap-4 md:grid-cols-3">
-            <Card>
+            <Card className="stat-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">磁盘使用</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <HardDrive className="h-4 w-4 text-muted-foreground" /> 磁盘使用
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center py-4">
@@ -406,9 +529,11 @@ export default function InstanceDetailPage() {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="stat-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">网络入流量</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" /> 网络入流量
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center py-4">
@@ -420,9 +545,11 @@ export default function InstanceDetailPage() {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="stat-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">网络出流量</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" /> 网络出流量
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center py-4">
@@ -435,7 +562,7 @@ export default function InstanceDetailPage() {
             </Card>
           </div>
           
-          <Card>
+          <Card className="card-clean">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm text-muted-foreground">
@@ -454,7 +581,7 @@ export default function InstanceDetailPage() {
 
         {/* 日志 */}
         <TabsContent value="logs">
-          <Card>
+          <Card className="card-clean">
             <CardHeader>
               <CardTitle className="text-base">实例日志</CardTitle>
             </CardHeader>
@@ -476,41 +603,64 @@ export default function InstanceDetailPage() {
 
         {/* 设置 */}
         <TabsContent value="settings">
-          <Card>
+          <Card className="card-clean">
             <CardHeader>
-              <CardTitle className="text-base">实例设置</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                实例设置
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">实例名称</div>
-                  <p className="text-sm text-muted-foreground">{instance.name}</p>
+            <CardContent className="space-y-1">
+              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                    <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium">实例名称</div>
+                    <p className="text-sm text-muted-foreground">{instance.name}</p>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">修改</Button>
+                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">修改</Button>
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">数据盘扩容</div>
-                  <p className="text-sm text-muted-foreground">当前 {instance.disk || '-'} GB</p>
+              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors">
+                    <HardDrive className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium">数据盘扩容</div>
+                    <p className="text-sm text-muted-foreground">当前 {instance.disk || '-'} GB</p>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">扩容</Button>
+                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">扩容</Button>
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">重置SSH密码</div>
-                  <p className="text-sm text-muted-foreground">重置后需要重新登录</p>
+              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
+                    <KeyRound className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium">重置SSH密码</div>
+                    <p className="text-sm text-muted-foreground">重置后需要重新登录</p>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">重置</Button>
+                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">重置</Button>
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">保存为镜像</div>
-                  <p className="text-sm text-muted-foreground">将当前实例环境保存为自定义镜像</p>
+              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
+                    <Save className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium">保存为镜像</div>
+                    <p className="text-sm text-muted-foreground">将当前实例环境保存为自定义镜像</p>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">保存</Button>
+                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">保存</Button>
               </div>
             </CardContent>
           </Card>
@@ -519,14 +669,13 @@ export default function InstanceDetailPage() {
 
       {/* 终端弹窗 */}
       <Dialog open={terminalOpen} onOpenChange={setTerminalOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <DialogHeader className="px-4 py-2 border-b">
-            <DialogTitle>Web Terminal - {instance.name}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden">
+          <DialogTitle className="sr-only">WebShell 终端</DialogTitle>
           {terminalOpen && token && (
             <WebTerminal
               instanceId={instanceId}
               token={token}
+              instanceName={instance?.name}
               onClose={() => setTerminalOpen(false)}
             />
           )}

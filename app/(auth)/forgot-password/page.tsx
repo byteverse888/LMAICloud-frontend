@@ -48,34 +48,36 @@ export default function ForgotPasswordPage() {
   }
 
   return (
+    <div className="min-h-screen flex items-center justify-center p-8 bg-background">
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
+      className="w-full max-w-md"
     >
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+      <Card className="card-clean shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-              <span className="text-2xl font-bold text-primary-foreground">L</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <span className="text-xl font-bold text-primary">L</span>
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">{t('forgotPassword')}</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription>
             输入您的邮箱，我们将发送重置密码链接
           </CardDescription>
         </CardHeader>
         {isSubmitted ? (
           <CardContent className="space-y-4 text-center">
             <div className="flex justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
-                <Mail className="h-8 w-8 text-emerald-500" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10">
+                <Mail className="h-7 w-7 text-green-600 dark:text-green-400" />
               </div>
             </div>
             <p className="text-muted-foreground">
               重置密码链接已发送到您的邮箱，请查收
             </p>
-            <Button asChild variant="outline" className="mt-4">
+            <Button asChild variant="outline" className="mt-4 rounded-lg">
               <Link href="/login">返回登录</Link>
             </Button>
           </CardContent>
@@ -85,12 +87,12 @@ export default function ForgotPasswordPage() {
               <div className="space-y-2">
                 <Label htmlFor="email">{t('email')}</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder={t('emailPlaceholder')}
-                    className="pl-9 bg-slate-900/50 border-slate-700"
+                    className="pl-9 h-11"
                     {...form.register('email')}
                   />
                 </div>
@@ -102,7 +104,7 @@ export default function ForgotPasswordPage() {
             <CardFooter className="flex flex-col space-y-4">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11 text-base rounded-lg"
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -119,5 +121,6 @@ export default function ForgotPasswordPage() {
         )}
       </Card>
     </motion.div>
+    </div>
   )
 }

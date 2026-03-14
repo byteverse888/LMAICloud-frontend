@@ -207,10 +207,10 @@ export default function AdminTicketsPage() {
 
   const getPriorityBadge = (priority: string) => {
     const config: Record<string, { color: string; label: string }> = {
-      low: { color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', label: '低' },
-      medium: { color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', label: '中' },
-      high: { color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400', label: '高' },
-      urgent: { color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400', label: '紧急' },
+      low: { color: 'bg-slate-100 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400', label: '低' },
+      medium: { color: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400', label: '中' },
+      high: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', label: '高' },
+      urgent: { color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', label: '紧急' },
     }
     const c = config[priority] || config.medium
     return <span className={`px-2 py-0.5 rounded text-xs font-medium ${c.color}`}>{c.label}</span>

@@ -179,9 +179,9 @@ export default function InstanceCreatePage() {
       }
       if (envVars.length > 0) payload.env_vars = envVars.filter(e => e.key)
       if (storageMounts.length > 0) payload.storage_mounts = storageMounts.filter(s => s.name)
-      const response = await api.post<{ id: string }>('/instances', payload)
+      await api.post<{ id: string }>('/instances', payload)
       toast.success('实例创建中，请稍候...')
-      router.push(`/instances/${response.data.id}`)
+      router.push('/instances')
     } catch (error: any) { toast.error(error?.message || '创建失败') }
     finally { setCreating(false) }
   }
@@ -219,7 +219,7 @@ export default function InstanceCreatePage() {
         <p className="text-sm text-muted-foreground mt-1">配置您的 GPU 容器实例，选择资源规格和镜像后即可一键创建。</p>
       </div>
 
-      <div className="space-y-5 max-w-5xl">
+      <div className="space-y-6 max-w-5xl">
         {/* ===== 基础信息 ===== */}
         <Card className="animate-slide-up" style={{ animationDelay: '0.05s' }}>
           <CardHeader className="pb-4">
@@ -240,9 +240,10 @@ export default function InstanceCreatePage() {
             <FormRow label="实例数量" required>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setInstanceCount(Math.max(1, instanceCount - 1))}><Minus className="h-4 w-4" /></Button>
-                <Input className="w-20 h-9 text-center font-medium" type="number" min={1} value={instanceCount} onChange={e => setInstanceCount(Math.max(1, parseInt(e.target.value) || 1))} />
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setInstanceCount(instanceCount + 1)}><Plus className="h-4 w-4" /></Button>
+                <Input className="w-20 h-9 text-center font-medium" type="number" min={1} max={5} value={instanceCount} onChange={e => setInstanceCount(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))} />
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setInstanceCount(Math.min(5, instanceCount + 1))}><Plus className="h-4 w-4" /></Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">单次创建最多 5 个实例</p>
             </FormRow>
           </CardContent>
         </Card>
@@ -332,13 +333,13 @@ export default function InstanceCreatePage() {
                         <TableRow
                           key={`${cfg.node_id}-${cfg.resource_type}-${idx}`}
                           className={`cursor-pointer transition-all duration-200 ${
-                            sel ? 'bg-primary/5 border-l-2 border-l-primary' : ''
-                          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted/40'}`}
+                            sel ? 'bg-primary/8 border-l-[3px] border-l-primary shadow-sm' : ''
+                          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted/50'}`}
                           onClick={() => !disabled && setSelectedConfig(cfg)}
                         >
                           <TableCell className="text-center">
                             <div className={`h-4.5 w-4.5 rounded-full border-2 mx-auto flex items-center justify-center transition-all ${
-                              sel ? 'border-primary bg-primary' : 'border-muted-foreground/30'
+                              sel ? 'border-primary bg-primary shadow-md shadow-primary/30' : 'border-muted-foreground/30'
                             }`}>
                               {sel && <Check className="h-3 w-3 text-primary-foreground" />}
                             </div>
@@ -535,7 +536,7 @@ export default function InstanceCreatePage() {
       </div>
 
       {/* ===== 底部操作栏 ===== */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-lg">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/90 backdrop-blur-xl shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.3)]">
         <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">

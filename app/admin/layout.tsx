@@ -21,8 +21,14 @@ import {
   Sun,
   ShieldX,
   ChevronDown,
+  ChevronRight,
   KeyRound,
   User,
+  Boxes,
+  Container,
+  Network,
+  Box,
+  Database,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,11 +53,29 @@ import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
-const adminNavItems = [
+type NavItem = {
+  href: string
+  label: string
+  icon: any
+  children?: NavItem[]
+}
+
+const adminNavItems: NavItem[] = [
   { href: '/admin', label: '仪表盘', icon: LayoutDashboard },
-  { href: '/admin/clusters', label: '集群管理', icon: Server },
-  { href: '/admin/nodes', label: '节点管理', icon: HardDrive },
-  { href: '/admin/images', label: '镜像管理', icon: Image },
+  {
+    href: '/admin/resources',
+    label: '资源管理',
+    icon: Boxes,
+    children: [
+      { href: '/admin/clusters', label: '集群管理', icon: Server },
+      { href: '/admin/nodes', label: '节点管理', icon: HardDrive },
+      { href: '/admin/storage', label: '存储管理', icon: Database },
+      { href: '/admin/images', label: '镜像管理', icon: Image },
+      { href: '/admin/services', label: '服务管理', icon: Network },
+      { href: '/admin/deployments', label: '部署管理', icon: Box },
+      { href: '/admin/pods', label: '容器管理', icon: Container },
+    ],
+  },
   { href: '/admin/users', label: '用户管理', icon: Users },
   { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
   { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
@@ -65,6 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, isLoading, isAuthenticated, logout, checkAuth } = useAuthStore()
   const { theme, setTheme } = useTheme()
   const [countdown, setCountdown] = useState(3)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true })
   
   // 修改密码对话框状态
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
@@ -201,9 +226,62 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             管理后台
           </Link>
         </div>
-        <nav className="p-4 space-y-1 flex-1">
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
           {adminNavItems.map((item) => {
             const Icon = item.icon
+
+            // 有子菜单的分组
+            if (item.children) {
+              const isExpanded = expandedGroups[item.href] ?? false
+              const isChildActive = item.children.some(
+                (child) => pathname === child.href || pathname.startsWith(child.href + '/')
+              )
+
+              return (
+                <div key={item.href}>
+                  <button
+                    onClick={() => setExpandedGroups(prev => ({ ...prev, [item.href]: !prev[item.href] }))}
+                    className={cn(
+                      'flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-colors',
+                      isChildActive
+                        ? 'text-primary font-medium bg-primary/5'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </span>
+                    {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-4 mt-1 space-y-0.5 border-l pl-3">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon
+                        const isActive = pathname === child.href || pathname.startsWith(child.href + '/')
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                              isActive
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            )}
+                          >
+                            <ChildIcon className="h-3.5 w-3.5" />
+                            {child.label}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            // 普通菜单项
             const isActive = pathname === item.href || 
               (item.href !== '/admin' && pathname.startsWith(item.href))
             

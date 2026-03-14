@@ -69,7 +69,7 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fade-in">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold gradient-text">
+        <h1 className="text-2xl font-bold tracking-tight">
           {t('title')}
         </h1>
         {loading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
@@ -77,56 +77,56 @@ export default function DashboardPage() {
 
       {/* 快捷统计卡片 */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="stat-card bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200/50 dark:border-blue-800/50 hover-lift">
-          <CardContent className="pt-6">
+        <Card className="card-clean hover-lift">
+          <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">实例总数</p>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.instances.total}</p>
+                <p className="text-2xl font-bold">{stats.instances.total}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center rotate-3 hover:rotate-0 transition-transform">
-                <Server className="h-6 w-6 text-blue-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
+                <Server className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="stat-card bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/50 dark:to-emerald-900/30 border-emerald-200/50 dark:border-emerald-800/50 hover-lift">
-          <CardContent className="pt-6">
+        <Card className="card-clean hover-lift">
+          <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">运行中</p>
-                <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{stats.instances.running}</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.instances.running}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <Zap className="h-6 w-6 text-emerald-500 animate-pulse" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
+                <Zap className="h-5 w-5 text-emerald-500" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="stat-card bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/50 dark:to-amber-900/30 border-amber-200/50 dark:border-amber-800/50 hover-lift">
-          <CardContent className="pt-6">
+        <Card className="card-clean hover-lift">
+          <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">即将到期</p>
-                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats.instances.expiring}</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.instances.expiring}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-amber-500" />
+              <div className="h-10 w-10 rounded-lg bg-amber-500/8 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-500" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="stat-card bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/50 dark:to-purple-900/30 border-purple-200/50 dark:border-purple-800/50 hover-lift">
-          <CardContent className="pt-6">
+        <Card className="card-clean hover-lift">
+          <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">账户余额</p>
-                <p className={`text-3xl font-bold ${stats.balance.available < 0 ? 'text-red-500' : 'text-purple-600 dark:text-purple-400'}`}>
+                <p className={`text-2xl font-bold ${stats.balance.available < 0 ? 'text-red-500' : ''}`}>
                   ¥{stats.balance.available.toFixed(2)}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <CreditCard className="h-6 w-6 text-purple-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -137,9 +137,9 @@ export default function DashboardPage() {
         {/* 左侧主内容区 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 实例统计卡片 */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-transparent">
-              <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <Card className="card-clean overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
                 <Cpu className="h-5 w-5 text-primary" />
                 {t('instances')}
               </CardTitle>
@@ -195,10 +195,10 @@ export default function DashboardPage() {
           </Card>
 
           {/* 数据统计卡片 */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/5 to-transparent">
-              <CardTitle className="text-lg font-medium flex items-center gap-2">
-                <HardDrive className="h-5 w-5 text-blue-500" />
+          <Card className="card-clean overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
+                <HardDrive className="h-5 w-5 text-primary" />
                 {t('data')}
               </CardTitle>
             </CardHeader>
@@ -233,9 +233,9 @@ export default function DashboardPage() {
           </Card>
 
           {/* 常见问题 */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/5 to-transparent">
-              <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <Card className="card-clean overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
                 <HelpCircle className="h-5 w-5 text-amber-500" />
                 {t('faq')}
               </CardTitle>
@@ -278,8 +278,8 @@ export default function DashboardPage() {
         {/* 右侧信息栏 */}
         <div className="space-y-6">
           {/* 用户信息 */}
-          <Card className="overflow-hidden">
-            <div className="h-16 bg-gradient-to-r from-primary via-blue-500 to-purple-500" />
+          <Card className="card-clean overflow-hidden">
+            <div className="h-12 bg-gradient-to-r from-primary/80 to-primary/50 dark:from-primary/30 dark:to-primary/10" />
             <CardContent className="pt-0 relative">
               <div className="-mt-8 mb-4">
                 <div className="h-16 w-16 rounded-full bg-background border-4 border-background flex items-center justify-center shadow-lg">
@@ -332,17 +332,17 @@ export default function DashboardPage() {
           </Card>
 
           {/* 费用信息 */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-red-500/5 to-transparent">
-              <CardTitle className="text-lg font-medium flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-red-500" />
+          <Card className="card-clean overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
                 {t('balanceInfo')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm">{t('myBalance')}</span>
-                <Button size="sm" className="bg-red-500 hover:bg-red-600">
+                <Button size="sm" variant="default">
                   {t('recharge')}
                 </Button>
               </div>

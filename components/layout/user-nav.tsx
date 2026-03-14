@@ -35,12 +35,12 @@ export function UserNav() {
     return (
       <div className="flex items-center gap-2">
         <Link href="/login">
-          <Button variant="ghost" size="sm">
+          <Button variant="outline" size="sm">
             {t('login')}
           </Button>
         </Link>
         <Link href="/register">
-          <Button size="sm">{t('register')}</Button>
+          <Button size="sm" variant="outline">{t('register')}</Button>
         </Link>
       </div>
     )
@@ -58,7 +58,7 @@ export function UserNav() {
           <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-72 bg-white text-gray-900 dark:bg-zinc-900 dark:text-gray-100 shadow-xl border" align="end" forceMount>
+      <DropdownMenuContent className="w-72 shadow-xl" align="end" forceMount>
         {/* 用户名和认证状态 */}
         <div className="px-3 py-3">
           <div className="flex items-center gap-2">

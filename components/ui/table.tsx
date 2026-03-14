@@ -58,7 +58,12 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      'border-b transition-all duration-200 hover:bg-primary/5 data-[state=selected]:bg-muted',
+      'border-b transition-all duration-150',
+      // hover：浅蓝遮罩
+      'hover:bg-primary/5 dark:hover:bg-primary/8',
+      // 选中：明显蓝色高亮，深色模式也清晰
+      'data-[state=selected]:bg-primary/12 data-[state=selected]:border-primary/20',
+      'dark:data-[state=selected]:bg-primary/25 dark:data-[state=selected]:border-primary/40',
       className
     )}
     {...props}

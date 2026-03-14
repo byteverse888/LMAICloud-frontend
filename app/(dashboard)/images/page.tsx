@@ -57,17 +57,17 @@ export default function ImagesPage() {
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center justify-between">
-          <TabsList className="bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
+          <TabsList className="bg-muted/50 p-1 rounded-full">
             <TabsTrigger 
               value="market" 
-              className="gap-2 px-4 py-2 rounded-md text-slate-600 dark:text-slate-400 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-blue-600 dark:data-[state=active]:text-white transition-all"
+              className="gap-2 px-4 py-1.5 rounded-full text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
             >
               <Store className="h-4 w-4" />
               镜像市场
             </TabsTrigger>
             <TabsTrigger 
               value="my" 
-              className="gap-2 px-4 py-2 rounded-md text-slate-600 dark:text-slate-400 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-blue-600 dark:data-[state=active]:text-white transition-all"
+              className="gap-2 px-4 py-1.5 rounded-full text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
             >
               <Layers className="h-4 w-4" />
               我的镜像
@@ -91,17 +91,17 @@ export default function ImagesPage() {
         <TabsContent value="market" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredImages.map((image) => (
-              <Card key={image.id} className="bg-slate-900 border-slate-800 overflow-hidden">
+              <Card key={image.id} className="card-clean overflow-hidden">
                 {/* 顶部图标 */}
                 <div className="pt-6 pb-4 flex justify-center">
-                  <div className="w-16 h-16 rounded-xl bg-blue-600/20 flex items-center justify-center">
-                    <ImageIcon className="h-8 w-8 text-blue-400" />
+                  <div className="w-14 h-14 rounded-xl bg-primary/8 flex items-center justify-center">
+                    <ImageIcon className="h-7 w-7 text-primary" />
                   </div>
                 </div>
                 
                 {/* 标题和价格标签 */}
                 <div className="px-4 pb-3 flex items-center justify-center gap-2">
-                  <h3 className="text-lg font-bold text-white">{image.displayName}</h3>
+                  <h3 className="text-base font-semibold">{image.displayName}</h3>
                   <Badge className={`${getPriceTagStyle(image.priceTag)} text-xs px-2 py-0.5`}>
                     {image.priceTag}
                   </Badge>
@@ -110,7 +110,7 @@ export default function ImagesPage() {
                 {/* 版本选择 */}
                 <div className="px-4 pb-3">
                   <Select defaultValue={image.version}>
-                    <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -121,56 +121,56 @@ export default function ImagesPage() {
                 
                 {/* 描述 */}
                 <div className="px-4 pb-3">
-                  <p className="text-slate-400 text-sm">{image.description || `支持${image.displayName}等功能`}</p>
+                  <p className="text-muted-foreground text-sm">{image.description || `支持${image.displayName}等功能`}</p>
                 </div>
                 
                 {/* 信息列表 */}
                 <CardContent className="space-y-2.5 text-sm px-4 pt-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 flex items-center gap-2">
+                    <span className="text-muted-foreground flex items-center gap-2">
                       <HardDrive className="h-4 w-4" />
                       镜像大小
                     </span>
-                    <span className="text-white font-medium">{image.sizeDisplay}</span>
+                    <span className="font-medium">{image.sizeDisplay}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 flex items-center gap-2">
+                    <span className="text-muted-foreground flex items-center gap-2">
                       <User className="h-4 w-4" />
                       作者
                     </span>
-                    <span className="text-white font-medium">{image.author}</span>
+                    <span className="font-medium">{image.author}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 flex items-center gap-2">
+                    <span className="text-muted-foreground flex items-center gap-2">
                       <Cpu className="h-4 w-4" />
                       分类
                     </span>
-                    <Badge variant="outline" className="bg-slate-800 border-slate-600 text-slate-300">
+                    <Badge variant="outline" className="text-xs">
                       {image.aigcType}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 flex items-center gap-2">
+                    <span className="text-muted-foreground flex items-center gap-2">
                       <Box className="h-4 w-4" />
                       支持模型
                     </span>
-                    <Badge variant="outline" className="bg-slate-800 border-slate-600 text-slate-300 max-w-[120px] truncate">
+                    <Badge variant="outline" className="text-xs max-w-[120px] truncate">
                       {image.supportModels}
                     </Badge>
                   </div>
                 </CardContent>
                 
                 {/* 底部按钮 */}
-                <CardFooter className="flex gap-3 px-4 py-4">
+                <CardFooter className="flex gap-3 px-4 py-4 border-t border-border/50">
                   <Button 
                     variant="outline" 
-                    className="flex-1 bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
+                    className="flex-1"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     拉取镜像
                   </Button>
                   <Button 
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-0"
+                    className="flex-1"
                   >
                     <Rocket className="h-4 w-4 mr-2" />
                     部署应用

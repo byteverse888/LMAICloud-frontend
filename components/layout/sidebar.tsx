@@ -34,7 +34,6 @@ import {
   History,
   Users,
   Settings,
-  MessageSquare,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
@@ -91,7 +90,6 @@ export function Sidebar() {
         { title: t('settings'), href: '/account/settings', icon: Settings },
       ],
     },
-    { title: t('tickets'), href: '/tickets', icon: MessageSquare },
   ]
 
   const toggleExpanded = (title: string) => {
@@ -124,13 +122,13 @@ export function Sidebar() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    'w-full justify-center h-10 transition-all duration-200',
+                    'w-full justify-center h-10 rounded-lg transition-all duration-200',
                     active 
-                      ? 'bg-primary/10 text-primary shadow-sm' 
-                      : 'hover:bg-primary/5 hover:text-primary'
+                      ? 'bg-primary/8 text-primary' 
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-[18px] w-[18px]" />
                 </Button>
               </Link>
             </TooltipTrigger>
@@ -149,27 +147,27 @@ export function Sidebar() {
             <Button
               variant="ghost"
               className={cn(
-                'w-full justify-between h-10 transition-all duration-200',
+                'w-full justify-between h-9 rounded-lg transition-all duration-200',
                 active 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'hover:bg-primary/5 hover:text-primary'
+                  ? 'bg-primary/8 text-primary' 
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               )}
               style={{ paddingLeft: `${depth * 12 + 12}px` }}
               onClick={() => toggleExpanded(item.title)}
             >
-              <span className="flex items-center gap-3">
-                <Icon className="h-5 w-5" />
-                <span>{item.title}</span>
+              <span className="flex items-center gap-2.5">
+                <Icon className="h-[18px] w-[18px]" />
+                <span className="text-[13px]">{item.title}</span>
               </span>
               <ChevronDown
                 className={cn(
-                  'h-4 w-4 transition-transform',
+                  'h-3.5 w-3.5 transition-transform duration-200',
                   isExpanded && 'rotate-180'
                 )}
               />
             </Button>
             {isExpanded && (
-              <div className="ml-4">
+              <div className="ml-3 pl-3 border-l border-border/60">
                 {item.children!.map((child) => renderNavItem(child, depth + 1))}
               </div>
             )}
@@ -179,16 +177,15 @@ export function Sidebar() {
             <Button
               variant="ghost"
               className={cn(
-                'w-full justify-start h-10 gap-3 transition-all duration-200',
+                'w-full justify-start h-9 gap-2.5 rounded-lg transition-all duration-200',
                 active 
-                  ? 'bg-primary/10 text-primary font-medium' 
-                  : 'hover:bg-primary/5 hover:text-primary'
+                  ? 'bg-primary/8 text-primary font-medium border-l-2 border-primary -ml-px' 
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               )}
               style={{ paddingLeft: `${depth * 12 + 12}px` }}
             >
-              <Icon className={cn('h-5 w-5', active && 'text-primary')} />
-              <span>{item.title}</span>
-              {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+              <Icon className={cn('h-[18px] w-[18px]', active && 'text-primary')} />
+              <span className="text-[13px]">{item.title}</span>
             </Button>
           </Link>
         )}
@@ -199,37 +196,37 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r bg-sidebar transition-all duration-300 shadow-sm',
-        sidebarCollapsed ? 'w-16' : 'w-60'
+        'fixed left-0 top-0 z-40 h-screen border-r border-border/60 bg-sidebar transition-all duration-300',
+        sidebarCollapsed ? 'w-16' : 'w-56'
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b px-4 bg-gradient-to-r from-primary/5 to-transparent">
+      <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
         {!sidebarCollapsed && (
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
-              <span className="text-lg font-bold text-primary-foreground">L</span>
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+              <span className="text-sm font-bold text-primary">L</span>
             </div>
-            <span className="text-lg font-semibold gradient-text">{siteName}</span>
+            <span className="text-[15px] font-semibold text-foreground">{siteName}</span>
           </Link>
         )}
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 hover:bg-primary/10"
+          className="h-7 w-7 rounded-lg hover:bg-muted/80"
           onClick={toggleSidebar}
         >
           {sidebarCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3.5 w-3.5" />
           ) : (
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-3.5 w-3.5" />
           )}
         </Button>
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="h-[calc(100vh-4rem)]">
-        <nav className="space-y-1 p-2">
+      <ScrollArea className="h-[calc(100vh-3.5rem)]">
+        <nav className="space-y-0.5 p-2">
           {navItems.map((item) => renderNavItem(item))}
         </nav>
       </ScrollArea>

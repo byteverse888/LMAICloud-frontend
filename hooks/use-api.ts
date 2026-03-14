@@ -1,5 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '@/lib/api'
+import { useAuthStore } from '@/stores/auth-store'
+
+/** 从 zustand persist 存储中获取 token（兼容组件外调用） */
+function getPersistedToken(): string | null {
+  try {
+    const raw = localStorage.getItem('auth-storage')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.state?.token || null
+  } catch {
+    return null
+  }
+}
 
 // 实例类型定义
 export interface Instance {
@@ -36,6 +49,33 @@ export interface Instance {
   auto_release_type?: string
   auto_release_minutes?: number
   deployment_yaml?: string
+  // Deployment 运行时信息（由后端 K8s 查询注入）
+  deployment_name?: string
+  replicas?: number | null
+  ready_replicas?: number | null
+  available_replicas?: number | null
+  // 详情页: Deployment 完整信息
+  deployment_info?: {
+    name: string
+    replicas: number
+    ready_replicas: number
+    available_replicas: number
+    updated_replicas: number
+    images: string[]
+    conditions: Array<{ type: string; status: string; reason?: string; message?: string }>
+    strategy: string
+    created_at?: string
+  } | null
+  // 详情页: 关联 Pod 列表
+  pod_info?: Array<{
+    name: string
+    status: string
+    ip?: string
+    node_name?: string
+    restart_count: number
+    is_terminating: boolean
+    containers?: any[]
+  }>
 }
 
 // 镜像类型定义
@@ -68,19 +108,21 @@ export function useInstances() {
   const [instances, setInstances] = useState<Instance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const fetchInstances = useCallback(async () => {
+  // silent=true 时不触发 loading 状态，用于轮询/WS 静默刷新，避免表格闪烁
+  const fetchInstances = useCallback(async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const { data } = await api.get<ListResponse<Instance>>('/instances')
       setInstances(data.list || []); setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取实例列表失败')
-      setInstances([
+      if (!silent) setInstances([
         { id: '1', name: 'GPU-Instance-1', status: 'running', gpu_model: 'RTX 4090', gpu_count: 1, cpu_cores: 16, memory: 64, disk: 50, billing_type: 'hourly', hourly_price: 2.39, ssh_host: '192.168.1.100', ssh_port: 30001, ssh_password: 'abc123xyz', created_at: new Date().toISOString(), node_id: 'node-1', node_type: 'center', resource_type: 'vGPU', internal_ip: '10.42.0.15' },
         { id: '2', name: 'GPU-Instance-2', status: 'stopped', gpu_model: 'RTX 5090', gpu_count: 2, cpu_cores: 32, memory: 128, disk: 100, billing_type: 'hourly', hourly_price: 6.06, created_at: new Date().toISOString(), node_id: 'node-2', node_type: 'edge', resource_type: 'vGPU', internal_ip: '10.42.0.22' },
       ])
-    } finally { setLoading(false) }
+    } finally { if (!silent) setLoading(false) }
   }, [])
+  const silentRefresh = useCallback(() => fetchInstances(true), [fetchInstances])
   useEffect(() => { fetchInstances() }, [fetchInstances])
   const createInstance = async (data: Partial<Instance>) => {
     const { data: newInstance } = await api.post<Instance>('/instances', data)
@@ -92,13 +134,19 @@ export function useInstances() {
   }
   const stopInstance = async (id: string) => {
     await api.post(`/instances/${id}/stop`)
-    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'stopping' as const } : i))
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'stopped' as const } : i))
   }
   const deleteInstance = async (id: string) => {
     await api.delete(`/instances/${id}`)
     setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'releasing' as const } : i))
   }
-  return { instances, loading, error, refresh: fetchInstances, createInstance, startInstance, stopInstance, deleteInstance }
+  const forceDeleteInstance = async (id: string) => {
+    // 优先用 POST（兼容严格反向代理不放行 DELETE 子路径的环境）
+    // 后端同时注册了 POST /instances/{id}/force 和 DELETE /instances/{id}/force
+    await api.post(`/instances/${id}/force`)
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'released' as const } : i))
+  }
+  return { instances, loading, error, refresh: fetchInstances, silentRefresh, createInstance, startInstance, stopInstance, deleteInstance, forceDeleteInstance }
 }
 
 // ====== 镜像相关 hooks ======
@@ -338,7 +386,7 @@ export function useCurrentUser() {
 // ====== 管理后台 Hooks ======
 export interface AdminNode {
   id: string; name: string; cluster: string; status: 'online' | 'offline' | 'busy'
-  node_type: 'edge' | 'cloud'; gpu_model: string; gpu_count: number; gpu_available: number
+  node_type: 'edge' | 'center'; gpu_model: string; gpu_count: number; gpu_available: number
   cpu_cores: number; memory: number; hourly_price: number; created_at: string
 }
 
@@ -414,6 +462,50 @@ export function useAdminClusters() {
   return { clusters, loading, refresh: fetchClusters }
 }
 
+export function useClusterOverview() {
+  const [overview, setOverview] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchOverview = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any>('/admin/clusters/overview'); setOverview(data) }
+    catch { setOverview(null) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchOverview() }, [fetchOverview])
+  return { overview, loading, refresh: fetchOverview }
+}
+
+export function useClusterHealth() {
+  const [health, setHealth] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchHealth = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any>('/admin/clusters/health'); setHealth(data) }
+    catch { setHealth(null) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchHealth() }, [fetchHealth])
+  return { health, loading, refresh: fetchHealth }
+}
+
+export function useClusterNodeMetrics() {
+  const [metrics, setMetrics] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchMetrics = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: any[] }>('/admin/clusters/node-metrics'); setMetrics(data.list || []) }
+    catch { setMetrics([]) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchMetrics() }, [fetchMetrics])
+  return { metrics, loading, refresh: fetchMetrics }
+}
+
+export function useClusterEvents() {
+  const [events, setEvents] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchEvents = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: any[] }>('/admin/clusters/events'); setEvents(data.list || []) }
+    catch { setEvents([]) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchEvents() }, [fetchEvents])
+  return { events, loading, refresh: fetchEvents }
+}
+
 export function useAdminReports() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -430,16 +522,26 @@ export function useAdminReports() {
 export function useWebSocketStatus(onMessage?: (data: any) => void) {
   const [connected, setConnected] = useState(false)
   const [ws, setWs] = useState<WebSocket | null>(null)
+  const callbackRef = useRef(onMessage)
+  callbackRef.current = onMessage
+
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    if (typeof window === 'undefined') return
+    const token = getPersistedToken()
     if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
     const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
-    const socket = new WebSocket(`${baseWsUrl}/ws/status?token=${token}`)
+    let socket: WebSocket
+    try {
+      socket = new WebSocket(`${baseWsUrl}/ws/status?token=${token}`)
+    } catch (e) {
+      console.warn('[WS] Failed to create WebSocket:', e)
+      return
+    }
     socket.onopen = () => { setConnected(true) }
-    socket.onmessage = (event) => { try { onMessage?.(JSON.parse(event.data)) } catch (e) { console.error('[WS] Parse error:', e) } }
+    socket.onmessage = (event) => { try { callbackRef.current?.(JSON.parse(event.data)) } catch (e) { console.error('[WS] Parse error:', e) } }
     socket.onclose = () => { setConnected(false) }
-    socket.onerror = (error) => { console.error('[WS] Error:', error) }
+    socket.onerror = () => { /* 连接失败静默处理，onclose 会触发 */ }
     setWs(socket)
     const pingInterval = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' })) }, 30000)
     return () => { clearInterval(pingInterval); socket.close() }
@@ -452,22 +554,37 @@ export function useWebSocketStatus(onMessage?: (data: any) => void) {
 
 export function useInstanceWebSocket(instanceId: string, onStatusChange?: (status: string, data?: any) => void) {
   const [connected, setConnected] = useState(false)
+  // 使用 ref 存储回调，避免回调变化导致 WebSocket 重连
+  const callbackRef = useRef(onStatusChange)
+  callbackRef.current = onStatusChange
+
   useEffect(() => {
-    if (!instanceId) return
-    const token = localStorage.getItem('token')
+    if (!instanceId || typeof window === 'undefined') return
+    const token = getPersistedToken()
     if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
     const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
-    const socket = new WebSocket(`${baseWsUrl}/ws/instance/${instanceId}/status?token=${token}`)
+    let socket: WebSocket
+    try {
+      socket = new WebSocket(`${baseWsUrl}/ws/instance/${instanceId}/status?token=${token}`)
+    } catch (e) {
+      console.warn('[WS] Failed to create instance WebSocket:', e)
+      return
+    }
     socket.onopen = () => { setConnected(true) }
     socket.onmessage = (event) => {
-      try { const data = JSON.parse(event.data); if (data.type === 'instance_status' || data.type === 'connected') onStatusChange?.(data.status || data.current_status, data) }
-      catch (e) { console.error('[WS] Parse error:', e) }
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'instance_status' || data.type === 'connected') {
+          callbackRef.current?.(data.status || data.current_status, data)
+        }
+      } catch (e) { console.error('[WS] Parse error:', e) }
     }
     socket.onclose = () => setConnected(false)
+    socket.onerror = () => { /* 静默处理 */ }
     const pingInterval = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' })) }, 30000)
     return () => { clearInterval(pingInterval); socket.close() }
-  }, [instanceId, onStatusChange])
+  }, [instanceId])
   return { connected }
 }
 
@@ -502,13 +619,13 @@ export function useStorageFiles(region: string, path: string = '/') {
   useEffect(() => { fetchFiles() }, [fetchFiles])
   const uploadFile = async (file: File) => {
     const formData = new FormData(); formData.append('file', file); formData.append('region', region); formData.append('path', currentPath)
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: formData })
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${getPersistedToken()}` }, body: formData })
     if (!response.ok) throw new Error('Upload failed')
     const data = await response.json(); fetchFiles(); return data
   }
   const deleteFile = async (fileId: string) => { await api.delete(`/storage/files/${fileId}`); fetchFiles() }
   const downloadFile = (fileId: string, fileName: string) => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/storage/files/${fileId}/download?token=${localStorage.getItem('token')}`
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/storage/files/${fileId}/download?token=${getPersistedToken()}`
     const a = document.createElement('a'); a.href = url; a.download = fileName; a.click()
   }
   const navigateTo = (newPath: string) => { setCurrentPath(newPath); fetchFiles(newPath) }
@@ -552,4 +669,146 @@ export function useInstanceYaml(instanceId: string) {
   }, [instanceId])
   useEffect(() => { fetchYaml() }, [fetchYaml])
   return { yaml, loading, refresh: fetchYaml }
+}
+
+// ====== 管理后台 - 命名空间 ======
+export function useAdminNamespaces() {
+  const [namespaces, setNamespaces] = useState<{ name: string; status: string; created_at: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchNamespaces = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: any[] }>('/admin/clusters/namespaces/list'); setNamespaces(data.list || []) }
+    catch { setNamespaces([]) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchNamespaces() }, [fetchNamespaces])
+  return { namespaces, loading, refresh: fetchNamespaces }
+}
+
+// ====== 管理后台 - Deployment 管理 ======
+export function useAdminDeployments(namespace?: string, search?: string) {
+  const [deployments, setDeployments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchDeployments = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/deployments', params)
+      setDeployments(data.list || []); setTotal(data.total || 0)
+    } catch { setDeployments([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchDeployments() }, [fetchDeployments])
+  return { deployments, loading, total, refresh: fetchDeployments }
+}
+
+// ====== 管理后台 - Service 管理 ======
+export function useAdminServices(namespace?: string, search?: string) {
+  const [services, setServices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchServices = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/services', params)
+      setServices(data.list || []); setTotal(data.total || 0)
+    } catch { setServices([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchServices() }, [fetchServices])
+  return { services, loading, total, refresh: fetchServices }
+}
+
+// ====== 管理后台 - Pod 管理 ======
+export function useAdminPods(namespace?: string, node?: string, status?: string, search?: string) {
+  const [pods, setPods] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchPods = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (node) params.node = node
+      if (status) params.status = status
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/pods', params)
+      setPods(data.list || []); setTotal(data.total || 0)
+    } catch { setPods([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, node, status, search])
+  useEffect(() => { fetchPods() }, [fetchPods])
+  return { pods, loading, total, refresh: fetchPods }
+}
+
+// ====== 管理后台 - Pod 日志 ======
+export function useAdminPodLogs(ns: string, name: string, container?: string, tail: number = 200) {
+  const [logs, setLogs] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  const fetchLogs = useCallback(async () => {
+    if (!ns || !name) return
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { tail }
+      if (container) params.container = container
+      const { data } = await api.get<{ logs: string }>(`/admin/pods/${ns}/${name}/logs`, params)
+      setLogs(data.logs || '')
+    } catch { setLogs('[Error] 获取日志失败') } finally { setLoading(false) }
+  }, [ns, name, container, tail])
+  useEffect(() => { fetchLogs() }, [fetchLogs])
+  return { logs, loading, refresh: fetchLogs }
+}
+
+// ====== 管理后台 - 存储管理 ======
+export function useAdminPVs(search?: string) {
+  const [pvs, setPVs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchPVs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/storage/pvs', params)
+      setPVs(data.list || []); setTotal(data.total || 0)
+    } catch { setPVs([]); setTotal(0) } finally { setLoading(false) }
+  }, [search])
+  useEffect(() => { fetchPVs() }, [fetchPVs])
+  return { pvs, loading, total, refresh: fetchPVs }
+}
+
+export function useAdminPVCs(namespace?: string, search?: string) {
+  const [pvcs, setPVCs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchPVCs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/storage/pvcs', params)
+      setPVCs(data.list || []); setTotal(data.total || 0)
+    } catch { setPVCs([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchPVCs() }, [fetchPVCs])
+  return { pvcs, loading, total, refresh: fetchPVCs }
+}
+
+export function useAdminStorageClasses(search?: string) {
+  const [storageClasses, setStorageClasses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchSCs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/storage/storageclasses', params)
+      setStorageClasses(data.list || []); setTotal(data.total || 0)
+    } catch { setStorageClasses([]); setTotal(0) } finally { setLoading(false) }
+  }, [search])
+  useEffect(() => { fetchSCs() }, [fetchSCs])
+  return { storageClasses, loading, total, refresh: fetchSCs }
 }

@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, MoreHorizontal, Edit, Trash2, Power, RefreshCw, Loader2, Server, Cpu, Cloud, HardDrive } from 'lucide-react'
 import { useAdminNodes, useDeleteAdminNode } from '@/hooks/use-api'
+import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { toast } from 'react-hot-toast'
 
 export default function NodesPage() {
@@ -20,21 +21,33 @@ export default function NodesPage() {
   const [nodeTypeTab, setNodeTypeTab] = useState<'all' | 'edge' | 'cloud'>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   
   const { nodes, loading, total, refresh } = useAdminNodes()
   const { deleteNode, loading: deleteLoading } = useDeleteAdminNode()
+  
+  // 前端tab值 cloud 对应后端 node_type 值 center
+  const nodeTypeMap: Record<string, string> = { all: 'all', edge: 'edge', cloud: 'center' }
   
   const filteredNodes = nodes.filter(node => {
     const matchesSearch = node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           node.id.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === 'all' || node.status === statusFilter
-    const matchesType = nodeTypeTab === 'all' || node.node_type === nodeTypeTab
+    const matchesType = nodeTypeTab === 'all' || node.node_type === nodeTypeMap[nodeTypeTab]
     return matchesSearch && matchesStatus && matchesType
   })
-  
+  const pagedNodes = paginateArray(filteredNodes, currentPage, pageSize)
+
+  // 筛选条件变化时重置页码
+  const handleSearchChange = (v: string) => { setSearchQuery(v); setCurrentPage(1) }
+  const handleStatusChange = (v: string) => { setStatusFilter(v); setCurrentPage(1) }
+  const handleTypeChange = (v: string) => { setNodeTypeTab(v as 'all' | 'edge' | 'cloud'); setCurrentPage(1) }
+  const handlePageSizeChange = (s: number) => { setPageSize(s); setCurrentPage(1) }
+
   // 统计边缘/云端节点数量
   const edgeCount = nodes.filter(n => n.node_type === 'edge').length
-  const cloudCount = nodes.filter(n => n.node_type === 'cloud').length
+  const cloudCount = nodes.filter(n => n.node_type === 'center').length
   
   const handleDeleteClick = (node: { id: string; name: string }) => {
     setNodeToDelete(node)
@@ -92,7 +105,7 @@ export default function NodesPage() {
       </div>
 
       {/* 节点类型Tab */}
-      <Tabs value={nodeTypeTab} onValueChange={(v) => setNodeTypeTab(v as 'all' | 'edge' | 'cloud')}>
+      <Tabs value={nodeTypeTab} onValueChange={handleTypeChange}>
         <TabsList className="bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
           <TabsTrigger 
             value="all"
@@ -128,10 +141,10 @@ export default function NodesPage() {
             placeholder="搜索节点..." 
             className="pl-9 bg-muted/50 focus:bg-background transition-colors" 
             value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
+            onChange={(e) => handleSearchChange(e.target.value)} 
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-32 bg-muted/50">
             <SelectValue placeholder="状态" />
           </SelectTrigger>
@@ -173,7 +186,7 @@ export default function NodesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredNodes.map((node) => (
+                pagedNodes.map((node) => (
                 <TableRow key={node.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -240,6 +253,10 @@ export default function NodesPage() {
               )}
             </TableBody>
           </Table>
+          <Pagination
+            page={currentPage} pageSize={pageSize} total={filteredNodes.length}
+            onPageChange={setCurrentPage} onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

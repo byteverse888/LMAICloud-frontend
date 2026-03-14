@@ -52,14 +52,14 @@ export default function ActivatePage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <Card className="border-0 bg-card/80 backdrop-blur-xl shadow-2xl">
+        <Card className="card-clean shadow-lg">
           {/* Loading State */}
           {status === 'loading' && (
             <>
               <CardHeader className="space-y-1 text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                    <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
                 </div>
                 <CardTitle className="text-2xl font-bold">
@@ -77,8 +77,8 @@ export default function ActivatePage() {
             <>
               <CardHeader className="space-y-1 text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                    <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10">
+                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
                 <CardTitle className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -95,7 +95,7 @@ export default function ActivatePage() {
               </CardContent>
               <CardFooter>
                 <Link href="/login" className="w-full">
-                  <Button variant="gradient" className="w-full h-11 text-base">
+                  <Button className="w-full h-11 text-base rounded-lg">
                     立即登录
                   </Button>
                 </Link>
@@ -108,11 +108,11 @@ export default function ActivatePage() {
             <>
               <CardHeader className="space-y-1 text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                    <Mail className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                    <Mail className="h-8 w-8 text-primary" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <CardTitle className="text-2xl font-bold text-primary">
                   邮箱已激活
                 </CardTitle>
                 <CardDescription className="text-base">
@@ -126,7 +126,7 @@ export default function ActivatePage() {
               </CardContent>
               <CardFooter>
                 <Link href="/login" className="w-full">
-                  <Button variant="gradient" className="w-full h-11 text-base">
+                  <Button className="w-full h-11 text-base rounded-lg">
                     前往登录
                   </Button>
                 </Link>
@@ -139,11 +139,11 @@ export default function ActivatePage() {
             <>
               <CardHeader className="space-y-1 text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                    <XCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+                    <XCircle className="h-8 w-8 text-destructive" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold text-red-600 dark:text-red-400">
+                <CardTitle className="text-2xl font-bold text-destructive">
                   激活失败
                 </CardTitle>
                 <CardDescription className="text-base">
@@ -172,7 +172,7 @@ export default function ActivatePage() {
                   </Button>
                 </Link>
                 <Link href="/login" className="w-full">
-                  <Button variant="gradient" className="w-full h-11 text-base">
+                  <Button className="w-full h-11 text-base rounded-lg">
                     返回登录
                   </Button>
                 </Link>

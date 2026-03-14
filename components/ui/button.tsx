@@ -9,14 +9,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/30 dark:bg-primary dark:text-primary-foreground dark:shadow-primary/40',
-        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
-        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-primary/30 dark:border-muted-foreground/30 dark:hover:border-primary/50',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        // 浅色：深蓝底白字；深色：亮蓝底白字，hover 加亮
+        default: 'bg-primary text-white shadow-sm shadow-primary/20 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25 dark:bg-primary dark:text-white dark:hover:bg-primary/80 dark:shadow-primary/35',
+        // 红色破坏性操作
+        destructive: 'bg-destructive text-white shadow-sm hover:bg-destructive/90 dark:bg-destructive dark:text-white dark:hover:bg-destructive/80',
+        // 描边按钮：浅色清晰边框+hover淡蓝；深色加深边框避免消失
+        outline: 'border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-primary/40 dark:border-border dark:bg-transparent dark:text-foreground dark:hover:bg-muted dark:hover:border-primary/60',
+        // 次级：浅色灰底深字；深色稍亮灰底
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/70 dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/60',
+        ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-muted/60',
         link: 'text-primary underline-offset-4 hover:underline',
-        gradient: 'bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:brightness-110',
-        success: 'bg-green-600 text-white shadow-sm hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500',
+        gradient: 'bg-gradient-to-r from-primary to-sky-400 text-white font-semibold shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/35 hover:brightness-105 dark:shadow-primary/30',
+        success: 'bg-green-600 text-white shadow-sm hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400',
       },
       size: {
         default: 'h-10 px-4 py-2',

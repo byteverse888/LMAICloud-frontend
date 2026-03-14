@@ -24,7 +24,7 @@ export default function BillingDetailsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">费用明细</h1>
+        <h1 className="text-2xl font-bold tracking-tight">费用明细</h1>
         <Button variant="outline" size="sm" className="gap-2">
           <Download className="h-4 w-4" />
           导出账单
@@ -33,54 +33,54 @@ export default function BillingDetailsPage() {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+        <Card className="card-clean">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">本月消费</div>
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">¥156.89</div>
+                <div className="text-2xl font-bold">¥156.89</div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-orange-500/8 flex items-center justify-center">
                 <Receipt className="h-5 w-5 text-orange-500" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 border-emerald-200 dark:border-emerald-800">
+        <Card className="card-clean">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">本月充值</div>
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">¥200.00</div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
+        <Card className="card-clean">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">GPU费用</div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">¥145.39</div>
+                <div className="text-2xl font-bold">¥145.39</div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Cpu className="h-5 w-5 text-blue-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
+                <Cpu className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+        <Card className="card-clean">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">存储费用</div>
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">¥11.50</div>
+                <div className="text-2xl font-bold">¥11.50</div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <HardDrive className="h-5 w-5 text-purple-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
+                <HardDrive className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -88,7 +88,7 @@ export default function BillingDetailsPage() {
       </div>
 
       {/* 筛选 */}
-      <Card className="bg-muted/30">
+      <Card className="card-clean">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <Select value={dateRange} onValueChange={setDateRange}>
@@ -124,11 +124,11 @@ export default function BillingDetailsPage() {
       </Card>
 
       {/* 明细表格 */}
-      <Card className="overflow-hidden">
+      <Card className="card-clean overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50">
+              <TableRow className="bg-muted/30">
                 <TableHead>时间</TableHead>
                 <TableHead>类型</TableHead>
                 <TableHead>实例/项目</TableHead>

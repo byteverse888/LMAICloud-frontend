@@ -136,11 +136,11 @@ export default function BillingPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold gradient-text flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Wallet className="h-6 w-6 text-primary" />
           {t('title')}
         </h1>
-        <Button variant="ghost" size="icon" onClick={refresh} disabled={loading} className="hover:bg-primary/10">
+        <Button variant="ghost" size="icon" onClick={refresh} disabled={loading} className="hover:bg-muted/80">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
@@ -149,8 +149,7 @@ export default function BillingPage() {
         {/* 左侧充值区域 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 当前余额 */}
-          <Card className="overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
+          <Card className="card-clean overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -277,8 +276,7 @@ export default function BillingPage() {
 
         {/* 右侧订单确认 */}
         <div>
-          <Card className="sticky top-24 overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-primary to-purple-500" />
+          <Card className="sticky top-20 card-clean overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium">订单确认</CardTitle>
             </CardHeader>

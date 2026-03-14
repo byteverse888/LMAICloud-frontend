@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Check, HelpCircle, ChevronLeft, ChevronRight, Ticket, RefreshCcw, Loader2, Cpu, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useMarketMachines } from '@/hooks/use-api'
@@ -182,19 +183,11 @@ export default function MarketListPage() {
             <span className="text-muted-foreground w-20 shrink-0 pt-0.5">GPU型号：</span>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {gpuModels.map((model) => (
-                <label key={model.id} className="flex items-center gap-1.5 cursor-pointer text-sm">
-                  <div
-                    className={cn(
-                      'h-4 w-4 rounded border flex items-center justify-center transition-colors',
-                      (model.id === 'all' && selectedGpuModels.length === 0) || selectedGpuModels.includes(model.id)
-                        ? 'bg-primary border-primary' : 'border-border dark:border-muted'
-                    )}
-                    onClick={() => toggleGpuModel(model.id)}
-                  >
-                    {((model.id === 'all' && selectedGpuModels.length === 0) || selectedGpuModels.includes(model.id)) && (
-                      <Check className="h-3 w-3 text-white" />
-                    )}
-                  </div>
+                <label key={model.id} className="flex items-center gap-1.5 cursor-pointer text-sm select-none">
+                  <Checkbox
+                    checked={(model.id === 'all' && selectedGpuModels.length === 0) || selectedGpuModels.includes(model.id)}
+                    onCheckedChange={() => toggleGpuModel(model.id)}
+                  />
                   <span>
                     {model.name}
                     {model.available !== undefined && (

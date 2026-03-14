@@ -44,31 +44,17 @@ export default function OrdersPage() {
   const totalPages = Math.ceil(total / pageSize)
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return (
-          <span className="inline-flex items-center gap-1 text-green-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span>
-            已支付
-          </span>
-        )
-      case 'pending':
-        return (
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground"></span>
-            待结算
-          </span>
-        )
-      case 'cancelled':
-        return (
-          <span className="inline-flex items-center gap-1 text-red-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-            已取消
-          </span>
-        )
-      default:
-        return status
+    const cfg: Record<string, { cls: string; label: string }> = {
+      paid:      { cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400', label: '已支付' },
+      pending:   { cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',   label: '待结算' },
+      cancelled: { cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',           label: '已取消' },
     }
+    const c = cfg[status] || { cls: 'bg-slate-100 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400', label: status }
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${c.cls}`}>
+        {c.label}
+      </span>
+    )
   }
 
   return (

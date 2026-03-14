@@ -44,7 +44,7 @@ export default function PublicDataPage() {
       </div>
 
       {/* 搜索和筛选 */}
-      <Card>
+      <Card className="card-clean">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
@@ -85,7 +85,7 @@ export default function PublicDataPage() {
               variant={category === cat.id ? 'default' : 'outline'}
               size="sm"
               onClick={() => setCategory(cat.id)}
-              className="gap-2"
+              className="gap-2 rounded-full"
             >
               <Icon className="h-4 w-4" />
               {cat.name}
@@ -97,7 +97,7 @@ export default function PublicDataPage() {
       {/* 数据列表 */}
       <div className="grid gap-4">
         {filteredData.map((item) => (
-          <Card key={item.id} className="hover:shadow-md transition-shadow">
+          <Card key={item.id} className="card-clean">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">

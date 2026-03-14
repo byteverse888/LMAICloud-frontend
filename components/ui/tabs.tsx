@@ -14,7 +14,8 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      'inline-flex h-11 items-center justify-center rounded-xl bg-muted/50 p-1 text-muted-foreground',
+      'inline-flex h-11 items-center justify-center rounded-xl p-1 text-muted-foreground',
+      'bg-muted/60 dark:bg-muted/40',
       className
     )}
     {...props}
@@ -33,8 +34,10 @@ const TabsTrigger = React.forwardRef<
       'ring-offset-background transition-all duration-200',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       'disabled:pointer-events-none disabled:opacity-50',
-      'data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm',
-      'hover:text-foreground',
+      // 激活：白底（浅色）/ 深灰底（深色）+ 主色文字 + 阴影
+      'data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:font-semibold',
+      'dark:data-[state=active]:bg-card dark:data-[state=active]:text-primary dark:data-[state=active]:shadow-md dark:data-[state=active]:shadow-black/20',
+      'hover:text-foreground hover:bg-background/50 dark:hover:bg-muted/50',
       className
     )}
     {...props}
