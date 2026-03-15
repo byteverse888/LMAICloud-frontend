@@ -65,7 +65,7 @@ const sourceOptions = [
 const imageCategories = [
   { value: 'base', label: '基础镜像' },
   { value: 'app', label: '应用镜像' },
-  { value: 'hpc', label: 'HPC 镜像' },
+  { value: 'framework', label: 'AI框架' },
   { value: 'custom', label: '自定义镜像' },
   { value: 'external', label: '外部镜像地址' },
   { value: 'shared', label: '与我共享' },
@@ -399,13 +399,13 @@ export default function InstanceCreatePage() {
                     <TabsTrigger key={c.value} value={c.value} className="text-xs">{c.label}</TabsTrigger>
                   ))}
                 </TabsList>
-                {['base', 'app', 'hpc', 'custom', 'shared'].map(cat => (
+                {['base', 'app', 'framework', 'custom', 'shared'].map(cat => (
                   <TabsContent key={cat} value={cat}>
                     <div className="flex gap-3 items-center mt-2">
                       <Select value={selectedImage} onValueChange={v => { setSelectedImage(v); const img = images.find(i => i.id === v); if (img) setSelectedImageTag(img.tag) }}>
                         <SelectTrigger className="w-44"><SelectValue placeholder="选择镜像" /></SelectTrigger>
                         <SelectContent>
-                          {images.filter(i => cat === 'base' ? i.type === 'base' : cat === 'app' ? i.type === 'app' : true).map(img => (
+                          {images.filter(i => ['base', 'app', 'framework'].includes(cat) ? i.type === cat : true).map(img => (
                             <SelectItem key={img.id} value={img.id}>{img.name}</SelectItem>
                           ))}
                         </SelectContent>
