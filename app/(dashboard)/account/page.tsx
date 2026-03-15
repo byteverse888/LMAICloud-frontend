@@ -182,20 +182,6 @@ export default function AccountPage() {
 
               <Separator />
 
-              {/* SSH密钥 */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Key className="h-4 w-4" />
-                    <span className="font-medium">SSH 密钥</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">配置SSH密钥可免密登录实例</p>
-                </div>
-                <Button variant="outline">管理密钥</Button>
-              </div>
-
-              <Separator />
-
               {/* 两步验证 */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">

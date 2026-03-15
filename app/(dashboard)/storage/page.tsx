@@ -3,8 +3,9 @@
 import { useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { 
-  Upload, FolderOpen, File, Trash2, Download, Loader2, HardDrive, 
-  RefreshCw, Database, FolderPlus, ChevronRight, Home, ArrowUp
+  Upload, FolderOpen, File, Trash2, Loader2, HardDrive, 
+  RefreshCw, Database, FolderPlus, ChevronRight, Home, ArrowUp,
+  Link2, Copy, ChevronLeft, AlertCircle
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
@@ -30,36 +31,31 @@ import { Progress } from '@/components/ui/progress'
 import { formatFileSize, cn } from '@/lib/utils'
 import { useStorageFiles, useStorageQuota } from '@/hooks/use-api'
 
-const regions = [
-  { id: 'beijing-b', name: '北京B区' },
-  { id: 'neimeng-b', name: '内蒙B区' },
-  { id: 'chongqing-a', name: '重庆A区' },
-  { id: 'beijing-a', name: '北京A区' },
-  { id: 'northwest-b', name: '西北B区' },
-  { id: 'l20', name: 'L20专区' },
-  { id: 'a800', name: 'A800专区' },
-]
-
 export default function StoragePage() {
   const t = useTranslations('storage')
-  const [selectedRegion, setSelectedRegion] = useState('beijing-b')
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [linkDialog, setLinkDialog] = useState<{ open: boolean; url: string; filename: string }>({ open: false, url: '', filename: '' })
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const { 
-    files, loading: filesLoading, currentPath, 
-    uploadFile, deleteFile, downloadFile, navigateTo, refresh 
-  } = useStorageFiles(selectedRegion, '/')
-  const { quota, loading: quotaLoading } = useStorageQuota(selectedRegion)
+    files, loading: filesLoading, currentPath, total, page, pageSize,
+    uploadFile, deleteFile, getFileLink, createFolder, navigateTo, goToPage, refresh 
+  } = useStorageFiles('/')
+  const { quota, loading: quotaLoading, refresh: refreshQuota } = useStorageQuota()
   
   const storageInfo = quota || {
     used: 0,
-    total: 200 * 1024 * 1024 * 1024,
-    free: 20 * 1024 * 1024 * 1024,
-    paid: 0,
+    total: 10 * 1024 * 1024 * 1024,
+    remaining: 10 * 1024 * 1024 * 1024,
+    used_percent: 0,
+    file_count: 0,
+    max_file_count: 100,
+    max_upload_size: 50 * 1024 * 1024,
   }
+
+  const totalPages = Math.ceil(total / pageSize)
 
   const handleUploadClick = () => {
     fileInputRef.current?.click()
@@ -73,8 +69,9 @@ export default function StoragePage() {
       setUploading(true)
       await uploadFile(file)
       toast.success(`${file.name} 上传成功`)
+      refreshQuota()
     } catch (err) {
-      toast.error('上传失败')
+      toast.error(err instanceof Error ? err.message : '上传失败')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -86,18 +83,28 @@ export default function StoragePage() {
     try {
       await deleteFile(fileId)
       toast.success('删除成功')
+      refreshQuota()
     } catch (err) {
       toast.error('删除失败')
     }
   }
 
-  const handleDownload = (fileId: string, fileName: string) => {
-    downloadFile(fileId, fileName)
-    toast.success('开始下载')
+  const handleGetLink = async (fileId: string) => {
+    try {
+      const { url, filename } = await getFileLink(fileId)
+      setLinkDialog({ open: true, url, filename })
+    } catch (err) {
+      toast.error('获取下载链接失败')
+    }
+  }
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(linkDialog.url)
+    toast.success('链接已复制到剪贴板')
   }
 
   const handleNavigate = (item: any) => {
-    if (item.is_directory) {
+    if (item.is_dir) {
       navigateTo(item.path)
     }
   }
@@ -114,6 +121,26 @@ export default function StoragePage() {
     navigateTo('/')
   }
 
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim()
+    if (!name) {
+      toast.error('请输入文件夹名称')
+      return
+    }
+    if (name.includes('/')) {
+      toast.error('文件夹名称不能包含 /')
+      return
+    }
+    try {
+      await createFolder(name)
+      toast.success('文件夹创建成功')
+      setShowNewFolderDialog(false)
+      setNewFolderName('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '创建失败')
+    }
+  }
+
   const pathParts = currentPath.split('/').filter(Boolean)
 
   return (
@@ -125,43 +152,19 @@ export default function StoragePage() {
             <HardDrive className="h-6 w-6 text-primary" />
             {t('title')}
           </h1>
-          <p className="text-sm text-amber-500 mt-1 flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            {t('mountPath')}
+          <p className="text-sm text-muted-foreground mt-1">
+            管理您的文件和目录，支持通过下载链接在计算节点直接获取
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => refresh()} disabled={filesLoading} className="hover:bg-muted/80">
+        <Button variant="ghost" size="icon" onClick={() => { refresh(); refreshQuota() }} disabled={filesLoading} className="hover:bg-muted/80">
           <RefreshCw className={`h-4 w-4 ${filesLoading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
-      {/* 区域选择 */}
-      <div className="flex gap-2 flex-wrap">
-        {regions.map((region) => (
-          <Button
-            key={region.id}
-            variant={selectedRegion === region.id ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setSelectedRegion(region.id)
-              navigateTo('/')
-            }}
-            className={cn(
-              "rounded-full transition-all",
-              selectedRegion === region.id 
-                ? "shadow-sm" 
-                : "hover:border-primary/50 hover:bg-primary/5"
-            )}
-          >
-            {region.name}
-          </Button>
-        ))}
-      </div>
-
-      {/* 存储信息 */}
+      {/* 存储配额信息 */}
       <Card className="card-clean overflow-hidden">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Database className="h-7 w-7 text-primary" />
@@ -176,32 +179,27 @@ export default function StoragePage() {
                       <span className="text-lg text-muted-foreground font-normal"> / {formatFileSize(storageInfo.total)}</span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      已使用 {((storageInfo.used / storageInfo.total) * 100).toFixed(1)}%
+                      剩余 {formatFileSize(storageInfo.remaining)} ({(100 - storageInfo.used_percent).toFixed(1)}%)
+                      <span className="mx-2">·</span>
+                      文件 {storageInfo.file_count}/{storageInfo.max_file_count} 个
                     </div>
                   </>
                 )}
               </div>
             </div>
-            <div className="flex gap-4 text-sm">
-              <a href="#" className="text-primary hover:underline transition-colors">{t('viewRules')}</a>
-              <a href="#" className="text-primary hover:underline transition-colors">{t('expandInfo')}</a>
-            </div>
           </div>
           <Progress 
-            value={(storageInfo.used / storageInfo.total) * 100} 
-            className="h-2 mb-4"
+            value={storageInfo.used_percent} 
+            className="h-2"
           />
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary shadow-sm shadow-primary/50" />
-              <span className="text-muted-foreground">{t('free')}：</span>
-              <span className="font-medium">{formatFileSize(storageInfo.free)}</span>
+          {/* 使用限制提示 */}
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              单文件上限 {formatFileSize(storageInfo.max_upload_size)}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
-              <span className="text-muted-foreground">{t('paid')}：</span>
-              <span className="font-medium">{formatFileSize(storageInfo.paid)}</span>
-            </div>
+            <div>存储上限 {formatFileSize(storageInfo.total)}</div>
+            <div>文件数上限 {storageInfo.max_file_count} 个</div>
           </div>
         </CardContent>
       </Card>
@@ -213,7 +211,7 @@ export default function StoragePage() {
             <div className="flex items-center gap-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <FolderOpen className="h-5 w-5 text-primary" />
-                {regions.find(r => r.id === selectedRegion)?.name}
+                文件管理
               </CardTitle>
               {/* 面包屑导航 */}
               <div className="flex items-center gap-1 text-sm text-muted-foreground ml-4">
@@ -236,9 +234,6 @@ export default function StoragePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-amber-500 mr-2">
-                {t('maxFiles')}
-              </span>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -308,19 +303,19 @@ export default function StoragePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                files.map((file: any) => (
+                files.map((file) => (
                   <TableRow 
                     key={file.id} 
-                    className={file.is_directory ? "cursor-pointer hover:bg-muted/50" : ""}
+                    className={file.is_dir ? "cursor-pointer hover:bg-muted/50" : ""}
                     onClick={() => handleNavigate(file)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "h-9 w-9 rounded-lg flex items-center justify-center",
-                          file.is_directory ? "bg-amber-500/10" : "bg-blue-500/10"
+                          file.is_dir ? "bg-amber-500/10" : "bg-blue-500/10"
                         )}>
-                          {file.is_directory ? (
+                          {file.is_dir ? (
                             <FolderOpen className="h-4 w-4 text-amber-500" />
                           ) : (
                             <File className="h-4 w-4 text-blue-500" />
@@ -330,38 +325,72 @@ export default function StoragePage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium">{file.size_formatted || formatFileSize(file.size)}</span>
+                      <span className="font-medium">{file.is_dir ? '-' : formatFileSize(file.size)}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-muted-foreground">{file.modified_at || file.created_at}</span>
+                      <span className="text-muted-foreground">
+                        {file.updated_at ? new Date(file.updated_at).toLocaleString('zh-CN') : '-'}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {!file.is_directory && (
-                        <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                            onClick={(e) => { e.stopPropagation(); handleDownload(file.id, file.name) }}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 hover:bg-destructive/10 text-destructive"
-                            onClick={(e) => { e.stopPropagation(); handleDelete(file.id, file.name) }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        {!file.is_dir && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                              title="获取下载链接"
+                              onClick={(e) => { e.stopPropagation(); handleGetLink(file.id) }}
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-destructive/10 text-destructive"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(file.id, file.name) }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+
+          {/* 分页控件 */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <div className="text-sm text-muted-foreground">
+                共 {total} 项，第 {page}/{totalPages} 页
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  上一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  下一页
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -376,30 +405,53 @@ export default function StoragePage() {
               placeholder="请输入文件夹名称"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder() }}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>取消</Button>
-            <Button 
-              variant="gradient"
-              onClick={async () => {
-                if (!newFolderName.trim()) {
-                  toast.error('请输入文件夹名称')
-                  return
-                }
-                try {
-                  // TODO: 调用创建文件夹API
-                  toast.success('文件夹创建成功')
-                  setShowNewFolderDialog(false)
-                  setNewFolderName('')
-                  refresh()
-                } catch (err) {
-                  toast.error('创建失败')
-                }
-              }}
-            >
+            <Button variant="gradient" onClick={handleCreateFolder}>
               创建
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 下载链接对话框 */}
+      <Dialog open={linkDialog.open} onOpenChange={(open) => setLinkDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              下载链接
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              文件: <span className="font-medium text-foreground">{linkDialog.filename}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <Input 
+                value={linkDialog.url} 
+                readOnly 
+                className="text-xs font-mono"
+              />
+              <Button variant="outline" size="icon" onClick={handleCopyLink} title="复制链接">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>在计算节点执行以下命令下载:</p>
+              <code className="block bg-muted px-2 py-1.5 rounded font-mono break-all">
+                wget -O &quot;{linkDialog.filename}&quot; &quot;{linkDialog.url}&quot;
+              </code>
+              <code className="block bg-muted px-2 py-1.5 rounded font-mono break-all">
+                curl -o &quot;{linkDialog.filename}&quot; &quot;{linkDialog.url}&quot;
+              </code>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDialog(prev => ({ ...prev, open: false }))}>关闭</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

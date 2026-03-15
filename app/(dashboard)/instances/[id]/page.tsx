@@ -17,8 +17,6 @@ import {
   RotateCcw,
   Trash2,
   Terminal,
-  Copy,
-  ExternalLink,
   HardDrive,
   Cpu,
   MemoryStick,
@@ -26,10 +24,8 @@ import {
   Activity,
   FileText,
   Settings,
-  MonitorUp,
   Loader2,
   RefreshCw,
-  KeyRound,
   Save,
   Pencil,
 } from 'lucide-react'
@@ -81,15 +77,10 @@ export default function InstanceDetailPage() {
     }
   })
   
-  const [showPassword, setShowPassword] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [showRenewDialog, setShowRenewDialog] = useState(false)
   const [renewHours, setRenewHours] = useState(1)
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success(`${label}已复制`)
-  }
 
   const handleStart = async () => {
     try {
@@ -228,70 +219,28 @@ export default function InstanceDetailPage() {
       </div>
 
       {/* 快速连接 */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1">
         <Card className="card-clean overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="card-header-bar text-base flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/8">
                 <Terminal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              SSH 连接
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">地址</span>
-              <div className="flex items-center gap-2">
-                <code className="bg-muted px-2 py-1 rounded">{instance.ssh_host || '-'}:{instance.ssh_port || '-'}</code>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(`${instance.ssh_host}:${instance.ssh_port}`, 'SSH地址')}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">密码</span>
-              <div className="flex items-center gap-2">
-                <code className="bg-muted px-2 py-1 rounded">
-                  {showPassword ? (instance.ssh_password || '-') : '••••••••'}
-                </code>
-                <Button variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)}>
-                  {showPassword ? '隐藏' : '显示'}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(instance.ssh_password || '', '密码')}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="pt-2">
-              <Button 
-                className="w-full" 
-                variant="outline" 
-                onClick={() => setTerminalOpen(true)}
-                disabled={!['running', 'error'].includes(instance.status)}
-              >
-                <Terminal className="h-4 w-4 mr-2" />
-                打开 Web Terminal
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-clean overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="card-header-bar text-base flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/8">
-                <MonitorUp className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-              </div>
-              JupyterLab
+              Web Terminal
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              通过浏览器访问 JupyterLab 进行交互式开发
+              通过浏览器直接访问容器终端进行交互式操作
             </p>
-            <Button className="w-full" disabled>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              JupyterLab (待集成)
+            <Button 
+              className="w-full" 
+              variant="outline" 
+              onClick={() => setTerminalOpen(true)}
+              disabled={!['running', 'error'].includes(instance.status)}
+            >
+              <Terminal className="h-4 w-4 mr-2" />
+              打开 Web Terminal
             </Button>
           </CardContent>
         </Card>
@@ -635,19 +584,6 @@ export default function InstanceDetailPage() {
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">扩容</Button>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
-                    <KeyRound className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium">重置SSH密码</div>
-                    <p className="text-sm text-muted-foreground">重置后需要重新登录</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">重置</Button>
               </div>
               <Separator />
               <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">

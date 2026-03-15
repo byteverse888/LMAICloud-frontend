@@ -27,9 +27,6 @@ export interface Instance {
   image_id?: string
   billing_type: string
   hourly_price: number
-  ssh_host?: string
-  ssh_port?: number
-  ssh_password?: string
   created_at: string
   started_at?: string
   node_id: string
@@ -91,14 +88,26 @@ export interface Image {
 }
 
 // 存储类型定义
-export interface Storage {
+export interface StorageQuotaData {
+  used: number
+  total: number
+  remaining: number
+  used_percent: number
+  file_count: number
+  max_file_count: number
+  max_upload_size: number
+}
+
+export interface UserFileItem {
   id: string
   name: string
-  size_gb: number
-  used_gb: number
-  type: 'ssd' | 'hdd'
-  region: string
+  path: string
+  is_dir: boolean
+  size: number
+  mime_type?: string
+  storage_backend?: string
   created_at: string
+  updated_at: string
 }
 
 interface ListResponse<T> { list: T[]; total: number; page: number; size: number }
@@ -117,7 +126,7 @@ export function useInstances() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取实例列表失败')
       if (!silent) setInstances([
-        { id: '1', name: 'GPU-Instance-1', status: 'running', gpu_model: 'RTX 4090', gpu_count: 1, cpu_cores: 16, memory: 64, disk: 50, billing_type: 'hourly', hourly_price: 2.39, ssh_host: '192.168.1.100', ssh_port: 30001, ssh_password: 'abc123xyz', created_at: new Date().toISOString(), node_id: 'node-1', node_type: 'center', resource_type: 'vGPU', internal_ip: '10.42.0.15' },
+        { id: '1', name: 'GPU-Instance-1', status: 'running', gpu_model: 'RTX 4090', gpu_count: 1, cpu_cores: 16, memory: 64, disk: 50, billing_type: 'hourly', hourly_price: 2.39, created_at: new Date().toISOString(), node_id: 'node-1', node_type: 'center', resource_type: 'vGPU', internal_ip: '10.42.0.15' },
         { id: '2', name: 'GPU-Instance-2', status: 'stopped', gpu_model: 'RTX 5090', gpu_count: 2, cpu_cores: 32, memory: 128, disk: 100, billing_type: 'hourly', hourly_price: 6.06, created_at: new Date().toISOString(), node_id: 'node-2', node_type: 'edge', resource_type: 'vGPU', internal_ip: '10.42.0.22' },
       ])
     } finally { if (!silent) setLoading(false) }
@@ -173,38 +182,36 @@ export function useImages() {
 }
 
 // ====== 存储相关 hooks ======
-export function useStorage(region?: string) {
-  const [storages, setStorages] = useState<Storage[]>([])
+export function useStorage() {
+  const [storages, setStorages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const fetchStorage = useCallback(async () => {
     try {
       setLoading(true)
-      const params: Record<string, string> = {}
-      if (region) params.region = region
-      const { data } = await api.get<ListResponse<Storage>>('/storage', params)
+      const { data } = await api.get<{ list: any[]; total: number }>('/storage')
       setStorages(data.list || []); setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取存储列表失败'); setStorages([])
     } finally { setLoading(false) }
-  }, [region])
+  }, [])
   useEffect(() => { fetchStorage() }, [fetchStorage])
   return { storages, loading, error, refresh: fetchStorage }
 }
 
-export function useStorageQuota(region?: string) {
-  const [quota, setQuota] = useState<{ used: number; total: number; free: number; paid: number } | null>(null)
+export function useStorageQuota() {
+  const [quota, setQuota] = useState<StorageQuotaData | null>(null)
   const [loading, setLoading] = useState(true)
   const fetchQuota = useCallback(async () => {
     try {
       setLoading(true)
-      const params: Record<string, string> = {}
-      if (region) params.region = region
-      const { data } = await api.get<{ used: number; total: number; free: number; paid: number }>('/storage/quota', params)
+      const { data } = await api.get<StorageQuotaData>('/storage/quota')
       setQuota(data)
-    } catch { setQuota({ used: 8 * 1024, total: 200 * 1024 * 1024 * 1024, free: 20 * 1024 * 1024 * 1024, paid: 0 }) }
+    } catch {
+      setQuota({ used: 0, total: 10 * 1024 * 1024 * 1024, remaining: 10 * 1024 * 1024 * 1024, used_percent: 0, file_count: 0, max_file_count: 100, max_upload_size: 50 * 1024 * 1024 })
+    }
     finally { setLoading(false) }
-  }, [region])
+  }, [])
   useEffect(() => { fetchQuota() }, [fetchQuota])
   return { quota, loading, refresh: fetchQuota }
 }
@@ -604,32 +611,94 @@ export function useInstanceRenew() {
 }
 
 // ====== 存储文件操作 ======
-export function useStorageFiles(region: string, path: string = '/') {
-  const [files, setFiles] = useState<any[]>([])
+export function useStorageFiles(initialPath: string = '/', pageSize: number = 50) {
+  const [files, setFiles] = useState<UserFileItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentPath, setCurrentPath] = useState(path)
-  const fetchFiles = useCallback(async (targetPath?: string) => {
+  const [currentPath, setCurrentPath] = useState(initialPath)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+
+  // 用 ref 避免 useCallback 依赖 state 导致双重 fetch
+  const pathRef = useRef(initialPath)
+  const pageRef = useRef(1)
+
+  const fetchFiles = useCallback(async (targetPath?: string, targetPage?: number) => {
+    const p = targetPath ?? pathRef.current
+    const pg = targetPage ?? pageRef.current
     try {
       setLoading(true)
-      const p = targetPath || currentPath
-      const { data } = await api.get<{ files: any[]; total: number; current_path: string }>('/storage/files', { region, path: p })
-      setFiles(data.files || []); setCurrentPath(data.current_path || p)
-    } catch { setFiles([]) } finally { setLoading(false) }
-  }, [region, currentPath])
+      const { data } = await api.get<{ files: UserFileItem[]; total: number; page: number; page_size: number; current_path: string }>(
+        '/storage/files', { path: p, page: pg, page_size: pageSize }
+      )
+      setFiles(data.files || [])
+      setTotal(data.total || 0)
+      const resolvedPath = data.current_path || p
+      setCurrentPath(resolvedPath)
+      pathRef.current = resolvedPath
+    } catch { setFiles([]); setTotal(0) }
+    finally { setLoading(false) }
+  }, [pageSize])
+
+  // 仅在初始挂载时 fetch 一次
   useEffect(() => { fetchFiles() }, [fetchFiles])
+
   const uploadFile = async (file: File) => {
-    const formData = new FormData(); formData.append('file', file); formData.append('region', region); formData.append('path', currentPath)
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${getPersistedToken()}` }, body: formData })
-    if (!response.ok) throw new Error('Upload failed')
-    const data = await response.json(); fetchFiles(); return data
+    // 前端预检: 50MB
+    const MAX_SIZE = 50 * 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      throw new Error(`文件过大, 单文件最大允许 50MB, 当前 ${(file.size / 1024 / 1024).toFixed(1)}MB`)
+    }
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('path', pathRef.current)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/storage/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getPersistedToken()}` },
+      body: formData,
+    })
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}))
+      throw new Error(errData.detail || '上传失败')
+    }
+    const data = await response.json()
+    fetchFiles()
+    return data
   }
-  const deleteFile = async (fileId: string) => { await api.delete(`/storage/files/${fileId}`); fetchFiles() }
-  const downloadFile = (fileId: string, fileName: string) => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/storage/files/${fileId}/download?token=${getPersistedToken()}`
-    const a = document.createElement('a'); a.href = url; a.download = fileName; a.click()
+
+  const deleteFile = async (fileId: string) => {
+    await api.delete(`/storage/files/${fileId}`)
+    fetchFiles()
   }
-  const navigateTo = (newPath: string) => { setCurrentPath(newPath); fetchFiles(newPath) }
-  return { files, loading, currentPath, uploadFile, deleteFile, downloadFile, navigateTo, refresh: fetchFiles }
+
+  const getFileLink = async (fileId: string): Promise<{ url: string; filename: string }> => {
+    const { data } = await api.get<{ url: string; filename: string; expires_in: number }>(`/storage/files/${fileId}/link`)
+    return data
+  }
+
+  const createFolder = async (name: string) => {
+    await api.post('/storage/mkdir', { path: pathRef.current, name })
+    fetchFiles()
+  }
+
+  const navigateTo = (newPath: string) => {
+    pathRef.current = newPath
+    pageRef.current = 1
+    setCurrentPath(newPath)
+    setPage(1)
+    fetchFiles(newPath, 1)
+  }
+
+  const goToPage = (newPage: number) => {
+    pageRef.current = newPage
+    setPage(newPage)
+    fetchFiles(pathRef.current, newPage)
+  }
+
+  return {
+    files, loading, currentPath, total, page, pageSize,
+    uploadFile, deleteFile, getFileLink, createFolder, navigateTo, goToPage,
+    refresh: fetchFiles,
+  }
 }
 
 // ====== 可用资源配置 ======

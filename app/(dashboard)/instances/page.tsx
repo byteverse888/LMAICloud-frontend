@@ -459,14 +459,14 @@ export default function InstancesPage() {
               <TableHead className="font-semibold">磁盘</TableHead>
               <TableHead className="font-semibold">内网 IP</TableHead>
               <TableHead className="font-semibold">网络</TableHead>
-              <TableHead className="font-semibold">远程访问</TableHead>
+
               <TableHead className="font-semibold text-right sticky right-0 z-20 bg-muted/30">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-40 text-center">
+                <TableCell colSpan={8} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <span className="text-sm text-muted-foreground">加载中...</span>
@@ -475,7 +475,7 @@ export default function InstancesPage() {
               </TableRow>
             ) : filteredInstances.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-48 text-center">
+                <TableCell colSpan={8} className="h-48 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-16 w-16 rounded-2xl bg-muted/60 flex items-center justify-center">
                       <Server className="h-8 w-8 text-muted-foreground/50" />
@@ -544,15 +544,7 @@ export default function InstancesPage() {
                       {inst.node_type === 'edge' ? '边缘节点' : '内网互通'}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    {inst.ssh_host && inst.ssh_port ? (
-                      <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">
-                        {inst.ssh_host}:{inst.ssh_port}
-                      </code>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
+
                   <TableCell className={`text-right sticky right-0 z-10 transition-colors ${selectedIds.includes(inst.id) ? 'bg-primary/12 dark:bg-primary/25' : 'bg-card group-hover:bg-primary/3'}`}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

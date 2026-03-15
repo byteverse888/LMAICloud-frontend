@@ -141,12 +141,6 @@ export interface Instance {
   auto_release_minutes?: number
 
   // 连接信息
-  sshHost?: string
-  ssh_host?: string
-  sshPort?: number
-  ssh_port?: number
-  sshPassword?: string
-  ssh_password?: string
   internalIp?: string
   internal_ip?: string
 
@@ -258,6 +252,43 @@ export interface Recharge {
 }
 
 // 文件存储相关类型
+export interface UserFile {
+  id: string
+  name: string
+  path: string
+  is_dir: boolean
+  size: number
+  mime_type?: string
+  storage_backend?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface StorageQuota {
+  used: number       // 已用空间(字节)
+  total: number      // 总配额(字节)
+  remaining: number  // 剩余空间(字节)
+  used_percent: number
+  file_count: number      // 当前文件/目录数
+  max_file_count: number  // 文件数上限
+  max_upload_size: number // 单文件上传上限(字节)
+}
+
+export interface FileListResponse {
+  files: UserFile[]
+  total: number
+  page: number
+  page_size: number
+  current_path: string
+}
+
+export interface FileLinkResponse {
+  url: string
+  filename: string
+  expires_in: number
+}
+
+// 兼容旧类型
 export interface StorageFile {
   id: string
   userId: string
@@ -269,13 +300,6 @@ export interface StorageFile {
   isDirectory: boolean
   createdAt: string
   updatedAt: string
-}
-
-export interface StorageQuota {
-  used: number
-  total: number
-  free: number
-  paid: number
 }
 
 // 分页相关类型
