@@ -353,9 +353,10 @@ export function useInstanceStatus(instanceId: string) {
 }
 
 export interface InstanceMetrics {
-  instance_id: string; status: string; cpu_util: number; memory_util: number
-  gpu_util: number; gpu_memory: number; disk_util: number
-  network_in: number; network_out: number; timestamp: string
+  instance_id: string; status: string
+  cpu_usage_millicores: number | null; memory_usage_bytes: number | null
+  gpu_util: number | null; gpu_memory: number | null
+  timestamp: string
 }
 
 export function useInstanceMetrics(instanceId: string, refreshInterval: number = 5000) {

@@ -422,14 +422,14 @@ export default function InstanceDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>计算</span>
-                    <span className={`font-medium ${metrics?.gpu_util && metrics.gpu_util > 80 ? 'text-red-500' : metrics?.gpu_util && metrics.gpu_util > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.gpu_util ?? '-'}%</span>
+                    <span className="font-medium text-muted-foreground">{metrics?.gpu_util != null ? `${metrics.gpu_util}%` : '需部署 DCGM Exporter'}</span>
                   </div>
                   <Progress value={metrics?.gpu_util ?? 0} className="h-2" />
                 </div>
                 <div className="space-y-2 mt-4">
                   <div className="flex justify-between text-sm">
                     <span>显存</span>
-                    <span className={`font-medium ${metrics?.gpu_memory && metrics.gpu_memory > 80 ? 'text-red-500' : metrics?.gpu_memory && metrics.gpu_memory > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.gpu_memory ?? '-'}%</span>
+                    <span className="font-medium text-muted-foreground">{metrics?.gpu_memory != null ? `${metrics.gpu_memory}%` : '需部署 DCGM Exporter'}</span>
                   </div>
                   <Progress value={metrics?.gpu_memory ?? 0} className="h-2" />
                 </div>
@@ -446,66 +446,40 @@ export default function InstanceDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>CPU</span>
-                    <span className={`font-medium ${metrics?.cpu_util && metrics.cpu_util > 80 ? 'text-red-500' : metrics?.cpu_util && metrics.cpu_util > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.cpu_util ?? '-'}%</span>
+                    <span className="font-medium">
+                      {metrics?.cpu_usage_millicores != null
+                        ? metrics.cpu_usage_millicores < 1000
+                          ? `${metrics.cpu_usage_millicores}m`
+                          : `${(metrics.cpu_usage_millicores / 1000).toFixed(1)} 核`
+                        : '-'}
+                      {instance?.cpu_cores ? ` / ${instance.cpu_cores} 核` : ''}
+                    </span>
                   </div>
-                  <Progress value={metrics?.cpu_util ?? 0} className="h-2" />
+                  <Progress
+                    value={metrics?.cpu_usage_millicores != null && instance?.cpu_cores
+                      ? Math.min(100, metrics.cpu_usage_millicores / (instance.cpu_cores * 1000) * 100)
+                      : 0}
+                    className="h-2"
+                  />
                 </div>
                 <div className="space-y-2 mt-4">
                   <div className="flex justify-between text-sm">
                     <span>内存</span>
-                    <span className={`font-medium ${metrics?.memory_util && metrics.memory_util > 80 ? 'text-red-500' : metrics?.memory_util && metrics.memory_util > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>{metrics?.memory_util ?? '-'}%</span>
+                    <span className="font-medium">
+                      {metrics?.memory_usage_bytes != null
+                        ? metrics.memory_usage_bytes < 1024 * 1024 * 1024
+                          ? `${(metrics.memory_usage_bytes / (1024 * 1024)).toFixed(0)} Mi`
+                          : `${(metrics.memory_usage_bytes / (1024 * 1024 * 1024)).toFixed(1)} Gi`
+                        : '-'}
+                      {instance?.memory ? ` / ${instance.memory} Gi` : ''}
+                    </span>
                   </div>
-                  <Progress value={metrics?.memory_util ?? 0} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="stat-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <HardDrive className="h-4 w-4 text-muted-foreground" /> 磁盘使用
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">{metrics?.disk_util ?? '-'}%</div>
-                    <div className="text-sm text-muted-foreground">已用</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="stat-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-muted-foreground" /> 网络入流量
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">{metrics?.network_in ?? '-'}</div>
-                    <div className="text-sm text-muted-foreground">MB/s</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="stat-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-muted-foreground" /> 网络出流量
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">{metrics?.network_out ?? '-'}</div>
-                    <div className="text-sm text-muted-foreground">MB/s</div>
-                  </div>
+                  <Progress
+                    value={metrics?.memory_usage_bytes != null && instance?.memory
+                      ? Math.min(100, metrics.memory_usage_bytes / (instance.memory * 1024 * 1024 * 1024) * 100)
+                      : 0}
+                    className="h-2"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -521,8 +495,9 @@ export default function InstanceDetailPage() {
                   {instance?.status === 'running' ? '实时监控中' : '实例未运行'}
                 </Badge>
               </div>
-              <div className="h-48 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                历史趋势图表（集成Prometheus后展示）
+              <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded-lg">
+                <p>CPU / 内存数据来源: K8s Metrics Server (kubectl top pod)</p>
+                <p>GPU / 磁盘 / 网络等指标需部署 Prometheus + DCGM Exporter 后展示</p>
               </div>
             </CardContent>
           </Card>

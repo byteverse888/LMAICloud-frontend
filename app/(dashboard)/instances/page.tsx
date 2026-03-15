@@ -293,6 +293,20 @@ export default function InstancesPage() {
     )
   }
 
+  // 格式化 CPU (毫核 → 核)
+  const fmtCpu = (mc: number | null | undefined) => {
+    if (mc == null) return '-'
+    if (mc < 1000) return `${mc}m`
+    return `${(mc / 1000).toFixed(1)}`
+  }
+  // 格式化内存 (bytes → MB/GB)
+  const fmtMem = (bytes: number | null | undefined) => {
+    if (bytes == null) return '-'
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ki`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} Mi`
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} Gi`
+  }
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* 标题区 */}
@@ -456,6 +470,8 @@ export default function InstancesPage() {
                 <Filter className="inline h-3 w-3 ml-1 text-muted-foreground" />
               </TableHead>
               <TableHead className="font-semibold">计算配置</TableHead>
+              <TableHead className="font-semibold">CPU</TableHead>
+              <TableHead className="font-semibold">内存</TableHead>
               <TableHead className="font-semibold">磁盘</TableHead>
               <TableHead className="font-semibold">内网 IP</TableHead>
               <TableHead className="font-semibold">网络</TableHead>
@@ -466,7 +482,7 @@ export default function InstancesPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-40 text-center">
+                <TableCell colSpan={10} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <span className="text-sm text-muted-foreground">加载中...</span>
@@ -475,7 +491,7 @@ export default function InstancesPage() {
               </TableRow>
             ) : filteredInstances.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center">
+                <TableCell colSpan={10} className="h-48 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-16 w-16 rounded-2xl bg-muted/60 flex items-center justify-center">
                       <Server className="h-8 w-8 text-muted-foreground/50" />
@@ -532,6 +548,12 @@ export default function InstancesPage() {
                       )}
                       <div className="text-xs text-muted-foreground">{inst.cpu_cores}核 / {inst.memory}GB</div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-mono">{fmtCpu(inst.cpu_usage_millicores)}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-mono">{fmtMem(inst.memory_usage_bytes)}</span>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{inst.disk || '-'} GB</div>

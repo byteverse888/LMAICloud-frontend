@@ -17,7 +17,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { Search, RefreshCw, Trash2, Loader2, Container, Eye, FileText, Terminal as TerminalIcon } from 'lucide-react'
+import { Search, RefreshCw, Trash2, Loader2, Container, Eye, FileText, Terminal as TerminalIcon, Cpu, MemoryStick } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -73,6 +73,19 @@ function statusBadge(pod: any) {
 }
 
 export default function PodsPage() {
+  // 格式化 CPU (毫核 → 核)
+  const fmtCpu = (mc: number | null | undefined) => {
+    if (mc == null) return '-'
+    if (mc < 1000) return `${mc}m`
+    return `${(mc / 1000).toFixed(1)} 核`
+  }
+  // 格式化内存 (bytes → MB/GB)
+  const fmtMem = (bytes: number | null | undefined) => {
+    if (bytes == null) return '-'
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ki`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} Mi`
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} Gi`
+  }
   const [nsFilter, setNsFilter] = useState<string>('__all__')
   const [nodeFilter, setNodeFilter] = useState<string>('__all__')
   const [statusFilter, setStatusFilter] = useState<string>('__all__')
@@ -310,8 +323,8 @@ export default function PodsPage() {
                   <TableHead>Pod</TableHead>
                   <TableHead>命名空间</TableHead>
                   <TableHead>状态</TableHead>
-                  <TableHead>节点</TableHead>
-                  <TableHead>IP</TableHead>
+                  <TableHead>CPU / 内存</TableHead>
+                  <TableHead>节点 / IP</TableHead>
                   <TableHead>重启</TableHead>
                   <TableHead>创建时间</TableHead>
                   <TableHead className="text-right">操作</TableHead>
@@ -352,6 +365,10 @@ export default function PodsPage() {
                     </TableCell>
                     <TableCell><Badge variant="outline" className="text-xs">{pod.namespace}</Badge></TableCell>
                     <TableCell>{statusBadge(pod)}</TableCell>
+                    <TableCell className="text-xs font-mono">
+                      <div>{fmtCpu(pod.cpu_usage_millicores)}</div>
+                      <div className="text-muted-foreground">{fmtMem(pod.memory_usage_bytes)}</div>
+                    </TableCell>
                     <TableCell className="text-xs max-w-[140px]">
                       {pod.node_name ? (
                         <TooltipProvider>
@@ -359,12 +376,13 @@ export default function PodsPage() {
                             <TooltipTrigger asChild>
                               <div className="space-y-0.5">
                                 <span className="block truncate font-medium">{pod.node_name}</span>
-                                {pod.host_ip && <span className="block truncate text-muted-foreground font-mono">{pod.host_ip}</span>}
+                                <span className="block truncate text-muted-foreground font-mono">{pod.pod_ip || '-'}</span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>节点: {pod.node_name}</p>
                               {pod.host_ip && <p>Host IP: {pod.host_ip}</p>}
+                              <p>Pod IP: {pod.pod_ip || '-'}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -372,14 +390,13 @@ export default function PodsPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm font-mono">{pod.pod_ip || '-'}</TableCell>
                     <TableCell>
                       <span className={pod.restart_count > 0 ? 'text-yellow-600 font-medium' : 'text-muted-foreground'}>
                         {pod.restart_count || 0}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {pod.created_at ? new Date(pod.created_at).toLocaleString() : '-'}
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {pod.created_at ? new Date(pod.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
