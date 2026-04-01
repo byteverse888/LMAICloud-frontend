@@ -34,6 +34,10 @@ import {
   History,
   Users,
   Settings,
+  Bot,
+  Coins,
+  Share2,
+  ClipboardList,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
@@ -62,6 +66,7 @@ export function Sidebar() {
   const navItems: NavItem[] = [
     { title: t('home'), href: '/', icon: Home },
     { title: t('instances'), href: '/instances', icon: Server },
+    { title: t('openclaw'), href: '/openclaw', icon: Bot },
     { title: t('storage'), href: '/storage', icon: HardDrive },
     { title: t('images'), href: '/images', icon: Layers },
     { title: t('publicData'), href: '/public-data', icon: Database },
@@ -73,6 +78,7 @@ export function Sidebar() {
         { title: t('billingDetails'), href: '/billing/details', icon: FileText },
         { title: t('orders'), href: '/billing/orders', icon: Receipt },
         { title: t('statements'), href: '/billing/statements', icon: CreditCard },
+        { title: t('points'), href: '/billing/points', icon: Coins },
         // 以下功能暂时隐藏
         // { title: t('coupons'), href: '/billing/coupons', icon: Ticket },
         // { title: t('vouchers'), href: '/billing/vouchers', icon: Gift },
@@ -87,6 +93,8 @@ export function Sidebar() {
       children: [
         { title: t('security'), href: '/account/security', icon: Shield },
         { title: t('accessLog'), href: '/account/access-log', icon: History },
+        { title: t('auditLog'), href: '/account/audit-log', icon: ClipboardList },
+        { title: t('referral'), href: '/account/referral', icon: Share2 },
         { title: t('settings'), href: '/account/settings', icon: Settings },
       ],
     },

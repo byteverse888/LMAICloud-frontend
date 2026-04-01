@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
@@ -24,6 +24,8 @@ interface RegisterResponse {
 export default function RegisterPage() {
   const t = useTranslations('auth')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteCode = searchParams.get('invite') || ''
   const [isLoading, setIsLoading] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
@@ -54,6 +56,7 @@ export default function RegisterPage() {
       const response = await api.post<RegisterResponse>('/auth/register', {
         email: data.email,
         password: data.password,
+        invite_code: inviteCode || undefined,
       })
       
       if (response.data.need_activation) {
@@ -243,11 +246,11 @@ export default function RegisterPage() {
                 onClick={handleAgreeTermsChange}
               >
                 {t('agreeTerms')}{' '}
-                <Link href="/terms" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                <Link href="/agreements/user" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                   {t('termsOfService')}
                 </Link>{' '}
                 和{' '}
-                <Link href="/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                <Link href="/agreements/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                   {t('privacyPolicy')}
                 </Link>
               </span>

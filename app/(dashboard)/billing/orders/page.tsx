@@ -136,8 +136,12 @@ export default function OrdersPage() {
                 <TableRow key={order.id}>
                   <TableCell className="font-mono text-sm">{order.id}</TableCell>
                   <TableCell className="text-sm">{order.created_at}</TableCell>
-                  <TableCell className="text-sm">{order.product_name || '-'}</TableCell>
-                  <TableCell className="text-sm">{order.billing_type || '按量计费'}</TableCell>
+                  <TableCell className="text-sm">{order.product_name || order.description || '-'}</TableCell>
+                  <TableCell className="text-sm">
+                    {order.billing_cycle === 'monthly' ? '包月' :
+                     order.billing_cycle === 'yearly' ? '包年' :
+                     order.billing_cycle === 'daily' ? '按天' : '按量计费'}
+                  </TableCell>
                   <TableCell className="text-sm">{order.order_type || '-'}</TableCell>
                   <TableCell className="text-sm">{getStatusBadge(order.status)}</TableCell>
                   <TableCell className="text-right">

@@ -15,6 +15,8 @@ interface WebTerminalProps {
   instanceName?: string
   onClose?: () => void
   className?: string
+  /** 自定义 WebSocket 路径前缀，默认 /ws/terminal */
+  wsPath?: string
 }
 
 export default function WebTerminal({
@@ -23,6 +25,7 @@ export default function WebTerminal({
   instanceName,
   onClose,
   className,
+  wsPath = '/ws/terminal',
 }: WebTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -119,7 +122,7 @@ export default function WebTerminal({
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
       const wsBase = process.env.NEXT_PUBLIC_WS_URL
         || apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
-      const wsUrl = `${wsBase}/ws/terminal/${instanceId}?token=${token}`
+      const wsUrl = `${wsBase}${wsPath}/${instanceId}?token=${token}`
 
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
@@ -180,7 +183,7 @@ export default function WebTerminal({
     }
 
     setTimeout(startTerminal, 30)
-  }, [instanceId, token, safeFit])
+  }, [instanceId, token, safeFit, wsPath])
 
   // 窗口 resize
   useEffect(() => {

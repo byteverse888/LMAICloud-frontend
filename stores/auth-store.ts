@@ -12,7 +12,7 @@ interface AuthState {
   setUser: (user: User | null) => void
   setToken: (token: string | null) => void
   setRefreshToken: (refreshToken: string | null) => void
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, captchaId?: string, captchaCode?: string) => Promise<void>
   logout: (redirectUrl?: string) => void
   checkAuth: () => Promise<void>
 }
@@ -38,11 +38,11 @@ export const useAuthStore = create<AuthState>()(
         api.setRefreshToken(refreshToken)
       },
 
-      login: async (email: string, password: string) => {
-        const response = await api.post<{ user: User; token: string; refresh_token: string }>('/auth/login', {
-          email,
-          password,
-        })
+      login: async (email: string, password: string, captchaId?: string, captchaCode?: string) => {
+        const payload: Record<string, string> = { email, password }
+        if (captchaId) payload.captcha_id = captchaId
+        if (captchaCode) payload.captcha_code = captchaCode
+        const response = await api.post<{ user: User; token: string; refresh_token: string }>('/auth/login', payload)
         const { user, token, refresh_token } = response.data
         set({ user, token, refreshToken: refresh_token, isAuthenticated: true })
         api.setToken(token)

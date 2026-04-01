@@ -1,25 +1,34 @@
 'use client'
 
-import { useState } from 'react'
-import { Download, Search, Calendar, Filter, Cpu, HardDrive, CreditCard, TrendingUp, Receipt } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Download, Search, Calendar, Filter, Cpu, HardDrive, TrendingUp, Receipt, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-
-const billingDetails = [
-  { id: '1', date: '2024-02-13 14:30:25', type: 'GPU实例', instance: 'RTX 4090 x1', duration: '2小时30分', amount: -4.95, balance: 156.05 },
-  { id: '2', date: '2024-02-13 10:15:00', type: '数据存储', instance: '50GB SSD', duration: '1天', amount: -0.50, balance: 161.00 },
-  { id: '3', date: '2024-02-12 18:00:00', type: '充值', instance: '-', duration: '-', amount: 100.00, balance: 161.50 },
-  { id: '4', date: '2024-02-12 09:30:00', type: 'GPU实例', instance: 'RTX 5090 x2', duration: '5小时', amount: -30.30, balance: 61.50 },
-  { id: '5', date: '2024-02-11 20:00:00', type: 'GPU实例', instance: 'RTX 4090D x1', duration: '3小时', amount: -5.94, balance: 91.80 },
-]
+import { useTransactions, useBalance } from '@/hooks/use-api'
 
 export default function BillingDetailsPage() {
-  const [dateRange, setDateRange] = useState('week')
-  const [typeFilter, setTypeFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const pageSize = 20
+
+  const { transactions, loading, total } = useTransactions(page, pageSize, typeFilter === 'all' ? undefined : typeFilter)
+  const { balance } = useBalance()
+
+  // 统计卡片：从交易数据聚合
+  const stats = useMemo(() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const monthItems = transactions.filter(t => t.created_at >= monthStart)
+    const consumption = monthItems.filter(t => t.type === 'consumption').reduce((s, t) => s + Math.abs(t.amount), 0)
+    const recharge = monthItems.filter(t => t.type === 'recharge').reduce((s, t) => s + t.amount, 0)
+    return { consumption, recharge }
+  }, [transactions])
+
+  const totalPages = Math.ceil(total / pageSize)
 
   return (
     <div className="space-y-6">
@@ -32,13 +41,13 @@ export default function BillingDetailsPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="card-clean">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">本月消费</div>
-                <div className="text-2xl font-bold">¥156.89</div>
+                <div className="text-2xl font-bold">¥{stats.consumption.toFixed(2)}</div>
               </div>
               <div className="h-10 w-10 rounded-lg bg-orange-500/8 flex items-center justify-center">
                 <Receipt className="h-5 w-5 text-orange-500" />
@@ -51,7 +60,7 @@ export default function BillingDetailsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">本月充值</div>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">¥200.00</div>
+                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">¥{stats.recharge.toFixed(2)}</div>
               </div>
               <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
@@ -63,8 +72,8 @@ export default function BillingDetailsPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">GPU费用</div>
-                <div className="text-2xl font-bold">¥145.39</div>
+                <div className="text-sm text-muted-foreground">当前余额</div>
+                <div className="text-2xl font-bold text-primary">¥{balance.toFixed(2)}</div>
               </div>
               <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
                 <Cpu className="h-5 w-5 text-primary" />
@@ -76,8 +85,8 @@ export default function BillingDetailsPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">存储费用</div>
-                <div className="text-2xl font-bold">¥11.50</div>
+                <div className="text-sm text-muted-foreground">交易笔数</div>
+                <div className="text-2xl font-bold">{total}</div>
               </div>
               <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
                 <HardDrive className="h-5 w-5 text-primary" />
@@ -91,34 +100,17 @@ export default function BillingDetailsPage() {
       <Card className="card-clean">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-32 bg-background">
-                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">今天</SelectItem>
-                <SelectItem value="week">近7天</SelectItem>
-                <SelectItem value="month">近30天</SelectItem>
-                <SelectItem value="year">近1年</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={typeFilter || 'all'} onValueChange={(v) => { setTypeFilter(v === 'all' ? undefined : v); setPage(1) }}>
               <SelectTrigger className="w-32 bg-background">
                 <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部类型</SelectItem>
-                <SelectItem value="gpu">GPU实例</SelectItem>
-                <SelectItem value="storage">数据存储</SelectItem>
+                <SelectItem value="consumption">消费</SelectItem>
                 <SelectItem value="recharge">充值</SelectItem>
               </SelectContent>
             </Select>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="搜索..." className="pl-10 bg-background" />
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -126,45 +118,70 @@ export default function BillingDetailsPage() {
       {/* 明细表格 */}
       <Card className="card-clean overflow-hidden">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead>时间</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>实例/项目</TableHead>
-                <TableHead>时长</TableHead>
-                <TableHead className="text-right">金额</TableHead>
-                <TableHead className="text-right">余额</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {billingDetails.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/30">
-                  <TableCell className="text-muted-foreground">{item.date}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="secondary"
-                      className={`
-                        ${item.type === '充值' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}
-                        ${item.type === 'GPU实例' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' : ''}
-                        ${item.type === '数据存储' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400' : ''}
-                      `}
-                    >
-                      {item.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{item.instance}</TableCell>
-                  <TableCell>{item.duration}</TableCell>
-                  <TableCell className={`text-right font-semibold ${item.amount > 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                    {item.amount > 0 ? '+' : ''}¥{Math.abs(item.amount).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">¥{item.balance.toFixed(2)}</TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">加载中...</span>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">暂无交易记录</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead>时间</TableHead>
+                  <TableHead>类型</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead className="text-right">金额</TableHead>
+                  <TableHead>状态</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((item: any) => (
+                  <TableRow key={item.id} className="hover:bg-muted/30">
+                    <TableCell className="text-muted-foreground">{new Date(item.created_at).toLocaleString('zh-CN')}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          item.type === 'recharge'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400'
+                        }
+                      >
+                        {item.type === 'recharge' ? '充值' : '消费'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{item.description || '-'}</TableCell>
+                    <TableCell className={`text-right font-semibold ${item.amount > 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                      {item.amount > 0 ? '+' : ''}¥{Math.abs(item.amount).toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">{item.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+
+      {/* 分页 */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">共 {total} 条记录</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="flex items-center text-sm px-2">{page} / {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

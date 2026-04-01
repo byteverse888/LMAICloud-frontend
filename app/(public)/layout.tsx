@@ -1,11 +1,23 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserNav } from '@/components/layout/user-nav'
 import { Button } from '@/components/ui/button'
 import { Bell, Crown, ChevronDown } from 'lucide-react'
+import api from '@/lib/api'
+
+interface SiteInfo {
+  site_name: string
+  site_logo?: string
+  footer_text?: string
+  icp_number?: string
+  icp_link?: string
+  police_number?: string
+  copyright_text?: string
+}
 
 export default function PublicLayout({
   children,
@@ -13,6 +25,13 @@ export default function PublicLayout({
   children: React.ReactNode
 }) {
   const t = useTranslations('header')
+  const [siteInfo, setSiteInfo] = useState<SiteInfo>({ site_name: 'LMAICloud' })
+
+  useEffect(() => {
+    api.get<SiteInfo>('/system/site-info')
+      .then(({ data }) => setSiteInfo(data))
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,10 +47,14 @@ export default function PublicLayout({
         {/* 左侧 Logo + 导航 */}
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">L</span>
-            </div>
-            <span className="font-semibold text-xl">LMAICloud</span>
+            {siteInfo.site_logo ? (
+              <img src={siteInfo.site_logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+            ) : (
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">L</span>
+              </div>
+            )}
+            <span className="font-semibold text-xl">{siteInfo.site_name}</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -90,8 +113,19 @@ export default function PublicLayout({
       <main className="max-w-7xl mx-auto px-6 py-4">{children}</main>
 
       {/* 页脚 */}
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        ©2021-2026 LMAICloud 科技有限公司
+      <footer className="border-t py-6 text-center text-sm text-muted-foreground space-y-1">
+        <div>{siteInfo.copyright_text || `©2021-2026 ${siteInfo.site_name}`}</div>
+        <div className="flex items-center justify-center gap-4">
+          {siteInfo.icp_number && (
+            <a href={siteInfo.icp_link || 'https://beian.miit.gov.cn/'} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+              {siteInfo.icp_number}
+            </a>
+          )}
+          {siteInfo.police_number && (
+            <span>{siteInfo.police_number}</span>
+          )}
+        </div>
+        {siteInfo.footer_text && <div>{siteInfo.footer_text}</div>}
       </footer>
     </div>
   )

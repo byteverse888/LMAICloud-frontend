@@ -7,6 +7,8 @@ export interface User {
   role: 'user' | 'admin'
   balance: number
   frozen_balance: number
+  points: number
+  invite_code?: string
   status: 'active' | 'inactive' | 'banned'
   verified: boolean
   createdAt: string

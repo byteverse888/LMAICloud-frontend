@@ -24,6 +24,16 @@ interface SystemSettings {
   maintenance_mode: boolean
   registration_enabled: boolean
   notification_email_enabled: boolean
+  site_logo: string
+  footer_text: string
+  icp_number: string
+  icp_link: string
+  police_number: string
+  copyright_text: string
+  user_agreement: string
+  privacy_policy: string
+  service_agreement: string
+  captcha_enabled: boolean
 }
 
 interface EmailConfig {
@@ -54,6 +64,16 @@ export default function SettingsPage() {
     maintenance_mode: false,
     registration_enabled: true,
     notification_email_enabled: true,
+    site_logo: '',
+    footer_text: '',
+    icp_number: '',
+    icp_link: '',
+    police_number: '',
+    copyright_text: '',
+    user_agreement: '',
+    privacy_policy: '',
+    service_agreement: '',
+    captcha_enabled: true,
   })
 
   // 邮件配置
@@ -185,8 +205,10 @@ export default function SettingsPage() {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">基本设置</TabsTrigger>
+          <TabsTrigger value="brand">品牌配置</TabsTrigger>
           <TabsTrigger value="billing">计费设置</TabsTrigger>
           <TabsTrigger value="email">邮件配置</TabsTrigger>
+          <TabsTrigger value="agreements">协议管理</TabsTrigger>
           <TabsTrigger value="security">安全设置</TabsTrigger>
         </TabsList>
 
@@ -492,12 +514,144 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">登录验证码</div>
+                  <p className="text-sm text-muted-foreground">开启后登录时需要输入图形验证码</p>
+                </div>
+                <Switch 
+                  checked={settings.captcha_enabled} 
+                  onCheckedChange={(v) => updateSetting('captcha_enabled', v)} 
+                />
+              </div>
               <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 保存设置
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* 品牌配置 */}
+        <TabsContent value="brand">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">品牌配置</CardTitle>
+              <CardDescription>配置Logo、备案信息、版权等</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Logo URL</Label>
+                <Input 
+                  placeholder="https://example.com/logo.png"
+                  value={settings.site_logo} 
+                  onChange={(e) => updateSetting('site_logo', e.target.value)} 
+                />
+                <p className="text-xs text-muted-foreground">推荐尺寸: 200x200, 支持 PNG/SVG 格式</p>
+              </div>
+              <div className="space-y-2">
+                <Label>页脚文字</Label>
+                <Input 
+                  placeholder="例：XXX科技有限公司"
+                  value={settings.footer_text} 
+                  onChange={(e) => updateSetting('footer_text', e.target.value)} 
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>ICP备案号</Label>
+                  <Input 
+                    placeholder="京ICP备XXXXXXXX号"
+                    value={settings.icp_number} 
+                    onChange={(e) => updateSetting('icp_number', e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>ICP备案链接</Label>
+                  <Input 
+                    placeholder="https://beian.miit.gov.cn/"
+                    value={settings.icp_link} 
+                    onChange={(e) => updateSetting('icp_link', e.target.value)} 
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>公安备案号</Label>
+                  <Input 
+                    placeholder="京公网安备XXXXXXXXXXX号"
+                    value={settings.police_number} 
+                    onChange={(e) => updateSetting('police_number', e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>版权信息</Label>
+                  <Input 
+                    placeholder="©2021-2026 XXX科技有限公司"
+                    value={settings.copyright_text} 
+                    onChange={(e) => updateSetting('copyright_text', e.target.value)} 
+                  />
+                </div>
+              </div>
+              <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                保存设置
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 协议管理 */}
+        <TabsContent value="agreements">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">用户协议</CardTitle>
+                <CardDescription>登录页面底部展示的用户协议内容（支持HTML）</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <textarea
+                  className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={settings.user_agreement}
+                  onChange={(e) => updateSetting('user_agreement', e.target.value)}
+                  placeholder="请输入用户协议内容..."
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">隐私政策</CardTitle>
+                <CardDescription>隐私政策内容（支持HTML）</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <textarea
+                  className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={settings.privacy_policy}
+                  onChange={(e) => updateSetting('privacy_policy', e.target.value)}
+                  placeholder="请输入隐私政策内容..."
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">产品服务协议</CardTitle>
+                <CardDescription>产品服务协议内容（支持HTML）</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <textarea
+                  className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={settings.service_agreement}
+                  onChange={(e) => updateSetting('service_agreement', e.target.value)}
+                  placeholder="请输入产品服务协议内容..."
+                />
+              </CardContent>
+            </Card>
+            <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              保存协议
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

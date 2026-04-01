@@ -24,6 +24,7 @@
   "nav": {
     "home": "Home",
     "instances": "Instances",
+    "openclaw": "AI Agent",
     "storage": "Storage",
     "images": "Images",
     "publicData": "Public Data",
@@ -38,6 +39,9 @@
     "account": "Account",
     "security": "Security",
     "accessLog": "Access Log",
+    "auditLog": "Audit Log",
+    "referral": "Referral",
+    "points": "Points",
     "subAccounts": "Sub Accounts",
     "settings": "Settings",
     "tickets": "Tickets"
@@ -221,6 +225,8 @@
     "images": "Images",
     "reports": "Reports",
     "settings": "Settings",
+    "auditLog": "Audit Log",
+    "market": "Market",
     "totalUsers": "Total Users",
     "totalNodes": "Total Nodes",
     "totalInstances": "Total Instances",
@@ -233,7 +239,7 @@
     "privateCloud": "Private Cloud",
     "docs": "Documentation",
     "console": "Console",
-    "memberSubscription": "Subscription",
+    "memberSubscription": "Recharge",
     "notifications": "Notifications",
     "tickets": "Tickets"
   },

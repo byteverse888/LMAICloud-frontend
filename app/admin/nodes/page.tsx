@@ -169,19 +169,20 @@ export default function NodesPage() {
                 <TableHead>GPU</TableHead>
                 <TableHead>可用/总数</TableHead>
                 <TableHead>CPU/内存</TableHead>
+                <TableHead>资源使用</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={9} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredNodes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                     暂无数据
                   </TableCell>
                 </TableRow>
@@ -228,6 +229,42 @@ export default function NodesPage() {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">{node.cpu_cores}核 / {node.memory}GB</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1.5 min-w-[120px]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-8">CPU</span>
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${(node.cpu_usage_percent || 0) > 80 ? 'bg-red-500' : (node.cpu_usage_percent || 0) > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.min(node.cpu_usage_percent || 0, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium w-10 text-right">{(node.cpu_usage_percent || 0).toFixed(1)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-8">内存</span>
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${(node.memory_usage_percent || 0) > 80 ? 'bg-red-500' : (node.memory_usage_percent || 0) > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.min(node.memory_usage_percent || 0, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium w-10 text-right">{(node.memory_usage_percent || 0).toFixed(1)}%</span>
+                      </div>
+                      {node.gpu_count > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-8">GPU</span>
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${(node.gpu_usage_percent || 0) > 80 ? 'bg-red-500' : (node.gpu_usage_percent || 0) > 50 ? 'bg-amber-500' : 'bg-purple-500'}`}
+                              style={{ width: `${Math.min(node.gpu_usage_percent || 0, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium w-10 text-right">{(node.gpu_usage_percent || 0).toFixed(1)}%</span>
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

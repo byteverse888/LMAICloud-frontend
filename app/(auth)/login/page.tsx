@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuthStore } from '@/stores/auth-store'
+import api from '@/lib/api'
 
 export default function LoginPage() {
   const t = useTranslations('auth')
@@ -26,6 +27,37 @@ export default function LoginPage() {
   const [verifyCode, setVerifyCode] = useState('')
   const [countdown, setCountdown] = useState(0)
   const { login, checkAuth } = useAuthStore()
+  const [captchaId, setCaptchaId] = useState('')
+  const [captchaCode, setCaptchaCode] = useState('')
+  const [captchaImage, setCaptchaImage] = useState('')
+  const [captchaEnabled, setCaptchaEnabled] = useState(false)
+
+  // 获取验证码
+  const fetchCaptcha = async () => {
+    try {
+      const { data } = await api.get<{ captcha_id: string; image_base64: string; enabled: boolean }>('/auth/captcha')
+      if (data.enabled === false) {
+        setCaptchaEnabled(false)
+        return
+      }
+      setCaptchaId(data.captcha_id)
+      setCaptchaImage(data.image_base64)
+      setCaptchaCode('')
+    } catch {
+      // 验证码不可用，忽略
+    }
+  }
+
+  // 检查验证码是否启用
+  useEffect(() => {
+    api.get<{ captcha_enabled?: boolean }>('/system/site-info')
+      .then(({ data }) => {
+        const enabled = data.captcha_enabled !== false
+        setCaptchaEnabled(enabled)
+        if (enabled) fetchCaptcha()
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (countdown > 0) {
@@ -78,7 +110,7 @@ export default function LoginPage() {
     setIsLoading(true)
     try {
       if (loginType === 'password') {
-        await login(email, password)
+        await login(email, password, captchaEnabled ? captchaId : undefined, captchaEnabled ? captchaCode : undefined)
         await checkAuth()  // 刷新用户信息
       } else {
         // 验证码登录
@@ -102,6 +134,7 @@ export default function LoginPage() {
       router.push(redirectUrl)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '登录失败，请检查账号信息')
+      if (captchaEnabled) fetchCaptcha()
     } finally {
       setIsLoading(false)
     }
@@ -257,6 +290,35 @@ export default function LoginPage() {
                   </div>
                 </TabsContent>
 
+                {/* 图形验证码 */}
+                {captchaEnabled && (
+                  <div className="space-y-2">
+                    <Label>验证码</Label>
+                    <div className="flex gap-3 items-center">
+                      <Input
+                        placeholder="请输入验证码"
+                        className="h-11 flex-1"
+                        maxLength={4}
+                        value={captchaCode}
+                        onChange={(e) => setCaptchaCode(e.target.value.toUpperCase())}
+                      />
+                      {captchaImage ? (
+                        <img
+                          src={captchaImage}
+                          alt="验证码"
+                          className="h-11 w-28 rounded-md border cursor-pointer bg-white object-contain"
+                          onClick={fetchCaptcha}
+                          title="点击刷新验证码"
+                        />
+                      ) : (
+                        <Button type="button" variant="outline" className="h-11 w-28" onClick={fetchCaptcha}>
+                          获取验证码
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <Button type="submit" className="w-full h-11 text-base rounded-lg" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   登录
@@ -276,9 +338,11 @@ export default function LoginPage() {
 
           <div className="mt-8 text-center text-xs text-muted-foreground">
             登录即表示同意{' '}
-            <Link href="/terms" className="text-primary hover:underline">服务条款</Link>
+            <Link href="/agreements/user" className="text-primary hover:underline">用户协议</Link>
+            {' '}、{' '}
+            <Link href="/agreements/privacy" className="text-primary hover:underline">隐私政策</Link>
             {' '}和{' '}
-            <Link href="/privacy" className="text-primary hover:underline">隐私政策</Link>
+            <Link href="/agreements/service" className="text-primary hover:underline">产品服务协议</Link>
           </div>
           
           {/* 小屏幕显示版权信息 */}

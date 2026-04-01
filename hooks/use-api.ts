@@ -221,7 +221,7 @@ export function useBalance() {
   const [loading, setLoading] = useState(true)
   const fetchBalance = useCallback(async () => {
     try { setLoading(true); const { data } = await api.get<{ balance: number }>('/billing/balance'); setBalance(data.balance) }
-    catch { setBalance(156.05) } finally { setLoading(false) }
+    catch { setBalance(0) } finally { setLoading(false) }
   }, [])
   useEffect(() => { fetchBalance() }, [fetchBalance])
   return { balance, loading, refresh: fetchBalance }
@@ -288,10 +288,7 @@ export function useOrders(page: number = 1, size: number = 20) {
       const { data } = await api.get<{ list: any[]; total: number }>('/billing/orders', { page, size })
       setOrders(data.list || []); setTotal(data.total || 0)
     } catch {
-      setOrders([
-        { id: '17340085070493927', created_at: '2024-12-12 21:01:47', type: 'create', status: 'pending', amount: 0 },
-        { id: '17340082078379671', created_at: '2024-12-12 20:56:48', type: 'create', status: 'paid', amount: 10.5 },
-      ]); setTotal(2)
+      setOrders([]); setTotal(0)
     } finally { setLoading(false) }
   }, [page, size])
   useEffect(() => { fetchOrders() }, [fetchOrders])
@@ -304,7 +301,7 @@ export function useUserBalance() {
   const [loading, setLoading] = useState(true)
   const fetchBalance = useCallback(async () => {
     try { setLoading(true); const { data } = await api.get<{ balance: number; frozen_balance: number }>('/users/me'); setBalance(data.balance || 0); setFrozenBalance(data.frozen_balance || 0) }
-    catch { setBalance(156.05); setFrozenBalance(0) } finally { setLoading(false) }
+    catch { setBalance(0); setFrozenBalance(0) } finally { setLoading(false) }
   }, [])
   useEffect(() => { fetchBalance() }, [fetchBalance])
   return { balance, frozenBalance, loading, refresh: fetchBalance }
@@ -396,6 +393,7 @@ export interface AdminNode {
   id: string; name: string; cluster: string; status: 'online' | 'offline' | 'busy'
   node_type: 'edge' | 'center'; gpu_model: string; gpu_count: number; gpu_available: number
   cpu_cores: number; memory: number; hourly_price: number; created_at: string
+  cpu_usage_percent?: number; memory_usage_percent?: number; gpu_usage_percent?: number
 }
 
 export function useAdminNodes() {
@@ -442,19 +440,21 @@ export interface AdminOrder {
   id: string; user_id: string; user_email: string; type: string; status: string; amount: number; created_at: string
 }
 
-export function useAdminOrders(page: number = 1, size: number = 20) {
+export function useAdminOrders(page: number = 1, size: number = 20, userId?: string) {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
   const fetchOrders = useCallback(async () => {
-    try { setLoading(true); const { data } = await api.get<{ list: AdminOrder[]; total: number }>('/admin/orders', { page, size }); setOrders(data.list || []); setTotal(data.total || 0) }
-    catch {
-      setOrders([
-        { id: 'ord-001', user_id: 'usr-001', user_email: 'user1@example.com', type: 'recharge', status: 'paid', amount: 500, created_at: '2024-03-01 10:30:00' },
-        { id: 'ord-002', user_id: 'usr-002', user_email: 'user2@example.com', type: 'instance', status: 'pending', amount: 23.9, created_at: '2024-03-01 09:15:00' },
-      ]); setTotal(2)
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (userId) params.user_id = userId
+      const { data } = await api.get<{ list: AdminOrder[]; total: number }>('/admin/orders', params)
+      setOrders(data.list || []); setTotal(data.total || 0)
+    } catch {
+      setOrders([]); setTotal(0)
     } finally { setLoading(false) }
-  }, [page, size])
+  }, [page, size, userId])
   useEffect(() => { fetchOrders() }, [fetchOrders])
   return { orders, loading, total, refresh: fetchOrders }
 }
@@ -881,4 +881,324 @@ export function useAdminStorageClasses(search?: string) {
   }, [search])
   useEffect(() => { fetchSCs() }, [fetchSCs])
   return { storageClasses, loading, total, refresh: fetchSCs }
+}
+
+// ====== 计费相关 hooks ======
+
+export function useTransactions(page: number = 1, size: number = 20, type?: string) {
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchTransactions = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (type) params.type = type
+      const { data } = await api.get<{ list: any[]; total: number }>('/billing/transactions', params)
+      setTransactions(data.list || []); setTotal(data.total || 0)
+    } catch { setTransactions([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, type])
+  useEffect(() => { fetchTransactions() }, [fetchTransactions])
+  return { transactions, loading, total, refresh: fetchTransactions }
+}
+
+export function useStatements(year?: number) {
+  const [statements, setStatements] = useState<any[]>([])
+  const [summary, setSummary] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchStatements = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, number> = {}
+      if (year) params.year = year
+      const { data } = await api.get<{ year: number; statements: any[]; summary: any }>('/billing/statements', params)
+      setStatements(data.statements || []); setSummary(data.summary || null)
+    } catch { setStatements([]); setSummary(null) } finally { setLoading(false) }
+  }, [year])
+  useEffect(() => { fetchStatements() }, [fetchStatements])
+  return { statements, summary, loading, refresh: fetchStatements }
+}
+
+export function useResourcePlans() {
+  const [plans, setPlans] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchPlans = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any[]>('/billing/plans'); setPlans(data || []) }
+    catch { setPlans([]) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchPlans() }, [fetchPlans])
+  return { plans, loading, refresh: fetchPlans }
+}
+
+export function useAdminTransactions(page: number = 1, size: number = 20, userId?: string, type?: string) {
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchTransactions = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (userId) params.user_id = userId
+      if (type) params.type = type
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/orders/transactions', params)
+      setTransactions(data.list || []); setTotal(data.total || 0)
+    } catch { setTransactions([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, userId, type])
+  useEffect(() => { fetchTransactions() }, [fetchTransactions])
+  return { transactions, loading, total, refresh: fetchTransactions }
+}
+
+export function useAdminStatements(year?: number, userId?: string) {
+  const [statements, setStatements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchStatements = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = {}
+      if (year) params.year = year
+      if (userId) params.user_id = userId
+      const { data } = await api.get<{ year: number; statements: any[] }>('/admin/orders/statements', params)
+      setStatements(data.statements || [])
+    } catch { setStatements([]) } finally { setLoading(false) }
+  }, [year, userId])
+  useEffect(() => { fetchStatements() }, [fetchStatements])
+  return { statements, loading, refresh: fetchStatements }
+}
+
+export function useAdminOrderStats(userId?: string, days: number = 30) {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { days }
+      if (userId) params.user_id = userId
+      const { data } = await api.get<any>('/admin/orders/stats', params)
+      setStats(data)
+    } catch { setStats(null) } finally { setLoading(false) }
+  }, [userId, days])
+  useEffect(() => { fetchStats() }, [fetchStats])
+  return { stats, loading, refresh: fetchStats }
+}
+
+export function useAdminResourcePlans() {
+  const [plans, setPlans] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchPlans = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any[]>('/admin/orders/billing/plans'); setPlans(data || []) }
+    catch { setPlans([]) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchPlans() }, [fetchPlans])
+  const createPlan = async (planData: any) => { const { data } = await api.post('/admin/orders/billing/plans', planData); fetchPlans(); return data }
+  const updatePlan = async (id: string, planData: any) => { const { data } = await api.put(`/admin/orders/billing/plans/${id}`, planData); fetchPlans(); return data }
+  const deletePlan = async (id: string) => { await api.delete(`/admin/orders/billing/plans/${id}`); fetchPlans() }
+  return { plans, loading, refresh: fetchPlans, createPlan, updatePlan, deletePlan }
+}
+
+// ====== 积分系统 hooks ======
+export function usePoints() {
+  const [points, setPoints] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const fetchPoints = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ points: number }>('/points/balance'); setPoints(data.points || 0) }
+    catch { setPoints(0) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchPoints() }, [fetchPoints])
+  return { points, loading, refresh: fetchPoints }
+}
+
+export function usePointRecords(page: number = 1, size: number = 20) {
+  const [records, setRecords] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchRecords = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: any[]; total: number }>('/points/records', { page, size }); setRecords(data.list || []); setTotal(data.total || 0) }
+    catch { setRecords([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size])
+  useEffect(() => { fetchRecords() }, [fetchRecords])
+  return { records, loading, total, refresh: fetchRecords }
+}
+
+export function useDailyCheckin() {
+  const [loading, setLoading] = useState(false)
+  const checkin = async () => {
+    setLoading(true)
+    try { const { data } = await api.post<{ message: string; points: number }>('/points/daily-checkin'); return data }
+    finally { setLoading(false) }
+  }
+  return { checkin, loading }
+}
+
+// ====== 推广邀请 hooks ======
+export function useReferralInfo() {
+  const [info, setInfo] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchInfo = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any>('/referral/info'); setInfo(data) }
+    catch { setInfo(null) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchInfo() }, [fetchInfo])
+  return { info, loading, refresh: fetchInfo }
+}
+
+export function useReferralRecords(page: number = 1, size: number = 20) {
+  const [records, setRecords] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchRecords = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<{ list: any[]; total: number }>('/referral/records', { page, size }); setRecords(data.list || []); setTotal(data.total || 0) }
+    catch { setRecords([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size])
+  useEffect(() => { fetchRecords() }, [fetchRecords])
+  return { records, loading, total, refresh: fetchRecords }
+}
+
+// ====== 操作日志 hooks ======
+export function useAuditLog(page: number = 1, size: number = 20, keyword?: string, resourceType?: string) {
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (keyword) params.keyword = keyword
+      if (resourceType) params.resource_type = resourceType
+      const { data } = await api.get<{ list: any[]; total: number }>('/audit-log', params)
+      setLogs(data.list || []); setTotal(data.total || 0)
+    } catch { setLogs([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, keyword, resourceType])
+  useEffect(() => { fetchLogs() }, [fetchLogs])
+  return { logs, loading, total, refresh: fetchLogs }
+}
+
+export function useAdminAuditLog(page: number = 1, size: number = 20, userEmail?: string, keyword?: string, resourceType?: string) {
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (userEmail) params.user_email = userEmail
+      if (keyword) params.keyword = keyword
+      if (resourceType) params.resource_type = resourceType
+      const { data } = await api.get<{ list: any[]; total: number }>('/audit-log/admin', params)
+      setLogs(data.list || []); setTotal(data.total || 0)
+    } catch { setLogs([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, userEmail, keyword, resourceType])
+  useEffect(() => { fetchLogs() }, [fetchLogs])
+  return { logs, loading, total, refresh: fetchLogs }
+}
+
+// ====== 通知 hooks ======
+export function useNotifications(page: number = 1, size: number = 20, unreadOnly: boolean = false) {
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number | boolean> = { page, size }
+      if (unreadOnly) params.unread_only = true
+      const { data } = await api.get<{ list: any[]; total: number }>('/notifications', params)
+      setNotifications(data.list || []); setTotal(data.total || 0)
+    } catch { setNotifications([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, unreadOnly])
+  useEffect(() => { fetchNotifications() }, [fetchNotifications])
+  return { notifications, loading, total, refresh: fetchNotifications }
+}
+
+export function useUnreadCount() {
+  const [count, setCount] = useState(0)
+  const fetchCount = useCallback(async () => {
+    try { const { data } = await api.get<{ unread_count: number }>('/notifications/unread-count'); setCount(data.unread_count || 0) }
+    catch { setCount(0) }
+  }, [])
+  useEffect(() => { fetchCount(); const iv = setInterval(fetchCount, 30000); return () => clearInterval(iv) }, [fetchCount])
+  return { count, refresh: fetchCount }
+}
+
+export async function markAsRead(id: string) {
+  await api.put(`/notifications/${id}/read`)
+}
+
+export async function markAllRead() {
+  await api.put('/notifications/read-all')
+}
+
+// ====== 管理端仪表盘 ======
+export function useAdminDashboard() {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchStats = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any>('/admin/dashboard/stats'); setStats(data) }
+    catch { setStats(null) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchStats() }, [fetchStats])
+  return { stats, loading, refresh: fetchStats }
+}
+
+// ====== 管理端市场产品 ======
+export function useAdminMarketProducts(category?: string) {
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (category) params.category = category
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/market/products', params)
+      setProducts(data.list || []); setTotal(data.total || 0)
+    } catch { setProducts([]); setTotal(0) } finally { setLoading(false) }
+  }, [category])
+  useEffect(() => { fetchProducts() }, [fetchProducts])
+  const createProduct = async (productData: any) => { const { data } = await api.post('/admin/market/products', productData); fetchProducts(); return data }
+  const updateProduct = async (id: string, productData: any) => { const { data } = await api.put(`/admin/market/products/${id}`, productData); fetchProducts(); return data }
+  const deleteProduct = async (id: string) => { await api.delete(`/admin/market/products/${id}`); fetchProducts() }
+  return { products, loading, total, refresh: fetchProducts, createProduct, updateProduct, deleteProduct }
+}
+
+// ====== 公开市场产品 ======
+export function useMarketProducts(category?: string) {
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (category) params.category = category
+      const { data } = await api.get<any[]>('/market/products', params)
+      setProducts(data || [])
+    } catch { setProducts([]) } finally { setLoading(false) }
+  }, [category])
+  useEffect(() => { fetchProducts() }, [fetchProducts])
+  return { products, loading, refresh: fetchProducts }
+}
+
+// ====== 站点信息 ======
+export function useSiteInfo() {
+  const [siteInfo, setSiteInfo] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    api.get<any>('/system/site-info')
+      .then(({ data }) => setSiteInfo(data))
+      .catch(() => setSiteInfo({ site_name: 'LMAICloud', site_description: '大模型AI算力云平台', captcha_enabled: true }))
+      .finally(() => setLoading(false))
+  }, [])
+  return { siteInfo, loading }
+}
+
+// ====== 协议 ======
+export function useAgreements() {
+  const [agreements, setAgreements] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    api.get<any>('/system/agreements')
+      .then(({ data }) => setAgreements(data))
+      .catch(() => setAgreements(null))
+      .finally(() => setLoading(false))
+  }, [])
+  return { agreements, loading }
 }

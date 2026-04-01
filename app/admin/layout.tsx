@@ -29,6 +29,10 @@ import {
   Network,
   Box,
   Database,
+  Bot,
+  CircleDollarSign,
+  ClipboardList,
+  Store,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -78,7 +82,11 @@ const adminNavItems: NavItem[] = [
   },
   { href: '/admin/users', label: '用户管理', icon: Users },
   { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
+  { href: '/admin/billing', label: '计费管理', icon: CircleDollarSign },
   { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
+  { href: '/admin/openclaw', label: 'OpenClaw', icon: Bot },
+  { href: '/admin/audit-log', label: '操作日志', icon: ClipboardList },
+  { href: '/admin/market', label: '市场管理', icon: Store },
   { href: '/admin/reports', label: '数据报表', icon: BarChart3 },
   { href: '/admin/settings', label: '系统设置', icon: Settings },
 ]

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { CreditCard, Wallet, Loader2, Sparkles, RefreshCw, QrCode, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { QRCodeSVG } from 'qrcode.react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -347,17 +348,22 @@ export default function BillingPage() {
               </div>
             ) : (
               <>
-                {/* 模拟二维码展示 */}
-                <div className="w-48 h-48 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
-                  <div className="text-center">
-                    <QrCode className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">扫码支付</p>
-                    <p className="text-xs text-muted-foreground mt-1">¥{paymentInfo?.amount?.toFixed(2)}</p>
-                  </div>
+                {/* 二维码展示 */}
+                <div className="w-52 h-52 bg-white rounded-lg flex items-center justify-center border p-2">
+                  {paymentInfo?.qr_code_url && (paymentInfo.qr_code_url.startsWith('weixin://') || paymentInfo.qr_code_url.startsWith('https://qr.')) ? (
+                    <QRCodeSVG value={paymentInfo.qr_code_url} size={192} />
+                  ) : (
+                    <div className="text-center">
+                      <QrCode className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">扫码支付</p>
+                      <p className="text-xs text-muted-foreground mt-1">¥{paymentInfo?.amount?.toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">
                   请使用{paymentMethod === 'wechat' ? '微信' : '支付宝'}扫描二维码完成支付
                 </p>
+                <p className="text-xs text-muted-foreground">金额: ¥{paymentInfo?.amount?.toFixed(2)}</p>
                 <div className="flex gap-2 mt-4">
                   <Button 
                     variant="outline" 
@@ -368,14 +374,16 @@ export default function BillingPage() {
                     {checkingStatus && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                     查询支付状态
                   </Button>
-                  {/* 开发测试用：模拟支付成功 */}
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={mockPaySuccess}
-                  >
-                    模拟支付成功
-                  </Button>
+                  {/* 开发模式：模拟支付成功 */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={mockPaySuccess}
+                    >
+                      模拟支付成功
+                    </Button>
+                  )}
                 </div>
               </>
             )}
