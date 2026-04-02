@@ -10,12 +10,14 @@ const typeMap: Record<string, string> = {
   user: 'user_agreement',
   privacy: 'privacy_policy',
   service: 'service_agreement',
+  recharge: 'recharge_agreement',
 }
 
 const titleMap: Record<string, string> = {
   user: '用户协议',
   privacy: '隐私政策',
   service: '产品服务协议',
+  recharge: '用户充值协议',
 }
 
 export default function AgreementPage() {

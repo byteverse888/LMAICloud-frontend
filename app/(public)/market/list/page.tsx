@@ -8,7 +8,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { useMarketMachines, useRegions, useGpuModels } from '@/hooks/use-api'
+import { useMarketProducts } from '@/hooks/use-api'
+
+/** 从 specs JSON 字符串安全解析 */
+function parseSpecs(specs: any): Record<string, any> {
+  if (!specs) return {}
+  if (typeof specs === 'object') return specs
+  try { return JSON.parse(specs) } catch { return {} }
+}
 
 export default function MarketListPage() {
   const router = useRouter()
@@ -19,17 +26,73 @@ export default function MarketListPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState('20')
 
-  const { regions } = useRegions()
-  const { gpuModels } = useGpuModels()
-  const { machines, loading, total, refresh } = useMarketMachines({
-    region: selectedRegion || undefined,
-    gpuModel: selectedGpuModel || undefined,
-    gpuCount,
-    page: currentPage,
-    size: parseInt(pageSize),
-  })
+  // 从数据库获取市场产品（管理员维护的数据）
+  const { products, loading, total: rawTotal, refresh } = useMarketProducts({ category: 'compute' })
 
-  const totalPages = Math.max(1, Math.ceil(total / parseInt(pageSize)))
+  // 将产品数据展开为渲染用数据
+  const allItems = useMemo(() => products.map((p: any) => {
+    const s = parseSpecs(p.specs)
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      region: s.region || '默认区域',
+      gpu_model: s.gpu_model || '--',
+      gpu_memory: s.gpu_memory || '--',
+      gpu_available: s.gpu_available ?? 0,
+      gpu_total: s.gpu_total ?? 0,
+      cpu_cores: s.cpu_cores ?? 0,
+      cpu_model: s.cpu_model || '--',
+      memory: s.memory ?? 0,
+      disk: s.disk ?? 50,
+      gpu_driver: s.gpu_driver || '--',
+      cuda_version: s.cuda_version || '--',
+      hourly_price: p.price ?? 0,
+      member_price: s.member_price ?? (p.price ? +(p.price * 0.95).toFixed(2) : 0),
+      available_until: s.available_until || '长期可用',
+      node_type: s.node_type || 'center',
+      node_id: s.node_id || p.name,
+      tag: s.tag || null,
+    }
+  }), [products])
+
+  // 动态提取筛选选项：区域
+  const regions = useMemo(() => {
+    const set = new Set<string>()
+    allItems.forEach(item => { if (item.region) set.add(item.region) })
+    return Array.from(set).map(r => ({ id: r, name: r }))
+  }, [allItems])
+
+  // 动态提取筛选选项：GPU型号
+  const gpuModels = useMemo(() => {
+    const stats: Record<string, { available: number; total: number }> = {}
+    allItems.forEach(item => {
+      if (item.gpu_model && item.gpu_model !== '--') {
+        if (!stats[item.gpu_model]) stats[item.gpu_model] = { available: 0, total: 0 }
+        stats[item.gpu_model].available += item.gpu_available
+        stats[item.gpu_model].total += item.gpu_total
+      }
+    })
+    return Object.entries(stats).map(([name, s]) => ({ id: name, name, available: s.available, total: s.total }))
+  }, [allItems])
+
+  // 客户端过滤
+  const filtered = useMemo(() => {
+    let list = allItems
+    if (selectedRegion) list = list.filter(m => m.region === selectedRegion)
+    if (selectedGpuModel) list = list.filter(m => m.gpu_model === selectedGpuModel)
+    if (gpuCount > 1) list = list.filter(m => m.gpu_available >= gpuCount)
+    return list
+  }, [allItems, selectedRegion, selectedGpuModel, gpuCount])
+
+  // 客户端分页
+  const total = filtered.length
+  const pageSizeNum = parseInt(pageSize)
+  const totalPages = Math.max(1, Math.ceil(total / pageSizeNum))
+  const machines = useMemo(() => {
+    const start = (currentPage - 1) * pageSizeNum
+    return filtered.slice(start, start + pageSizeNum)
+  }, [filtered, currentPage, pageSizeNum])
 
   // 动态生成页码按钮
   const pageNumbers = useMemo(() => {
@@ -239,7 +302,7 @@ export default function MarketListPage() {
               {/* 顶部信息行 */}
               <div className="flex items-center justify-between mb-3 relative">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">{machine.region} / {machine.id}</span>
+                  <span className="font-medium text-foreground">{machine.region} / {machine.name}</span>
                   <span className="bg-muted px-2 py-0.5 rounded text-xs">{machine.node_id}</span>
                   <span>可租用至：{machine.available_until || '长期可用'}</span>
                 </div>
@@ -311,7 +374,7 @@ export default function MarketListPage() {
       </div>
 
       {/* 分页 - 超过 pageSize 条才显示 */}
-      {total > parseInt(pageSize) && (
+      {total > pageSizeNum && (
         <div className="flex items-center justify-center gap-4 py-4">
           <span className="text-sm text-muted-foreground">共 {total} 条</span>
           <div className="flex items-center gap-1">

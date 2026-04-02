@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { CreditCard, Wallet, Loader2, Sparkles, RefreshCw, QrCode, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -34,13 +34,21 @@ export default function BillingPage() {
   const [checkingStatus, setCheckingStatus] = useState(false)
 
   const { balance, frozenBalance, loading, refresh } = useUserBalance()
+
+  // 用 ref 防止充值成功的 toast/refresh 重复触发
+  const successHandledRef = useRef(false)
+  const handlePaymentSuccess = useCallback(() => {
+    if (successHandledRef.current) return
+    successHandledRef.current = true
+    setPaymentStatus('success')
+    refresh()
+    toast.success('充值成功！')
+  }, [refresh])
   
   // WebSocket监听充值成功
   useWebSocketStatus((data) => {
     if (data.type === 'recharge_success' && paymentInfo) {
-      setPaymentStatus('success')
-      refresh()
-      toast.success('充值成功！')
+      handlePaymentSuccess()
     }
   })
 
@@ -82,6 +90,7 @@ export default function BillingPage() {
         expire_time: data.expire_time
       })
       setPaymentStatus('pending')
+      successHandledRef.current = false
       setShowPayDialog(true)
     } catch (err) {
       toast.error('创建支付订单失败')
@@ -98,9 +107,7 @@ export default function BillingPage() {
       const { data } = await api.get<{ status: string }>(`/billing/pay/${paymentInfo.order_id}/status`)
       
       if (data.status === 'success') {
-        setPaymentStatus('success')
-        refresh()
-        toast.success('充值成功！')
+        handlePaymentSuccess()
       } else if (data.status === 'failed') {
         setPaymentStatus('failed')
         toast.error('支付失败')
@@ -118,9 +125,7 @@ export default function BillingPage() {
     
     try {
       await api.post(`/billing/pay/mock/${paymentInfo.order_id}`)
-      setPaymentStatus('success')
-      refresh()
-      toast.success('充值成功！')
+      handlePaymentSuccess()
     } catch (err) {
       toast.error('模拟支付失败')
     }
@@ -290,7 +295,7 @@ export default function BillingPage() {
                 {t('payNow')}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                充值即表示同意《用户充值协议》
+                充值即表示同意<a href="/agreements/recharge" target="_blank" className="text-primary hover:underline">《用户充值协议》</a>
               </p>
             </CardContent>
           </Card>

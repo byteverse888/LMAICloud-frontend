@@ -1160,20 +1160,23 @@ export function useAdminMarketProducts(category?: string) {
 }
 
 // ====== 公开市场产品 ======
-export function useMarketProducts(category?: string) {
+export function useMarketProducts(filters?: { category?: string; page?: number; size?: number }) {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)
-      const params: Record<string, string> = {}
-      if (category) params.category = category
-      const { data } = await api.get<any[]>('/market/products', params)
-      setProducts(data || [])
-    } catch { setProducts([]) } finally { setLoading(false) }
-  }, [category])
+      const params: Record<string, string | number> = {}
+      if (filters?.category) params.category = filters.category
+      if (filters?.page) params.page = filters.page
+      if (filters?.size) params.size = filters.size
+      const { data } = await api.get<{ list: any[]; total: number }>('/market/products', params)
+      setProducts(data.list || []); setTotal(data.total || 0)
+    } catch { setProducts([]); setTotal(0) } finally { setLoading(false) }
+  }, [filters?.category, filters?.page, filters?.size])
   useEffect(() => { fetchProducts() }, [fetchProducts])
-  return { products, loading, refresh: fetchProducts }
+  return { products, loading, total, refresh: fetchProducts }
 }
 
 // ====== 站点信息 ======

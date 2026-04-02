@@ -91,7 +91,7 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
       { href: '/admin/billing', label: '计费管理', icon: CircleDollarSign },
       { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
-      { href: '/admin/market', label: '市场管理', icon: Store },
+      { href: '/admin/market', label: '算力市场', icon: Store },
       { href: '/admin/public-data', label: '公开数据', icon: Globe },
       { href: '/admin/reports', label: '数据报表', icon: BarChart3 },
       { href: '/admin/audit-log', label: '操作日志', icon: ClipboardList },
