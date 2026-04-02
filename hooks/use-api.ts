@@ -228,7 +228,7 @@ export function useBalance() {
 }
 
 // ====== GPU 市场数据 hooks ======
-export function useMarketMachines(filters?: { region?: string; gpuModel?: string; gpuCount?: number }) {
+export function useMarketMachines(filters?: { region?: string; gpuModel?: string; gpuCount?: number; page?: number; size?: number }) {
   const [machines, setMachines] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -239,15 +239,14 @@ export function useMarketMachines(filters?: { region?: string; gpuModel?: string
       if (filters?.region) params.region = filters.region
       if (filters?.gpuModel) params.gpu_model = filters.gpuModel
       if (filters?.gpuCount) params.gpu_count = filters.gpuCount
+      if (filters?.page) params.page = filters.page
+      if (filters?.size) params.size = filters.size
       const { data } = await api.get<{ list: any[]; total: number }>('/market/machines', params)
       setMachines(data.list || []); setTotal(data.total || 0)
     } catch {
-      setMachines([
-        { id: '876机', node_id: 'qvadxau6nv', region: '北京B区', gpu_model: 'RTX 4090D', gpu_memory: '24 GB', gpu_available: 1, gpu_total: 8, cpu_cores: 16, cpu_model: 'Xeon(R) Platinum 8352V', memory: 60, disk: 50, hourly_price: 1.98, member_price: 1.88 },
-        { id: '472机', node_id: '73df479249', region: '北京B区', gpu_model: 'RTX 5090', gpu_memory: '32 GB', gpu_available: 1, gpu_total: 8, cpu_cores: 25, cpu_model: 'Xeon(R) Platinum 8470Q', memory: 90, disk: 50, hourly_price: 3.03, member_price: 2.39 },
-      ]); setTotal(2)
+      setMachines([]); setTotal(0)
     } finally { setLoading(false) }
-  }, [filters?.region, filters?.gpuModel, filters?.gpuCount])
+  }, [filters?.region, filters?.gpuModel, filters?.gpuCount, filters?.page, filters?.size])
   useEffect(() => { fetchMachines() }, [fetchMachines])
   return { machines, loading, total, refresh: fetchMachines }
 }
@@ -258,7 +257,7 @@ export function useRegions() {
   useEffect(() => {
     const f = async () => {
       try { const { data } = await api.get<{ regions: any[] }>('/market/regions'); setRegions(data.regions || []) }
-      catch { setRegions([{ id: 'beijing-b', name: '北京B区' }, { id: 'beijing-a', name: '北京A区' }, { id: 'northwest-b', name: '西北B区' }]) }
+      catch { setRegions([]) }
       finally { setLoading(false) }
     }; f()
   }, [])
@@ -271,7 +270,7 @@ export function useGpuModels() {
   useEffect(() => {
     const f = async () => {
       try { const { data } = await api.get<{ gpu_models: any[] }>('/market/gpu-models'); setGpuModels(data.gpu_models || []) }
-      catch { setGpuModels([{ id: 'RTX 5090', name: 'RTX 5090', available: 100, total: 200 }, { id: 'RTX 4090', name: 'RTX 4090', available: 50, total: 100 }]) }
+      catch { setGpuModels([]) }
       finally { setLoading(false) }
     }; f()
   }, [])
@@ -519,7 +518,7 @@ export function useAdminReports() {
   const [loading, setLoading] = useState(true)
   const fetchStats = useCallback(async () => {
     try { setLoading(true); const { data } = await api.get<any>('/admin/reports/stats'); setStats(data) }
-    catch { setStats({ totalUsers: 1250, activeInstances: 86, totalRevenue: 125680.5, todayNewUsers: 12, todayOrders: 45, gpuUtilization: 72.5 }) }
+    catch { setStats(null) }
     finally { setLoading(false) }
   }, [])
   useEffect(() => { fetchStats() }, [fetchStats])
@@ -975,7 +974,7 @@ export function useAdminOrderStats(userId?: string, days: number = 30) {
       if (userId) params.user_id = userId
       const { data } = await api.get<any>('/admin/orders/stats', params)
       setStats(data)
-    } catch { setStats(null) } finally { setLoading(false) }
+    } catch { setStats({ total_consumption: 0, total_recharge: 0, consumption_orders: 0, recharge_orders: 0 }) } finally { setLoading(false) }
   }, [userId, days])
   useEffect(() => { fetchStats() }, [fetchStats])
   return { stats, loading, refresh: fetchStats }
@@ -1201,4 +1200,54 @@ export function useAgreements() {
       .finally(() => setLoading(false))
   }, [])
   return { agreements, loading }
+}
+
+// ====== 公开数据集 hooks ======
+export function usePublicDatasets(page: number = 1, size: number = 20, category?: string, search?: string) {
+  const [datasets, setDatasets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchDatasets = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (category && category !== 'all') params.category = category
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/public-data', params)
+      setDatasets(data.list || []); setTotal(data.total || 0)
+    } catch { setDatasets([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, category, search])
+  useEffect(() => { fetchDatasets() }, [fetchDatasets])
+  return { datasets, loading, total, refresh: fetchDatasets }
+}
+
+// ====== 管理端公开数据集 hooks ======
+export function useAdminPublicDatasets(page: number = 1, size: number = 20, category?: string, search?: string) {
+  const [datasets, setDatasets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchDatasets = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (category && category !== 'all') params.category = category
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/public-data', params)
+      setDatasets(data.list || []); setTotal(data.total || 0)
+    } catch { setDatasets([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, category, search])
+  useEffect(() => { fetchDatasets() }, [fetchDatasets])
+  return { datasets, loading, total, refresh: fetchDatasets }
+}
+
+export async function createPublicDataset(data: any) {
+  return api.post('/admin/public-data', data)
+}
+
+export async function updatePublicDataset(id: string, data: any) {
+  return api.put(`/admin/public-data/${id}`, data)
+}
+
+export async function deletePublicDataset(id: string) {
+  return api.delete(`/admin/public-data/${id}`)
 }

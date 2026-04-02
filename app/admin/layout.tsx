@@ -29,6 +29,7 @@ import {
   Network,
   Box,
   Database,
+  Globe,
   Bot,
   CircleDollarSign,
   ClipboardList,
@@ -78,16 +79,24 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/services', label: '服务管理', icon: Network },
       { href: '/admin/deployments', label: '部署管理', icon: Box },
       { href: '/admin/pods', label: '容器管理', icon: Container },
+      { href: '/admin/openclaw', label: '智能体管理', icon: Bot },
     ],
   },
-  { href: '/admin/users', label: '用户管理', icon: Users },
-  { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
-  { href: '/admin/billing', label: '计费管理', icon: CircleDollarSign },
-  { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
-  { href: '/admin/openclaw', label: 'OpenClaw', icon: Bot },
-  { href: '/admin/audit-log', label: '操作日志', icon: ClipboardList },
-  { href: '/admin/market', label: '市场管理', icon: Store },
-  { href: '/admin/reports', label: '数据报表', icon: BarChart3 },
+  {
+    href: '/admin/operations',
+    label: '运营管理',
+    icon: Users,
+    children: [
+      { href: '/admin/users', label: '用户管理', icon: Users },
+      { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
+      { href: '/admin/billing', label: '计费管理', icon: CircleDollarSign },
+      { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
+      { href: '/admin/market', label: '市场管理', icon: Store },
+      { href: '/admin/public-data', label: '公开数据', icon: Globe },
+      { href: '/admin/reports', label: '数据报表', icon: BarChart3 },
+      { href: '/admin/audit-log', label: '操作日志', icon: ClipboardList },
+    ],
+  },
   { href: '/admin/settings', label: '系统设置', icon: Settings },
 ]
 
@@ -97,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, isLoading, isAuthenticated, logout, checkAuth } = useAuthStore()
   const { theme, setTheme } = useTheme()
   const [countdown, setCountdown] = useState(3)
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true })
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true, '/admin/operations': true })
   
   // 修改密码对话框状态
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)

@@ -76,10 +76,12 @@ export function Header() {
       {/* 右侧工具栏 */}
       <div className="flex items-center gap-1.5">
         {/* 会员订阅 */}
-        <Button variant="ghost" size="sm" className="gap-1.5 text-amber-500 hover:bg-amber-500/10 hover:text-amber-500">
-          <Crown className="h-4 w-4" />
-          <span className="hidden sm:inline text-[13px]">{t('memberSubscription')}</span>
-        </Button>
+        <Link href="/billing">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-amber-500 hover:bg-amber-500/10 hover:text-amber-500">
+            <Crown className="h-4 w-4" />
+            <span className="hidden sm:inline text-[13px]">{t('memberSubscription')}</span>
+          </Button>
+        </Link>
 
         {/* 通知 */}
         <div className="relative" ref={dropdownRef}>

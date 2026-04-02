@@ -21,7 +21,7 @@ export default function BillingPage() {
   const t = useTranslations('billing')
   const [selectedAmount, setSelectedAmount] = useState<number | null>(100)
   const [customAmount, setCustomAmount] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('wechat')
+  const paymentMethod = 'wechat'
   const [paying, setPaying] = useState(false)
   const [showPayDialog, setShowPayDialog] = useState(false)
   const [paymentInfo, setPaymentInfo] = useState<{
@@ -241,34 +241,13 @@ export default function BillingPage() {
             <CardContent>
               <div className="flex gap-4">
                 <Button
-                  variant={paymentMethod === 'wechat' ? 'default' : 'outline'}
-                  className={cn(
-                    "flex-1 h-14 gap-3 transition-all",
-                    paymentMethod === 'wechat' 
-                      ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25" 
-                      : "hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                  )}
-                  onClick={() => setPaymentMethod('wechat')}
+                  variant="default"
+                  className="flex-1 h-14 gap-3 transition-all bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25"
                 >
                   <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.269-.03-.406-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
                   </svg>
                   {t('wechatPay')}
-                </Button>
-                <Button
-                  variant={paymentMethod === 'alipay' ? 'default' : 'outline'}
-                  className={cn(
-                    "flex-1 h-14 gap-3 transition-all",
-                    paymentMethod === 'alipay' 
-                      ? "bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/25" 
-                      : "hover:border-blue-500/50 hover:bg-blue-50 dark:hover:bg-blue-950/20"
-                  )}
-                  onClick={() => setPaymentMethod('alipay')}
-                >
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21.422 15.358c-3.106-1.199-5.513-2.196-7.049-2.939.573-1.303 1.012-2.792 1.262-4.418H9.873V6.474h6.164V5.175H9.873V2.237H7.697v2.938H1.695v1.299h6.002V8.001H2.93v1.317h9.058c-.212 1.247-.54 2.406-.99 3.447-2.273-.943-3.988-1.34-5.112-1.34-1.89 0-3.188.973-3.188 2.478 0 1.588 1.489 2.773 3.94 2.773 2.093 0 4.021-.876 5.742-2.58.947.538 2.209 1.163 3.796 1.883-.37.706-.776 1.365-1.217 1.976H24v-1.4c0-1.24-.852-1.837-2.578-2.197zm-16.31.897c-1.436 0-2.044-.445-2.044-1.127 0-.622.596-1.073 1.622-1.073.928 0 2.04.299 3.546.918-1.178 1.011-2.168 1.282-3.124 1.282z"/>
-                  </svg>
-                  {t('alipay')}
                 </Button>
               </div>
             </CardContent>
@@ -288,7 +267,7 @@ export default function BillingPage() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">支付方式</span>
-                <span className="font-medium">{paymentMethod === 'wechat' ? '微信支付' : '支付宝'}</span>
+                <span className="font-medium">微信支付</span>
               </div>
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between">
@@ -324,7 +303,7 @@ export default function BillingPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5" />
-              {paymentMethod === 'wechat' ? '微信支付' : '支付宝'}
+              微信支付
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center py-6">
@@ -350,7 +329,7 @@ export default function BillingPage() {
               <>
                 {/* 二维码展示 */}
                 <div className="w-52 h-52 bg-white rounded-lg flex items-center justify-center border p-2">
-                  {paymentInfo?.qr_code_url && (paymentInfo.qr_code_url.startsWith('weixin://') || paymentInfo.qr_code_url.startsWith('https://qr.')) ? (
+                  {paymentInfo?.qr_code_url ? (
                     <QRCodeSVG value={paymentInfo.qr_code_url} size={192} />
                   ) : (
                     <div className="text-center">
@@ -361,7 +340,7 @@ export default function BillingPage() {
                   )}
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  请使用{paymentMethod === 'wechat' ? '微信' : '支付宝'}扫描二维码完成支付
+                  请使用微信扫描二维码完成支付
                 </p>
                 <p className="text-xs text-muted-foreground">金额: ¥{paymentInfo?.amount?.toFixed(2)}</p>
                 <div className="flex gap-2 mt-4">
@@ -374,16 +353,13 @@ export default function BillingPage() {
                     {checkingStatus && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                     查询支付状态
                   </Button>
-                  {/* 开发模式：模拟支付成功 */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      onClick={mockPaySuccess}
-                    >
-                      模拟支付成功
-                    </Button>
-                  )}
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={mockPaySuccess}
+                  >
+                    模拟支付成功
+                  </Button>
                 </div>
               </>
             )}

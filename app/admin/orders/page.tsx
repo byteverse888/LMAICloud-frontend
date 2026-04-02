@@ -37,8 +37,10 @@ export default function OrdersPage() {
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string }> = {
       paid: { label: '已支付', variant: 'success', dotClass: 'bg-emerald-500' },
+      success: { label: '已完成', variant: 'success', dotClass: 'bg-emerald-500' },
       pending: { label: '待支付', variant: 'warning', dotClass: 'bg-amber-500' },
       cancelled: { label: '已取消', variant: 'secondary', dotClass: 'bg-gray-400' },
+      failed: { label: '已失败', variant: 'destructive', dotClass: 'bg-red-500' },
       refunded: { label: '已退款', variant: 'destructive', dotClass: 'bg-red-500' },
     }
     const { label, variant, dotClass } = config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
@@ -153,7 +155,7 @@ export default function OrdersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">订单数</p>
-                <p className="text-xl font-bold">{stats?.order_count || total || 0}</p>
+                <p className="text-xl font-bold">{stats?.consumption_orders || total || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -166,7 +168,7 @@ export default function OrdersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">充值数</p>
-                <p className="text-xl font-bold">{stats?.recharge_count || 0}</p>
+                <p className="text-xl font-bold">{stats?.recharge_orders || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -302,9 +304,9 @@ export default function OrdersPage() {
                     statements.map((st: any) => (
                       <TableRow key={`${st.year}-${st.month}`}>
                         <TableCell className="font-medium">{st.year}年{st.month}月</TableCell>
-                        <TableCell className="text-right text-emerald-500 font-medium">+¥{(st.income || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-orange-500 font-medium">-¥{(st.expense || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold">¥{(st.balance || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-emerald-500 font-medium">+¥{(st.recharge || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-orange-500 font-medium">-¥{(st.consumption || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-semibold">¥{(st.net || 0).toFixed(2)}</TableCell>
                       </TableRow>
                     ))
                   )}

@@ -13,11 +13,26 @@ export default function ReferralPage() {
   const [page, setPage] = useState(1)
   const { records, loading, total } = useReferralRecords(page, 20)
 
-  const copyInviteLink = () => {
+  const copyInviteLink = async () => {
     if (!info) return
     const link = `${window.location.origin}${info.invite_link}`
-    navigator.clipboard.writeText(link)
-    toast.success('邀请链接已复制')
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(link)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = link
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      toast.success('邀请链接已复制')
+    } catch {
+      toast.error('复制失败，请手动复制')
+    }
   }
 
   return (

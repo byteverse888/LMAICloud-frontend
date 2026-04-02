@@ -16,8 +16,8 @@ export default function StatementsPage() {
   const { statements, loading, summary } = useStatements(year)
   const { balance } = useBalance()
 
-  const totalIncome = summary?.total_income ?? statements.reduce((acc: number, s: any) => acc + (s.income || 0), 0)
-  const totalExpense = summary?.total_expense ?? statements.reduce((acc: number, s: any) => acc + (s.expense || 0), 0)
+  const totalIncome = summary?.total_recharge ?? statements.reduce((acc: number, s: any) => acc + (s.recharge || 0), 0)
+  const totalExpense = summary?.total_consumption ?? statements.reduce((acc: number, s: any) => acc + (s.consumption || 0), 0)
 
   const yearOptions = []
   for (let y = currentYear; y >= currentYear - 3; y--) {
@@ -122,12 +122,12 @@ export default function StatementsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="text-emerald-500 font-medium">+¥{(item.income || 0).toFixed(2)}</span>
+                        <span className="text-emerald-500 font-medium">+¥{(item.recharge || 0).toFixed(2)}</span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="text-orange-500 font-medium">-¥{(item.expense || 0).toFixed(2)}</span>
+                        <span className="text-orange-500 font-medium">-¥{(item.consumption || 0).toFixed(2)}</span>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">¥{(item.balance || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-semibold">¥{(item.net || 0).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={isCurrentMonth ? 'default' : 'secondary'}
