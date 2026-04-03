@@ -3,70 +3,58 @@
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
-import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import {
   Server,
-  PlayCircle,
-  Clock,
-  AlertTriangle,
   HardDrive,
-  Layers,
-  FolderOpen,
-  HelpCircle,
   ExternalLink,
-  Edit,
   CreditCard,
-  Ticket,
-  Gift,
-  BadgeCheck,
   Loader2,
   Cpu,
   Zap,
   TrendingUp,
+  Coins,
+  ShoppingCart,
+  Receipt,
+  Store,
+  Bot,
+  FolderOpen,
+  ArrowRight,
+  Wallet,
+  BadgeCheck,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useInstances, useBalance, useStorage } from '@/hooks/use-api'
+import { useInstances, useBalance, useStorageQuota, useSiteInfo, useCurrentUser, usePoints } from '@/hooks/use-api'
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard')
   const { instances, loading: instancesLoading } = useInstances()
   const { balance, loading: balanceLoading } = useBalance()
-  const { storages, loading: storageLoading } = useStorage()
+  const { quota: storageQuota, loading: storageLoading } = useStorageQuota()
+  const { siteInfo } = useSiteInfo()
+  const { user: currentUser } = useCurrentUser()
+  const { points } = usePoints()
 
-  // 计算统计数据
-  const stats = {
-    instances: {
-      total: instances.length,
-      running: instances.filter(i => i.status === 'running').length,
-      expiring: 0,
-      releasing: 0,
-    },
-    data: {
-      instanceDisk: storages.reduce((acc, s) => acc + s.size_gb, 0),
-      imageCapacity: 0,
-      fileStorage: storages.reduce((acc, s) => acc + s.used_gb, 0),
-    },
-    balance: {
-      available: balance,
-      frozen: 0,
-      coupon: 0,
-      voucher: 0,
-    },
-    user: {
-      nickname: '炼丹师5325',
-      verified: false,
-      level: '普通用户',
-      growthValue: 0,
-      maxGrowth: 100,
-    },
-  }
+  // 计算统计数据（全部来自真实 API）
+  const runningCount = instances.filter(i => i.status === 'running').length
+  const stoppedCount = instances.filter(i => i.status === 'stopped').length
+  const totalDiskGB = storageQuota ? +(storageQuota.total / (1024 ** 3)).toFixed(1) : 0
+  const usedDiskGB = storageQuota ? +(storageQuota.used / (1024 ** 3)).toFixed(2) : 0
+  const nickname = currentUser?.nickname || currentUser?.email?.split('@')[0] || '--'
+  const verified = currentUser?.verified ?? false
 
   const loading = instancesLoading || balanceLoading || storageLoading
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* 首页公告 */}
+      {siteInfo?.announcement_text?.trim() && (
+        <div className="rounded-lg bg-primary/10 dark:bg-primary/15 border border-primary/20 px-4 py-3 text-sm text-foreground/90 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary shrink-0" />
+          <span>{siteInfo.announcement_text}</span>
+        </div>
+      )}
+
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">
@@ -81,8 +69,8 @@ export default function DashboardPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">实例总数</p>
-                <p className="text-2xl font-bold">{stats.instances.total}</p>
+                <p className="text-sm text-muted-foreground">{t('totalInstances')}</p>
+                <p className="text-2xl font-bold">{instances.length}</p>
               </div>
               <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
                 <Server className="h-5 w-5 text-primary" />
@@ -94,8 +82,8 @@ export default function DashboardPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">运行中</p>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.instances.running}</p>
+                <p className="text-sm text-muted-foreground">{t('running')}</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{runningCount}</p>
               </div>
               <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
                 <Zap className="h-5 w-5 text-emerald-500" />
@@ -107,11 +95,13 @@ export default function DashboardPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">即将到期</p>
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.instances.expiring}</p>
+                <p className="text-sm text-muted-foreground">{t('balance')}</p>
+                <p className={`text-2xl font-bold ${balance < 0 ? 'text-red-500' : ''}`}>
+                  ¥{balance.toFixed(2)}
+                </p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-amber-500/8 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -120,13 +110,11 @@ export default function DashboardPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">账户余额</p>
-                <p className={`text-2xl font-bold ${stats.balance.available < 0 ? 'text-red-500' : ''}`}>
-                  ¥{stats.balance.available.toFixed(2)}
-                </p>
+                <p className="text-sm text-muted-foreground">{t('points')}</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{points}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-primary" />
+              <div className="h-10 w-10 rounded-lg bg-amber-500/8 flex items-center justify-center">
+                <Coins className="h-5 w-5 text-amber-500" />
               </div>
             </div>
           </CardContent>
@@ -136,139 +124,99 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* 左侧主内容区 */}
         <div className="lg:col-span-2 space-y-6">
-          {/* 实例统计卡片 */}
+          {/* 实例概览 */}
           <Card className="card-clean overflow-hidden">
             <CardHeader className="pb-3">
-              <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-primary" />
-                {t('instances')}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
+                  <Cpu className="h-5 w-5 text-primary" />
+                  {t('instanceOverview')}
+                </CardTitle>
+                <Link href="/instances">
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                    {t('viewAll')} <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('containerInstances')}</div>
-                  <div className="text-2xl font-bold text-primary">{stats.instances.total}</div>
+                  <div className="text-2xl font-bold text-primary">{instances.length}</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('running')}</div>
-                  <div className="text-2xl font-bold text-emerald-500">{stats.instances.running}</div>
+                  <div className="text-2xl font-bold text-emerald-500">{runningCount}</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    {t('expiring')} <HelpCircle className="h-3 w-3" />
-                  </div>
-                  <div className="text-2xl font-bold text-amber-500">{stats.instances.expiring}</div>
+                  <div className="text-sm text-muted-foreground">{t('stopped')}</div>
+                  <div className="text-2xl font-bold text-muted-foreground">{stoppedCount}</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    {t('releasing')} <HelpCircle className="h-3 w-3" />
-                  </div>
-                  <div className="text-2xl font-bold text-red-500">{stats.instances.releasing}</div>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">{t('expiryWarning')}</span>
-                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                  <Switch />
-                  <span className="text-muted-foreground">已开启</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">{t('balanceWarning')}</span>
-                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                  <Switch defaultChecked />
-                  <span className="text-muted-foreground">已开启</span>
-                </div>
-                <Link href="#" className="text-primary hover:underline">
-                  {t('sendRecords')}
-                </Link>
-                <span className="text-muted-foreground text-xs">(余额不足10元预警)</span>
-                <Link href="#" className="text-primary hover:underline">
-                  {t('bindEmail')}
-                </Link>
               </div>
             </CardContent>
           </Card>
 
-          {/* 数据统计卡片 */}
+          {/* 存储概览 */}
           <Card className="card-clean overflow-hidden">
             <CardHeader className="pb-3">
-              <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
-                <HardDrive className="h-5 w-5 text-primary" />
-                {t('data')}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
+                  <HardDrive className="h-5 w-5 text-primary" />
+                  {t('storageOverview')}
+                </CardTitle>
+                <Link href="/storage">
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                    {t('viewAll')} <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">{t('instanceDataDisk')}</div>
-                  <div className="text-xs text-muted-foreground">{t('paidExpansion')}</div>
+                  <div className="text-sm text-muted-foreground">{t('totalStorage')}</div>
                   <div className="text-2xl font-bold">
-                    {stats.data.instanceDisk}
-                    <span className="text-sm font-normal text-muted-foreground">GB</span>
+                    {totalDiskGB}
+                    <span className="text-sm font-normal text-muted-foreground"> GB</span>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">{t('imageCapacity')}</div>
-                  <div className="text-xs text-muted-foreground">{t('paidCapacity')}</div>
+                  <div className="text-sm text-muted-foreground">{t('usedStorage')}</div>
                   <div className="text-2xl font-bold">
-                    {stats.data.imageCapacity}
-                    <span className="text-sm font-normal text-muted-foreground">GB</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">{t('fileStorage')}</div>
-                  <div className="text-xs text-muted-foreground">{t('paidCapacity')}</div>
-                  <div className="text-2xl font-bold">
-                    {stats.data.fileStorage}
-                    <span className="text-sm font-normal text-muted-foreground">GB</span>
+                    {usedDiskGB}
+                    <span className="text-sm font-normal text-muted-foreground"> GB</span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* 常见问题 */}
+          {/* 快捷入口 */}
           <Card className="card-clean overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="card-header-bar text-base font-medium flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-amber-500" />
-                {t('faq')}
+                <ArrowRight className="h-5 w-5 text-primary" />
+                {t('quickLinks')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Link
-                  href="#"
-                  className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  {t('howToChooseGpu')}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Link href="/instances" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <Server className="h-6 w-6 text-primary" />
+                  <span className="text-xs text-muted-foreground">{t('myInstances')}</span>
                 </Link>
-                <Link
-                  href="#"
-                  className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  {t('howToUploadData')}
+                <Link href="/storage" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <FolderOpen className="h-6 w-6 text-blue-500" />
+                  <span className="text-xs text-muted-foreground">{t('myStorage')}</span>
                 </Link>
-                <Link
-                  href="#"
-                  className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  {t('howToInvoice')}
+                <Link href="/openclaw" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <Bot className="h-6 w-6 text-violet-500" />
+                  <span className="text-xs text-muted-foreground">{t('openClaw')}</span>
                 </Link>
-                <Link
-                  href="#"
-                  className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  {t('howToBecomeMember')}
+                <Link href="/market/list" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <Store className="h-6 w-6 text-emerald-500" />
+                  <span className="text-xs text-muted-foreground">{t('market')}</span>
                 </Link>
               </div>
             </CardContent>
@@ -283,51 +231,32 @@ export default function DashboardPage() {
             <CardContent className="pt-0 relative">
               <div className="-mt-8 mb-4">
                 <div className="h-16 w-16 rounded-full bg-background border-4 border-background flex items-center justify-center shadow-lg">
-                  <span className="text-2xl font-bold text-primary">炼</span>
+                  <span className="text-2xl font-bold text-primary">{(currentUser?.nickname || currentUser?.email || '用')[0]}</span>
                 </div>
               </div>
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{stats.user.nickname}</span>
+                  <span className="font-medium">{nickname}</span>
                   <Link href="/account" className="text-muted-foreground hover:text-primary">
                     <ExternalLink className="h-4 w-4" />
                   </Link>
-                  {!stats.user.verified && (
-                    <span className="px-2 py-0.5 text-xs border border-amber-500 text-amber-500 rounded">
-                      {t('notVerified')}
-                    </span>
-                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                 <BadgeCheck className="h-4 w-4" />
-                {t('normalUser')}
+                {verified ? t('verified') : t('notVerified')}
               </div>
-              <Link href="#" className="text-sm text-primary hover:underline block mb-1">
-                {t('upgradeMember')}
-              </Link>
-              <Link href="#" className="text-sm text-primary hover:underline block mb-4">
-                {t('memberBenefits')}
-              </Link>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>{t('growthValue')}</span>
-                  <span>
-                    {stats.user.growthValue}/{stats.user.maxGrowth}
-                  </span>
-                </div>
-                <Progress value={(stats.user.growthValue / stats.user.maxGrowth) * 100} className="h-2" />
-                <div className="text-xs text-muted-foreground">
-                  距离升级还需{stats.user.maxGrowth - stats.user.growthValue}成长值{' '}
-                  <Link href="#" className="text-primary hover:underline">
-                    {t('upgradeGuide')}
-                  </Link>
-                </div>
-                <Link href="#" className="text-sm text-primary hover:underline block">
-                  {t('growthPage')} &gt;
-                </Link>
+              <div className="flex items-center gap-2 text-sm mb-1">
+                <Coins className="h-4 w-4 text-amber-500" />
+                <span className="text-muted-foreground">{t('points')}：</span>
+                <span className="font-medium text-amber-600 dark:text-amber-400">{points}</span>
               </div>
+              <Link href="/billing/points" className="text-sm text-primary hover:underline block mt-3">
+                {t('pointsDetail')} &gt;
+              </Link>
+              <Link href="/account/referral" className="text-sm text-primary hover:underline block mt-1">
+                {t('referralCenter')} &gt;
+              </Link>
             </CardContent>
           </Card>
 
@@ -342,60 +271,32 @@ export default function DashboardPage() {
             <CardContent>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm">{t('myBalance')}</span>
-                <Button size="sm" variant="default">
-                  {t('recharge')}
-                </Button>
+                <Link href="/billing/details">
+                  <Button size="sm" variant="default">
+                    {t('recharge')}
+                  </Button>
+                </Link>
               </div>
               <div className="flex items-center gap-4 mb-4">
                 <div>
                   <span className="text-sm text-muted-foreground">{t('available')}：</span>
-                  <span className={`text-xl font-bold ${stats.balance.available < 0 ? 'text-red-500' : ''}`}>
-                    ¥{stats.balance.available.toFixed(2)}
+                  <span className={`text-xl font-bold ${balance < 0 ? 'text-red-500' : ''}`}>
+                    ¥{balance.toFixed(2)}
                   </span>
                 </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">{t('frozen')}：</span>
-                  <span className="text-xl font-bold">¥{stats.balance.frozen.toFixed(2)}</span>
-                </div>
-              </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Ticket className="h-4 w-4 text-amber-500" />
-                  <span>{t('coupon')}</span>
-                  <span className="ml-auto">¥{stats.balance.coupon.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Gift className="h-4 w-4 text-red-500" />
-                  <span>{t('voucher')}</span>
-                  <span className="ml-auto">{t('none')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-blue-500" />
-                  <span>{t('credit')}</span>
-                  <span className="ml-auto">
-                    {t('none')}{' '}
-                    <Link href="#" className="text-primary hover:underline">
-                      {t('applyCredit')}
-                    </Link>
-                  </span>
-                </div>
               </div>
 
               <Separator className="my-4" />
 
               <div className="flex items-center justify-between text-sm">
-                <Link href="/billing/orders" className="text-primary hover:underline">
-                  {t('myOrders')} &gt;
+                <Link href="/billing/orders" className="text-primary hover:underline flex items-center gap-1">
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                  {t('myOrders')}
                 </Link>
-                <Link href="/billing/statements" className="text-primary hover:underline">
-                  {t('myStatements')} &gt;
-                </Link>
-                <Link href="/billing/coupons" className="text-primary hover:underline">
-                  {t('myCoupons')} &gt;
-                </Link>
-                <Link href="/billing/invoices" className="text-primary hover:underline">
-                  {t('invoiceManagement')} &gt;
+                <Link href="/billing/statements" className="text-primary hover:underline flex items-center gap-1">
+                  <Receipt className="h-3.5 w-3.5" />
+                  {t('myStatements')}
                 </Link>
               </div>
             </CardContent>

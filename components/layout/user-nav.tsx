@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, LogOut, Copy, ChevronDown, Star, Calendar } from 'lucide-react'
+import { User, LogOut, Copy, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -108,42 +108,17 @@ export function UserNav() {
         <div className="px-3 py-2 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">可用余额：</span>
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                'font-medium',
-                (user.balance || 0) < 0 ? 'text-red-500' : ''
-              )}>
-                ¥{(user.balance || 0).toFixed(2)}
-              </span>
-              <Link href="/billing">
-                <Button size="sm" variant="outline" className="h-6 text-xs text-orange-500 border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30">
-                  去充值
-                </Button>
-              </Link>
-            </div>
+            <span className={cn(
+              'font-medium',
+              (user.balance || 0) < 0 ? 'text-red-500' : ''
+            )}>
+              ¥{(user.balance || 0).toFixed(2)}
+            </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 text-amber-500" />
-              积分：
-            </span>
+            <span className="text-sm text-muted-foreground">积分余额：</span>
             <span className="font-medium text-amber-600 dark:text-amber-400">{user.points || 0}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              注册时间：
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '-'}
-            </span>
-          </div>
-          {user.invite_code && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">邀请码：</span>
-              <span className="text-sm font-mono">{user.invite_code}</span>
-            </div>
-          )}
         </div>
 
         <DropdownMenuSeparator />

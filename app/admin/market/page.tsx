@@ -164,6 +164,7 @@ export default function AdminMarketPage() {
             <SelectItem value="all">全部分类</SelectItem>
             <SelectItem value="compute">算力市场</SelectItem>
             <SelectItem value="ai_app">AI应用</SelectItem>
+            <SelectItem value="ai_server">AI服务器</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -206,7 +207,7 @@ export default function AdminMarketPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{p.category === 'compute' ? '算力市场' : 'AI应用'}</Badge>
+                      <Badge variant="secondary">{p.category === 'compute' ? '算力市场' : p.category === 'ai_server' ? 'AI服务器' : 'AI应用'}</Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
                       {renderSpecsSummary(p.specs)}
@@ -254,6 +255,7 @@ export default function AdminMarketPage() {
                   <SelectContent>
                     <SelectItem value="compute">算力市场</SelectItem>
                     <SelectItem value="ai_app">AI应用</SelectItem>
+                    <SelectItem value="ai_server">AI服务器</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

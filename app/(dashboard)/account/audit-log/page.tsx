@@ -4,8 +4,25 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { useAuditLog } from '@/hooks/use-api'
-import { History, Search, Loader2 } from 'lucide-react'
+import { History, Search, Loader2, LogIn, LogOut, Monitor } from 'lucide-react'
+
+function parseDevice(ua: string) {
+  if (!ua) return ''
+  let browser = '未知'
+  let os = '未知'
+  if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome'
+  else if (ua.includes('Edg')) browser = 'Edge'
+  else if (ua.includes('Firefox')) browser = 'Firefox'
+  else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari'
+  if (ua.includes('Windows')) os = 'Windows'
+  else if (ua.includes('Mac OS')) os = 'macOS'
+  else if (ua.includes('Linux')) os = 'Linux'
+  else if (ua.includes('Android')) os = 'Android'
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS'
+  return `${browser} / ${os}`
+}
 
 export default function AuditLogPage() {
   const [page, setPage] = useState(1)
@@ -14,7 +31,7 @@ export default function AuditLogPage() {
   const { logs, loading, total } = useAuditLog(page, 20, searchKeyword || undefined)
 
   const actionLabels: Record<string, string> = {
-    create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', recharge: '充值',
+    create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', logout: '登出', register: '注册', recharge: '充值',
   }
   const resourceLabels: Record<string, string> = {
     instance: '实例', openclaw: 'OpenClaw', storage: '存储', image: '镜像', account: '账号', billing: '计费',
@@ -45,18 +62,36 @@ export default function AuditLogPage() {
             <p className="text-center text-muted-foreground py-8">暂无操作记录</p>
           ) : (
             <div>
-              <div className="grid grid-cols-5 text-sm font-medium text-muted-foreground border-b pb-2 mb-2">
-                <span>时间</span><span>操作</span><span>资源类型</span><span>资源名称</span><span>IP地址</span>
+              <div className="grid grid-cols-6 text-sm font-medium text-muted-foreground border-b pb-2 mb-2">
+                <span>时间</span><span>操作</span><span>资源类型</span><span>资源名称</span><span>IP地址</span><span>详情</span>
               </div>
-              {logs.map((l: any) => (
-                <div key={l.id} className="grid grid-cols-5 text-sm py-2 border-b border-border/50">
+              {logs.map((l: any) => {
+                const isAuth = ['login', 'logout', 'register'].includes(l.action)
+                return (
+                <div key={l.id} className="grid grid-cols-6 text-sm py-2 border-b border-border/50 items-center">
                   <span className="text-muted-foreground">{l.created_at ? new Date(l.created_at).toLocaleString('zh-CN') : ''}</span>
-                  <span>{actionLabels[l.action] || l.action}</span>
+                  <span>
+                    {l.action === 'login' ? (
+                      <Badge variant="default" className="gap-1"><LogIn className="h-3 w-3" />{actionLabels[l.action]}</Badge>
+                    ) : l.action === 'logout' ? (
+                      <Badge variant="secondary" className="gap-1"><LogOut className="h-3 w-3" />{actionLabels[l.action]}</Badge>
+                    ) : (
+                      <span>{actionLabels[l.action] || l.action}</span>
+                    )}
+                  </span>
                   <span>{resourceLabels[l.resource_type] || l.resource_type}</span>
                   <span className="truncate">{l.resource_name || '-'}</span>
-                  <span className="text-muted-foreground">{l.ip_address || '-'}</span>
+                  <span className="text-muted-foreground font-mono text-xs">{l.ip_address || '-'}</span>
+                  <span className="text-muted-foreground text-xs truncate">
+                    {isAuth && l.detail ? (
+                      <span className="flex items-center gap-1"><Monitor className="h-3 w-3 shrink-0" />{parseDevice(l.detail)}</span>
+                    ) : (
+                      l.detail || '-'
+                    )}
+                  </span>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
           {total > 20 && (

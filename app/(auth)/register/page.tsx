@@ -248,10 +248,13 @@ export default function RegisterPage() {
                 {t('agreeTerms')}{' '}
                 <Link href="/agreements/user" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                   {t('termsOfService')}
-                </Link>{' '}
-                和{' '}
+                </Link>{'\u3001'}
                 <Link href="/agreements/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                   {t('privacyPolicy')}
+                </Link>
+                {'\u548C'}
+                <Link href="/agreements/service" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                  产品服务协议
                 </Link>
               </span>
             </div>

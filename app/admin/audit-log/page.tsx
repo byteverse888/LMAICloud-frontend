@@ -12,11 +12,11 @@ import { useAdminAuditLog } from '@/hooks/use-api'
 import { Pagination } from '@/components/ui/pagination'
 
 const actionLabels: Record<string, string> = {
-  create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启',
+  create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', logout: '登出', register: '注册', recharge: '充值',
 }
 
 const resourceTypeLabels: Record<string, string> = {
-  instance: '实例', openclaw: 'OpenClaw', storage: '存储', image: '镜像',
+  instance: '实例', openclaw: 'OpenClaw', storage: '存储', image: '镜像', account: '账号', billing: '计费',
 }
 
 export default function AdminAuditLogPage() {

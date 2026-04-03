@@ -125,10 +125,7 @@ export function useInstances() {
       setInstances(data.list || []); setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取实例列表失败')
-      if (!silent) setInstances([
-        { id: '1', name: 'GPU-Instance-1', status: 'running', gpu_model: 'RTX 4090', gpu_count: 1, cpu_cores: 16, memory: 64, disk: 50, billing_type: 'hourly', hourly_price: 2.39, created_at: new Date().toISOString(), node_id: 'node-1', node_type: 'center', resource_type: 'vGPU', internal_ip: '10.42.0.15' },
-        { id: '2', name: 'GPU-Instance-2', status: 'stopped', gpu_model: 'RTX 5090', gpu_count: 2, cpu_cores: 32, memory: 128, disk: 100, billing_type: 'hourly', hourly_price: 6.06, created_at: new Date().toISOString(), node_id: 'node-2', node_type: 'edge', resource_type: 'vGPU', internal_ip: '10.42.0.22' },
-      ])
+      if (!silent) setInstances([])
     } finally { if (!silent) setLoading(false) }
   }, [])
   const silentRefresh = useCallback(() => fetchInstances(true), [fetchInstances])
@@ -170,11 +167,7 @@ export function useImages() {
       setImages(data.list || []); setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取镜像列表失败')
-      setImages([
-        { id: '1', name: 'PyTorch', tag: '2.1-cuda12.1', size_gb: 15, type: 'base', description: 'PyTorch 2.1 with CUDA 12.1', created_at: new Date().toISOString() },
-        { id: '2', name: 'TensorFlow', tag: '2.15-cuda12.1', size_gb: 12, type: 'base', description: 'TensorFlow 2.15', created_at: new Date().toISOString() },
-        { id: '3', name: 'DeepSeek-R1', tag: 'webui-v4', size_gb: 25, type: 'app', description: 'DeepSeek R1 WebUI', created_at: new Date().toISOString() },
-      ])
+      setImages([])
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { fetchImages() }, [fetchImages])
@@ -208,7 +201,7 @@ export function useStorageQuota() {
       const { data } = await api.get<StorageQuotaData>('/storage/quota')
       setQuota(data)
     } catch {
-      setQuota({ used: 0, total: 10 * 1024 * 1024 * 1024, remaining: 10 * 1024 * 1024 * 1024, used_percent: 0, file_count: 0, max_file_count: 100, max_upload_size: 50 * 1024 * 1024 })
+      setQuota(null)
     }
     finally { setLoading(false) }
   }, [])
@@ -379,7 +372,7 @@ export function useCurrentUser() {
   const fetchUser = useCallback(async () => {
     try { setLoading(true); const { data } = await api.get<User>('/users/me'); setUser(data) }
     catch {
-      setUser({ id: 'usr_5325abc123', email: 'user@example.com', nickname: '炼丹师5325', phone: '138****8888', verified: false, balance: 156.05, frozen_balance: 0, api_key: 'sk-xxxx****xxxx', created_at: '2024-01-15' })
+      setUser(null)
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { fetchUser() }, [fetchUser])
@@ -425,10 +418,7 @@ export function useAdminUsers(page: number = 1, size: number = 20) {
   const fetchUsers = useCallback(async () => {
     try { setLoading(true); const { data } = await api.get<{ list: AdminUser[]; total: number }>('/admin/users', { page, size }); setUsers(data.list || []); setTotal(data.total || 0) }
     catch {
-      setUsers([
-        { id: 'usr-001', email: 'user1@example.com', nickname: '炼丹师5325', balance: 1250.5, status: 'active', verified: true, instances: 3, created_at: '2024-01-05' },
-        { id: 'usr-002', email: 'user2@example.com', nickname: 'AI研究者', balance: 580.0, status: 'active', verified: true, instances: 1, created_at: '2024-01-10' },
-      ]); setTotal(2)
+      setUsers([]); setTotal(0)
     } finally { setLoading(false) }
   }, [page, size])
   useEffect(() => { fetchUsers() }, [fetchUsers])
@@ -523,6 +513,50 @@ export function useAdminReports() {
   }, [])
   useEffect(() => { fetchStats() }, [fetchStats])
   return { stats, loading, refresh: fetchStats }
+}
+
+export function useRevenueTrend(days: number = 30) {
+  const [data, setData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchData = useCallback(async () => {
+    try { setLoading(true); const { data: res } = await api.get<{ trend: any[] }>('/admin/reports/revenue/trend', { days }); setData(res.trend || []) }
+    catch { setData([]) } finally { setLoading(false) }
+  }, [days])
+  useEffect(() => { fetchData() }, [fetchData])
+  return { data, loading, refresh: fetchData }
+}
+
+export function useUserTrend(days: number = 30) {
+  const [data, setData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchData = useCallback(async () => {
+    try { setLoading(true); const { data: res } = await api.get<{ trend: any[] }>('/admin/reports/users/trend', { days }); setData(res.trend || []) }
+    catch { setData([]) } finally { setLoading(false) }
+  }, [days])
+  useEffect(() => { fetchData() }, [fetchData])
+  return { data, loading, refresh: fetchData }
+}
+
+export function useGpuUsage() {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchData = useCallback(async () => {
+    try { setLoading(true); const { data: res } = await api.get<any>('/admin/reports/gpu/usage'); setData(res) }
+    catch { setData(null) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchData() }, [fetchData])
+  return { data, loading, refresh: fetchData }
+}
+
+export function useTopUsers(days: number = 30, limit: number = 10) {
+  const [data, setData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const fetchData = useCallback(async () => {
+    try { setLoading(true); const { data: res } = await api.get<{ list: any[] }>('/admin/reports/top/users', { days, limit }); setData(res.list || []) }
+    catch { setData([]) } finally { setLoading(false) }
+  }, [days, limit])
+  useEffect(() => { fetchData() }, [fetchData])
+  return { data, loading, refresh: fetchData }
 }
 
 // ====== WebSocket Hooks ======
@@ -715,12 +749,7 @@ export function useResourceConfigs(filters?: { gpu_model?: string; node_type?: s
       const { data } = await api.get<{ list: any[]; total: number }>('/instances/resource-configs', params)
       setConfigs(data.list || [])
     } catch {
-      setConfigs([
-        { node_id: 'node-1', node_name: 'gpu-node-01', node_type: 'center', resource_type: 'no_gpu', gpu_model: 'intel', gpu_memory: 0, cpu_model: 'intel 1核', cpu_cores: 1, memory: 2, disk: 30, network_desc: '--', gpu_available: 100, gpu_total: 0, hourly_price: 0.1 },
-        { node_id: 'node-2', node_name: 'gpu-node-02', node_type: 'center', resource_type: 'vGPU', gpu_model: 'NVIDIA-A100-SXM4-80GB', gpu_memory: 20, cpu_model: 'intel 3核', cpu_cores: 3, memory: 25, disk: 50, network_desc: '--', gpu_available: 28, gpu_total: 32, hourly_price: 1.75 },
-        { node_id: 'node-3', node_name: 'gpu-node-03', node_type: 'center', resource_type: 'vGPU', gpu_model: 'NVIDIA-A100-SXM4-80GB', gpu_memory: 40, cpu_model: 'intel 6核', cpu_cores: 6, memory: 50, disk: 50, network_desc: '--', gpu_available: 13, gpu_total: 16, hourly_price: 3.5 },
-        { node_id: 'node-4', node_name: 'edge-node-01', node_type: 'edge', resource_type: 'no_gpu', gpu_model: 'AMD', gpu_memory: 0, cpu_model: 'AMD 1核', cpu_cores: 1, memory: 2, disk: 30, network_desc: '--', gpu_available: 0, gpu_total: 0, hourly_price: 0.1 },
-      ])
+      setConfigs([])
     } finally { setLoading(false) }
   }, [filters?.gpu_model, filters?.node_type, filters?.resource_type])
   useEffect(() => { fetchConfigs() }, [fetchConfigs])
@@ -1053,6 +1082,21 @@ export function useReferralRecords(page: number = 1, size: number = 20) {
 }
 
 // ====== 操作日志 hooks ======
+
+export function useAccessLog(page: number = 1, size: number = 20, days: number = 30) {
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await api.get<{ list: any[]; total: number }>('/audit-log/access-log', { page, size, days })
+      setLogs(data.list || []); setTotal(data.total || 0)
+    } catch { setLogs([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, days])
+  useEffect(() => { fetchLogs() }, [fetchLogs])
+  return { logs, loading, total, refresh: fetchLogs }
+}
 export function useAuditLog(page: number = 1, size: number = 20, keyword?: string, resourceType?: string) {
   const [logs, setLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -1253,4 +1297,60 @@ export async function updatePublicDataset(id: string, data: any) {
 
 export async function deletePublicDataset(id: string) {
   return api.delete(`/admin/public-data/${id}`)
+}
+
+// ====== 管理端通知管理 hooks ======
+export function useAdminNotifications(page: number = 1, size: number = 20, userEmail?: string, ntype?: string) {
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (userEmail) params.user_email = userEmail
+      if (ntype) params.ntype = ntype
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/notifications', params)
+      setNotifications(data.list || []); setTotal(data.total || 0)
+    } catch { setNotifications([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, userEmail, ntype])
+  useEffect(() => { fetchNotifications() }, [fetchNotifications])
+  return { notifications, loading, total, refresh: fetchNotifications }
+}
+
+export async function sendAdminNotification(data: { title: string; content: string; type: string; user_ids?: string[] }) {
+  return api.post('/admin/notifications', data)
+}
+
+export async function deleteAdminNotification(id: string) {
+  return api.delete(`/admin/notifications/${id}`)
+}
+
+// ====== 管理端推广管理 hooks ======
+export function useAdminReferralStats() {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchStats = useCallback(async () => {
+    try { setLoading(true); const { data } = await api.get<any>('/admin/referral/stats'); setStats(data) }
+    catch { setStats(null) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { fetchStats() }, [fetchStats])
+  return { stats, loading, refresh: fetchStats }
+}
+
+export function useAdminReferralRecords(page: number = 1, size: number = 20, referrerEmail?: string) {
+  const [records, setRecords] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchRecords = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = { page, size }
+      if (referrerEmail) params.referrer_email = referrerEmail
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/referral/records', params)
+      setRecords(data.list || []); setTotal(data.total || 0)
+    } catch { setRecords([]); setTotal(0) } finally { setLoading(false) }
+  }, [page, size, referrerEmail])
+  useEffect(() => { fetchRecords() }, [fetchRecords])
+  return { records, loading, total, refresh: fetchRecords }
 }

@@ -34,6 +34,7 @@ export default async function RootLayout({
             {children}
             <Toaster
               position="top-center"
+              containerStyle={{ zIndex: 99999 }}
               toastOptions={{
                 className: 'bg-background text-foreground border shadow-lg',
                 duration: 3000,

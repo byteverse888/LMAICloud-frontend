@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   RefreshCw, Plus, Search, MoreHorizontal,
   Power, PowerOff, Trash2, Loader2, Bot,
-  Cpu, HardDrive, Globe, Server,
+  Cpu, HardDrive, Globe, Server, Check, ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,6 +57,14 @@ const getStatusBadge = (status: string) => {
   )
 }
 
+// ============ 智能体实例规格 ============
+interface ClawSpec { cpu: number; memory: number; disk: number; label: string; desc: string; price: number }
+const clawSpecs: ClawSpec[] = [
+  { cpu: 2, memory: 4, disk: 20, label: '入门型', desc: '2核4G / 20GB', price: 0.12 },
+  { cpu: 4, memory: 8, disk: 40, label: '通用型', desc: '4核8G / 40GB', price: 0.24 },
+  { cpu: 8, memory: 16, disk: 80, label: '旗舰型', desc: '8核16G / 80GB', price: 0.48 },
+]
+
 export default function OpenClawPage() {
   const { instances, loading, refresh, createInstance, startInstance, stopInstance, deleteInstance } = useOpenClawInstances()
 
@@ -69,9 +77,11 @@ export default function OpenClawPage() {
   // 创建弹窗
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [selectedClawSpec, setSelectedClawSpec] = useState<ClawSpec>(clawSpecs[0])
   const [form, setForm] = useState({
-    name: '', node_type: 'center', cpu_cores: 2, memory_gb: 4, disk_gb: 20, image_url: '', port: 18789,
+    name: '', node_type: 'center', image_url: '', port: 18789,
   })
+  const [showClawAdvanced, setShowClawAdvanced] = useState(false)
 
   // 删除确认
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -98,15 +108,17 @@ export default function OpenClawPage() {
       await createInstance({
         name: form.name.trim(),
         node_type: form.node_type,
-        cpu_cores: form.cpu_cores,
-        memory_gb: form.memory_gb,
-        disk_gb: form.disk_gb,
+        cpu_cores: selectedClawSpec.cpu,
+        memory_gb: selectedClawSpec.memory,
+        disk_gb: selectedClawSpec.disk,
         image_url: form.image_url || undefined,
         port: form.port,
       })
       toast.success('实例创建中')
       setShowCreate(false)
-      setForm({ name: '', node_type: 'center', cpu_cores: 2, memory_gb: 4, disk_gb: 20, image_url: '', port: 18789 })
+      setSelectedClawSpec(clawSpecs[0])
+      setForm({ name: '', node_type: 'center', image_url: '', port: 18789 })
+      setShowClawAdvanced(false)
     } catch { toast.error('创建失败') }
     finally { setCreating(false) }
   }
@@ -136,9 +148,9 @@ export default function OpenClawPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" /> AI Agent 实例
+            <Bot className="h-6 w-6 text-primary" /> 智能体实例
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">管理 OpenClaw AI Agent 实例</p>
+          <p className="text-muted-foreground text-sm mt-1">管理您的智能体实例</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading}>
@@ -196,7 +208,7 @@ export default function OpenClawPage() {
                   <TableCell colSpan={8} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Bot className="h-10 w-10 text-muted-foreground/40" />
-                      <p className="text-muted-foreground font-medium">暂无 AI Agent 实例</p>
+                      <p className="text-muted-foreground font-medium">暂无智能体实例</p>
                       <Button size="sm" className="mt-1" onClick={() => setShowCreate(true)}>
                         <Plus className="h-4 w-4 mr-1" /> 创建实例
                       </Button>
@@ -265,49 +277,76 @@ export default function OpenClawPage() {
 
       {/* 创建弹窗 */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[540px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> 创建 AI Agent 实例</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> 创建智能体实例</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>实例名称 *</Label>
               <Input placeholder="my-agent" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>节点类型</Label>
-                <Select value={form.node_type} onValueChange={v => setForm(f => ({ ...f, node_type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="center">云端节点</SelectItem>
-                    <SelectItem value="edge">边缘节点</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>端口</Label>
-                <Input type="number" value={form.port} onChange={e => setForm(f => ({ ...f, port: parseInt(e.target.value) || 18789 }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label>CPU (核)</Label>
-                <Input type="number" value={form.cpu_cores} onChange={e => setForm(f => ({ ...f, cpu_cores: parseInt(e.target.value) || 2 }))} />
-              </div>
-              <div className="grid gap-2">
-                <Label>内存 (GB)</Label>
-                <Input type="number" value={form.memory_gb} onChange={e => setForm(f => ({ ...f, memory_gb: parseInt(e.target.value) || 4 }))} />
-              </div>
-              <div className="grid gap-2">
-                <Label>磁盘 (GB)</Label>
-                <Input type="number" value={form.disk_gb} onChange={e => setForm(f => ({ ...f, disk_gb: parseInt(e.target.value) || 20 }))} />
-              </div>
-            </div>
+
+            {/* 规格选择卡片 */}
             <div className="grid gap-2">
-              <Label>镜像地址 (可选)</Label>
-              <Input placeholder="默认使用系统镜像" value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
+              <Label>实例规格 *</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {clawSpecs.map(spec => {
+                  const sel = selectedClawSpec.label === spec.label
+                  return (
+                    <div
+                      key={spec.label}
+                      onClick={() => setSelectedClawSpec(spec)}
+                      className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                        sel
+                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                          : 'border-border hover:border-primary/40 hover:shadow-sm'
+                      }`}
+                    >
+                      {sel && <div className="absolute top-1.5 right-1.5"><Check className="h-3.5 w-3.5 text-primary" /></div>}
+                      <div className="text-sm font-bold text-foreground">{spec.label}</div>
+                      <div className="text-xs text-muted-foreground">{spec.desc}</div>
+                      <div className="mt-0.5">
+                        <span className="text-primary font-bold text-sm">¥{spec.price.toFixed(2)}</span>
+                        <span className="text-[10px] text-muted-foreground">/时</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
+
+            <div className="grid gap-2">
+              <Label>节点类型</Label>
+              <Select value={form.node_type} onValueChange={v => setForm(f => ({ ...f, node_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="center">云端节点</SelectItem>
+                  <SelectItem value="edge">边缘节点</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 高级选项 */}
+            <button
+              onClick={() => setShowClawAdvanced(!showClawAdvanced)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${showClawAdvanced ? 'rotate-90' : ''}`} />
+              <span className="font-medium">高级选项</span>
+            </button>
+            {showClawAdvanced && (
+              <div className="grid gap-4 pl-1 border-l-2 border-muted ml-1">
+                <div className="grid gap-2">
+                  <Label>端口</Label>
+                  <Input type="number" value={form.port} onChange={e => setForm(f => ({ ...f, port: parseInt(e.target.value) || 18789 }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>镜像地址 (可选)</Label>
+                  <Input placeholder="默认使用系统镜像" value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>取消</Button>

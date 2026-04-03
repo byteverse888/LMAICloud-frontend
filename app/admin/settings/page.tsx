@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react'
+import { Loader2, Mail, CheckCircle, AlertCircle, Megaphone } from 'lucide-react'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -35,6 +35,7 @@ interface SystemSettings {
   service_agreement: string
   recharge_agreement: string
   captcha_enabled: boolean
+  announcement_text: string
 }
 
 interface EmailConfig {
@@ -76,6 +77,7 @@ export default function SettingsPage() {
     service_agreement: '',
     recharge_agreement: '',
     captcha_enabled: true,
+    announcement_text: '',
   })
 
   // 协议编辑/预览状态
@@ -247,6 +249,19 @@ export default function SettingsPage() {
                   value={settings.site_description} 
                   onChange={(e) => updateSetting('site_description', e.target.value)} 
                 />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Megaphone className="h-4 w-4" />
+                  首页公告
+                </Label>
+                <textarea
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  placeholder="输入公告内容，留空则不显示公告横幅"
+                  value={settings.announcement_text}
+                  onChange={(e) => updateSetting('announcement_text', e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">公告内容仅在首页顶部显示，留空则不显示</p>
               </div>
               <Separator />
               <div className="flex items-center justify-between">

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Minus, Loader2, X, Server, CreditCard, Cpu, HardDrive,
-  Box, Terminal, Clock, Zap, Image as ImageIcon, Package, Settings2,
+  Plus, Minus, Loader2, X, Server, Cpu, HardDrive,
+  Terminal, Clock, Zap, Image as ImageIcon,
   ChevronRight, Check, AlertCircle, Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -71,6 +71,36 @@ const imageCategories = [
   { value: 'shared', label: '与我共享' },
 ]
 
+// ============ 容器实例规格 =============
+interface SpecOption { cpu: number; memory: number; label: string; price: number }
+const containerSpecs: Record<string, { label: string; desc: string; specs: SpecOption[] }> = {
+  general: {
+    label: '通用型', desc: 'CPU:内存 = 1:2，适合大多数应用场景',
+    specs: [
+      { cpu: 2, memory: 4, label: '2核4G', price: 0.12 },
+      { cpu: 4, memory: 8, label: '4核8G', price: 0.24 },
+      { cpu: 8, memory: 16, label: '8核16G', price: 0.48 },
+    ],
+  },
+  compute: {
+    label: '计算型', desc: 'CPU:内存 = 1:1，适合计算密集型任务',
+    specs: [
+      { cpu: 2, memory: 2, label: '2核2G', price: 0.08 },
+      { cpu: 4, memory: 4, label: '4核4G', price: 0.16 },
+      { cpu: 8, memory: 8, label: '8核8G', price: 0.32 },
+      { cpu: 16, memory: 16, label: '16核16G', price: 0.64 },
+    ],
+  },
+  memory: {
+    label: '内存型', desc: 'CPU:内存 = 1:4，适合内存密集型任务',
+    specs: [
+      { cpu: 1, memory: 4, label: '1核4G', price: 0.10 },
+      { cpu: 2, memory: 8, label: '2核8G', price: 0.20 },
+      { cpu: 4, memory: 16, label: '4核16G', price: 0.40 },
+    ],
+  },
+}
+
 // ============ 分区标题 ============
 function SectionHeader({ icon: Icon, title, desc }: { icon: any; title: string; desc?: string }) {
   return (
@@ -123,6 +153,9 @@ export default function InstanceCreatePage() {
   const [shutdownMinutes, setShutdownMinutes] = useState(60)
   const [releaseMinutes, setReleaseMinutes] = useState(60)
   const [creating, setCreating] = useState(false)
+  const [specType, setSpecType] = useState('general')
+  const [selectedSpec, setSelectedSpec] = useState<SpecOption>(containerSpecs.general.specs[0])
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const { configs, loading: configsLoading } = useResourceConfigs(
     resourceTypeFilter !== 'all' ? { resource_type: resourceTypeFilter } : undefined
@@ -146,8 +179,8 @@ export default function InstanceCreatePage() {
     return c.gpu_model === resourceTypeFilter
   })
 
-  const hourlyPrice = selectedConfig ? selectedConfig.hourly_price : 0
-  const totalHourly = hourlyPrice * instanceCount
+  const gpuHourly = selectedConfig ? selectedConfig.hourly_price : 0
+  const totalHourly = (selectedSpec.price + gpuHourly) * instanceCount
 
   const handleCreate = async () => {
     if (!instanceName.trim()) { toast.error('请输入实例名称'); return }
@@ -160,6 +193,8 @@ export default function InstanceCreatePage() {
         gpu_count: selectedConfig.resource_type === 'vGPU' ? 1 : 0,
         gpu_model: selectedConfig.gpu_model, billing_type: billingMode,
         resource_type: selectedConfig.resource_type, node_type: selectedConfig.node_type,
+        cpu_cores: selectedSpec.cpu, memory_gb: selectedSpec.memory,
+        spec_type: specType, spec_label: selectedSpec.label,
         instance_count: instanceCount, pip_source: pipSource, conda_source: condaSource, apt_source: aptSource,
         startup_command: startupCommand.trim() || undefined,
         auto_shutdown_type: autoShutdown,
@@ -170,10 +205,10 @@ export default function InstanceCreatePage() {
       if (imageCategory === 'external') {
         payload.image_url = externalImageUrl
       } else if (selectedImage) {
-        payload.image_id = selectedImage
-        // 同时传 image_url，确保后端不依赖 DB 查找也能拿到正确镜像地址
-        const img = images.find(i => i.id === selectedImage)
+        // 通过 name + tag 匹配到具体镜像记录
+        const img = images.find(i => i.name === selectedImage && i.tag === selectedImageTag)
         if (img) {
+          payload.image_id = img.id
           payload.image_url = img.image_url || `${img.name}:${img.tag}`
         }
       }
@@ -245,6 +280,57 @@ export default function InstanceCreatePage() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">单次创建最多 5 个实例</p>
             </FormRow>
+          </CardContent>
+        </Card>
+
+        {/* ===== 规格选择 ===== */}
+        <Card className="animate-slide-up" style={{ animationDelay: '0.08s' }}>
+          <CardHeader className="pb-4">
+            <SectionHeader icon={Cpu} title="规格选择" desc="选择容器实例的 CPU 和内存配置" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-1 mb-1">
+              {Object.entries(containerSpecs).map(([key, group]) => (
+                <button
+                  key={key}
+                  onClick={() => { setSpecType(key); setSelectedSpec(group.specs[0]) }}
+                  className={`px-4 py-2 text-sm rounded-lg font-medium transition-all ${
+                    specType === key
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >{group.label}</button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{containerSpecs[specType].desc}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {containerSpecs[specType].specs.map(spec => {
+                const sel = selectedSpec.cpu === spec.cpu && selectedSpec.memory === spec.memory
+                return (
+                  <div
+                    key={spec.label}
+                    onClick={() => setSelectedSpec(spec)}
+                    className={`relative flex flex-col items-center gap-1.5 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                      sel
+                        ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                        : 'border-border hover:border-primary/40 hover:shadow-sm'
+                    }`}
+                  >
+                    {sel && <div className="absolute top-2 right-2"><Check className="h-4 w-4 text-primary" /></div>}
+                    <div className="text-lg font-bold text-foreground">{spec.label}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>CPU {spec.cpu}核</span>
+                      <span className="text-border">|</span>
+                      <span>内存 {spec.memory}GB</span>
+                    </div>
+                    <div className="mt-1">
+                      <span className="text-primary font-bold text-sm">¥{spec.price.toFixed(2)}</span>
+                      <span className="text-[10px] text-muted-foreground">/时</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </CardContent>
         </Card>
 
@@ -399,36 +485,59 @@ export default function InstanceCreatePage() {
                     <TabsTrigger key={c.value} value={c.value} className="text-xs">{c.label}</TabsTrigger>
                   ))}
                 </TabsList>
-                {['base', 'app', 'framework', 'custom', 'shared'].map(cat => (
-                  <TabsContent key={cat} value={cat}>
-                    <div className="flex gap-3 items-center mt-2">
-                      <Select value={selectedImage} onValueChange={v => { setSelectedImage(v); const img = images.find(i => i.id === v); if (img) setSelectedImageTag(img.tag) }}>
-                        <SelectTrigger className="w-44"><SelectValue placeholder="选择镜像" /></SelectTrigger>
-                        <SelectContent>
-                          {images.filter(i => ['base', 'app', 'framework'].includes(cat) ? i.type === cat : true).map(img => (
-                            <SelectItem key={img.id} value={img.id}>{img.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={selectedImageTag} onValueChange={setSelectedImageTag}>
-                        <SelectTrigger className="w-80"><SelectValue placeholder="选择版本" /></SelectTrigger>
-                        <SelectContent>
-                          {images.filter(i => i.id === selectedImage).map(img => (
-                            <SelectItem key={img.id} value={img.tag}>{img.image_url || `${img.name}:${img.tag}`}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TabsContent>
-                ))}
+                {['base', 'app', 'framework', 'custom', 'shared'].map(cat => {
+                  const catImages = images.filter(i => ['base', 'app', 'framework'].includes(cat) ? i.type === cat : true)
+                  const uniqueNames = [...new Map(catImages.map(i => [i.name, i])).values()]
+                  const tagOptions = catImages.filter(i => i.name === selectedImage)
+                  return (
+                    <TabsContent key={cat} value={cat}>
+                      <div className="flex gap-3 items-center mt-2">
+                        <Select value={selectedImage} onValueChange={v => { setSelectedImage(v); const first = catImages.find(i => i.name === v); if (first) setSelectedImageTag(first.tag) }}>
+                          <SelectTrigger className="w-44"><SelectValue placeholder="选择镜像" /></SelectTrigger>
+                          <SelectContent>
+                            {uniqueNames.map(img => (
+                              <SelectItem key={img.name} value={img.name}>{img.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={selectedImageTag} onValueChange={setSelectedImageTag}>
+                          <SelectTrigger className="w-80"><SelectValue placeholder="选择版本" /></SelectTrigger>
+                          <SelectContent>
+                            {tagOptions.map(img => (
+                              <SelectItem key={img.id} value={img.tag}>{img.image_url || `${img.name}:${img.tag}`}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TabsContent>
+                  )
+                })}
                 <TabsContent value="external">
                   <Input className="mt-2 max-w-xl" placeholder="请输入外部镜像地址，如 docker.io/pytorch/pytorch:latest" value={externalImageUrl} onChange={e => setExternalImageUrl(e.target.value)} />
                 </TabsContent>
               </Tabs>
             </FormRow>
+          </CardContent>
+        </Card>
 
-            <Separator />
-
+        {/* ===== 高级选项 ===== */}
+        <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+          >
+            <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${showAdvanced ? 'rotate-90' : ''}`} />
+            <span className="font-medium">高级选项</span>
+            <span className="text-xs">(安装源、启动命令、存储挂载、环境变量、自动策略)</span>
+          </button>
+        </div>
+        {showAdvanced && <>
+        {/* 安装源 & 启动命令 */}
+        <Card className="animate-slide-up">
+          <CardHeader className="pb-4">
+            <SectionHeader icon={Terminal} title="运行配置" desc="安装源和启动命令" />
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormRow label="安装源">
               <div className="flex gap-5 items-center flex-wrap">
                 {[
@@ -446,7 +555,6 @@ export default function InstanceCreatePage() {
                 ))}
               </div>
             </FormRow>
-
             <FormRow label="启动命令">
               <div className="flex items-center gap-2 max-w-lg">
                 <div className="relative flex-1">
@@ -458,7 +566,6 @@ export default function InstanceCreatePage() {
             </FormRow>
           </CardContent>
         </Card>
-
         {/* ===== 存储与环境 ===== */}
         <Card className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <CardHeader className="pb-4">
@@ -533,6 +640,7 @@ export default function InstanceCreatePage() {
             </FormRow>
           </CardContent>
         </Card>
+        </>}
       </div>
 
       {/* ===== 底部操作栏 ===== */}
@@ -547,9 +655,9 @@ export default function InstanceCreatePage() {
               <span className="text-2xl font-bold text-primary tracking-tight">¥{totalHourly.toFixed(2)}</span>
               <span className="text-sm text-muted-foreground">/小时</span>
             </div>
-            {totalHourly > 0 && (
-              <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-500/10">
-                优惠券优先扣费
+            {selectedSpec && (
+              <Badge variant="outline" className="text-[10px] border-primary/30 text-primary/80">
+                {containerSpecs[specType].label} · {selectedSpec.label}
               </Badge>
             )}
           </div>

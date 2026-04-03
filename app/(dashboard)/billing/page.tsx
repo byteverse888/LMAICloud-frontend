@@ -33,7 +33,7 @@ export default function BillingPage() {
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending')
   const [checkingStatus, setCheckingStatus] = useState(false)
 
-  const { balance, frozenBalance, loading, refresh } = useUserBalance()
+  const { balance, loading, refresh } = useUserBalance()
 
   // 用 ref 防止充值成功的 toast/refresh 重复触发
   const successHandledRef = useRef(false)
@@ -176,13 +176,6 @@ export default function BillingPage() {
                     <span className="text-sm text-muted-foreground">可用余额</span>
                     <div className={cn('text-3xl font-bold', balance < 0 ? 'text-red-500' : 'text-primary')}>
                       ¥{balance.toFixed(2)}
-                    </div>
-                  </div>
-                  <div className="h-12 w-px bg-border" />
-                  <div className="space-y-1">
-                    <span className="text-sm text-muted-foreground">冻结余额</span>
-                    <div className="text-3xl font-bold text-muted-foreground">
-                      ¥{frozenBalance.toFixed(2)}
                     </div>
                   </div>
                 </div>

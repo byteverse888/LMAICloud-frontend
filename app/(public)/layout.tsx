@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserNav } from '@/components/layout/user-nav'
 import { Button } from '@/components/ui/button'
-import { Bell, Crown, ChevronDown } from 'lucide-react'
+import { Bell, Crown, ChevronDown, Megaphone, X } from 'lucide-react'
 import api from '@/lib/api'
 
 interface SiteInfo {
@@ -17,6 +18,7 @@ interface SiteInfo {
   icp_link?: string
   police_number?: string
   copyright_text?: string
+  announcement_text?: string
 }
 
 export default function PublicLayout({
@@ -25,7 +27,9 @@ export default function PublicLayout({
   children: React.ReactNode
 }) {
   const t = useTranslations('header')
+  const pathname = usePathname()
   const [siteInfo, setSiteInfo] = useState<SiteInfo>({ site_name: 'LMAICloud' })
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false)
 
   useEffect(() => {
     api.get<SiteInfo>('/system/site-info')
@@ -33,14 +37,25 @@ export default function PublicLayout({
       .catch(() => {})
   }, [])
 
+  // 仅在首页显示公告
+  const isHomePage = pathname === '/market/list' || pathname === '/market'
+  const showAnnouncement = isHomePage && !announcementDismissed && !!siteInfo.announcement_text?.trim()
+
   return (
     <div className="min-h-screen bg-background">
-      {/* 顶部公告栏 */}
-      <div className="bg-orange-500 text-white text-sm text-center py-2 px-4">
-        西北B区、北京B区和重庆A区均已上线PRO 6000，关于PRO 6000介绍和性能可 
-        <Link href="#" className="underline mx-1">参考文档</Link>。
-        北京B区将于2月11日上线A800 80GB NVLink版本GPU。
-      </div>
+      {/* 顶部公告栏 - 仅首页 + 有内容时显示 */}
+      {showAnnouncement && (
+        <div className="relative bg-primary/10 dark:bg-primary/15 border-b border-primary/20 text-sm text-center py-2.5 px-10">
+          <Megaphone className="inline h-4 w-4 mr-2 text-primary" />
+          <span className="text-foreground/90">{siteInfo.announcement_text}</span>
+          <button
+            onClick={() => setAnnouncementDismissed(true)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* 顶部导航 */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">

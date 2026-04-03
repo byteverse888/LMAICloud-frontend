@@ -31,13 +31,13 @@ import {
   Gift,
   FileCheck,
   Shield,
-  History,
   Users,
   Settings,
   Bot,
   Coins,
   Share2,
   ClipboardList,
+  Bell,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
@@ -92,9 +92,9 @@ export function Sidebar() {
       icon: User,
       children: [
         { title: t('security'), href: '/account/security', icon: Shield },
-        { title: t('accessLog'), href: '/account/access-log', icon: History },
         { title: t('auditLog'), href: '/account/audit-log', icon: ClipboardList },
         { title: t('referral'), href: '/account/referral', icon: Share2 },
+        { title: t('notifications'), href: '/notifications', icon: Bell },
         { title: t('settings'), href: '/account/settings', icon: Settings },
       ],
     },

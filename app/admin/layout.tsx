@@ -34,6 +34,11 @@ import {
   CircleDollarSign,
   ClipboardList,
   Store,
+  Bell,
+  Share2,
+  Package,
+  MonitorCog,
+  AppWindow,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -75,11 +80,22 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/clusters', label: '集群管理', icon: Server },
       { href: '/admin/nodes', label: '节点管理', icon: HardDrive },
       { href: '/admin/storage', label: '存储管理', icon: Database },
-      { href: '/admin/images', label: '镜像管理', icon: Image },
       { href: '/admin/services', label: '服务管理', icon: Network },
       { href: '/admin/deployments', label: '部署管理', icon: Box },
       { href: '/admin/pods', label: '容器管理', icon: Container },
       { href: '/admin/openclaw', label: '智能体管理', icon: Bot },
+    ],
+  },
+  {
+    href: '/admin/products',
+    label: '产品管理',
+    icon: Package,
+    children: [
+      { href: '/admin/market', label: '算力市场', icon: Store },
+      { href: '/admin/ai-apps', label: 'AI应用', icon: AppWindow },
+      { href: '/admin/ai-servers', label: 'AI服务器', icon: MonitorCog },
+      { href: '/admin/images', label: '镜像管理', icon: Image },
+      { href: '/admin/public-data', label: '公开数据', icon: Globe },
     ],
   },
   {
@@ -91,8 +107,8 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
       { href: '/admin/billing', label: '计费管理', icon: CircleDollarSign },
       { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
-      { href: '/admin/market', label: '算力市场', icon: Store },
-      { href: '/admin/public-data', label: '公开数据', icon: Globe },
+      { href: '/admin/notifications', label: '通知管理', icon: Bell },
+      { href: '/admin/referral', label: '推广管理', icon: Share2 },
       { href: '/admin/reports', label: '数据报表', icon: BarChart3 },
       { href: '/admin/audit-log', label: '操作日志', icon: ClipboardList },
     ],
@@ -106,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, isLoading, isAuthenticated, logout, checkAuth } = useAuthStore()
   const { theme, setTheme } = useTheme()
   const [countdown, setCountdown] = useState(3)
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true, '/admin/operations': true })
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true, '/admin/products': true, '/admin/operations': true })
   
   // 修改密码对话框状态
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)

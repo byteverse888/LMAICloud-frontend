@@ -93,9 +93,9 @@ export default function AdminOpenClawPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" /> OpenClaw 实例管理
+            <Bot className="h-6 w-6 text-primary" /> 智能体实例管理
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">管理所有用户的 AI Agent 实例</p>
+          <p className="text-muted-foreground text-sm mt-1">管理所有用户的智能体实例</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> 刷新
@@ -178,7 +178,7 @@ export default function AdminOpenClawPage() {
                 <TableRow>
                   <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                     <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                    <p>暂无 OpenClaw 实例</p>
+                    <p>暂无智能体实例</p>
                   </TableCell>
                 </TableRow>
               ) : pagedInstances.map(inst => (
