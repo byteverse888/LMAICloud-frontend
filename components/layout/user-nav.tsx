@@ -11,14 +11,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, LogOut, Copy, ChevronDown } from 'lucide-react'
+import { User, LogOut, Copy, ChevronDown, CalendarCheck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useDailyCheckin } from '@/hooks/use-api'
 
 export function UserNav() {
   const t = useTranslations('auth')
   const { user, isAuthenticated, logout } = useAuthStore()
+  const { checkin, loading: checkinLoading, checkedInToday } = useDailyCheckin()
+
+  const handleCheckin = async () => {
+    try {
+      const result = await checkin()
+      toast.success(result.message || '签到成功，获得2积分')
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || '签到失败')
+    }
+  }
 
   if (!isAuthenticated || !user) {
     return (
@@ -119,6 +130,29 @@ export function UserNav() {
             <span className="text-sm text-muted-foreground">积分余额：</span>
             <span className="font-medium text-amber-600 dark:text-amber-400">{user.points || 0}</span>
           </div>
+        </div>
+
+        <DropdownMenuSeparator />
+
+        {/* 每日签到 */}
+        <div className="px-3 py-2">
+          <button
+            onClick={handleCheckin}
+            disabled={checkedInToday || checkinLoading}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              checkedInToday
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer'
+            )}
+          >
+            {checkinLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CalendarCheck className="h-4 w-4" />
+            )}
+            {checkedInToday ? '今日已签到' : '每日签到 +2积分'}
+          </button>
         </div>
 
         <DropdownMenuSeparator />

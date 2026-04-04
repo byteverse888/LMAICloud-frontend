@@ -4,20 +4,21 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { usePoints, usePointRecords, useDailyCheckin } from '@/hooks/use-api'
-import { Star, Gift, Loader2, CalendarCheck } from 'lucide-react'
+import { Star, Gift, Loader2, CalendarCheck, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function PointsPage() {
   const { points, loading: pointsLoading, refresh: refreshPoints } = usePoints()
   const [page, setPage] = useState(1)
-  const { records, loading, total } = usePointRecords(page, 20)
-  const { checkin, loading: checkinLoading } = useDailyCheckin()
+  const { records, loading, total, refresh: refreshRecords } = usePointRecords(page, 20)
+  const { checkin, loading: checkinLoading, checkedInToday } = useDailyCheckin()
 
   const handleCheckin = async () => {
     try {
       const result = await checkin()
       toast.success(result.message || '签到成功')
       refreshPoints()
+      refreshRecords()
     } catch (err: any) {
       toast.error(err.response?.data?.detail || '签到失败')
     }
@@ -52,11 +53,24 @@ export default function PointsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">每日签到</p>
-                <p className="text-sm text-muted-foreground mt-1">签到可获得 2 积分</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {checkedInToday ? '今日已签到，明天再来吧' : '签到可获得 2 积分'}
+                </p>
               </div>
-              <Button onClick={handleCheckin} disabled={checkinLoading} className="gap-2">
-                {checkinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarCheck className="h-4 w-4" />}
-                立即签到
+              <Button
+                onClick={handleCheckin}
+                disabled={checkedInToday || checkinLoading}
+                variant={checkedInToday ? 'outline' : 'default'}
+                className="gap-2"
+              >
+                {checkinLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : checkedInToday ? (
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <CalendarCheck className="h-4 w-4" />
+                )}
+                {checkedInToday ? '已签到' : '立即签到'}
               </Button>
             </div>
           </CardContent>

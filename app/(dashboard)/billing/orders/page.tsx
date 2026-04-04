@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { Calendar, Search, Eye, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Calendar, Search, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,8 +26,9 @@ import { cn } from '@/lib/utils'
 import { useOrders } from '@/hooks/use-api'
 
 const productOptions = [
-  { value: 'all', label: '请选择产品名称' },
+  { value: 'all', label: '全部产品' },
   { value: 'instance', label: '容器实例' },
+  { value: 'openclaw', label: 'OpenClaw' },
   { value: 'storage', label: '文件存储' },
   { value: 'image', label: '镜像' },
   { value: 'disk', label: '数据盘扩容' },
@@ -37,11 +38,46 @@ export default function OrdersPage() {
   const t = useTranslations('billing')
   const [orderId, setOrderId] = useState('')
   const [productType, setProductType] = useState('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [goToPage, setGoToPage] = useState('')
 
-  const { orders, loading, total, refresh } = useOrders(currentPage, pageSize)
+  // 搜索触发：只有点击搜索时才更新 appliedFilters
+  const [appliedFilters, setAppliedFilters] = useState<{
+    search?: string; product_name?: string; start_date?: string; end_date?: string
+  }>({})
+
+  const { orders, loading, total, refresh } = useOrders(currentPage, pageSize, appliedFilters)
   const totalPages = Math.ceil(total / pageSize)
+
+  const handleSearch = () => {
+    setCurrentPage(1)
+    setAppliedFilters({
+      search: orderId || undefined,
+      product_name: productType !== 'all' ? productType : undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+    })
+  }
+
+  const handleReset = () => {
+    setOrderId('')
+    setProductType('all')
+    setStartDate('')
+    setEndDate('')
+    setCurrentPage(1)
+    setAppliedFilters({})
+  }
+
+  const handleGoToPage = () => {
+    const p = parseInt(goToPage)
+    if (p >= 1 && p <= totalPages) {
+      setCurrentPage(p)
+    }
+    setGoToPage('')
+  }
 
   const getStatusBadge = (status: string) => {
     const cfg: Record<string, { cls: string; label: string }> = {
@@ -55,6 +91,16 @@ export default function OrdersPage() {
         {c.label}
       </span>
     )
+  }
+
+  const getOrderTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      create: '创建',
+      renew: '续费',
+      upgrade: '升级',
+      recharge: '充值',
+    }
+    return map[type] || type || '-'
   }
 
   return (
@@ -72,6 +118,7 @@ export default function OrdersPage() {
                 placeholder="请输入订单号"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-48"
               />
             </div>
@@ -96,20 +143,28 @@ export default function OrdersPage() {
             {/* 交易时间 */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">交易时间：</span>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                开始时间
-              </Button>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-36"
+              />
               <span className="text-muted-foreground">至</span>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                结束时间
-              </Button>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-36"
+              />
             </div>
 
-            <Button size="sm" className="gap-1">
+            <Button size="sm" className="gap-1" onClick={handleSearch}>
               <Search className="h-4 w-4" />
               搜索
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1" onClick={handleReset}>
+              <X className="h-4 w-4" />
+              重置
             </Button>
           </div>
         </CardContent>
@@ -128,39 +183,40 @@ export default function OrdersPage() {
                 <TableHead className="w-[120px]">订单类型</TableHead>
                 <TableHead className="w-[80px]">状态</TableHead>
                 <TableHead className="w-[100px] text-right">金额</TableHead>
-                <TableHead className="w-[80px] text-center">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
+              {!loading && orders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    暂无订单数据
+                  </TableCell>
+                </TableRow>
+              )}
               {orders.map((order: any) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-mono text-sm">{order.id}</TableCell>
-                  <TableCell className="text-sm">{order.created_at}</TableCell>
+                  <TableCell className="font-mono text-xs">{order.id}</TableCell>
+                  <TableCell className="text-sm">
+                    {order.created_at ? new Date(order.created_at).toLocaleString('zh-CN') : '-'}
+                  </TableCell>
                   <TableCell className="text-sm">{order.product_name || order.description || '-'}</TableCell>
                   <TableCell className="text-sm">
                     {order.billing_cycle === 'monthly' ? '包月' :
                      order.billing_cycle === 'yearly' ? '包年' :
                      order.billing_cycle === 'daily' ? '按天' : '按量计费'}
                   </TableCell>
-                  <TableCell className="text-sm">{order.order_type || '-'}</TableCell>
+                  <TableCell className="text-sm">{getOrderTypeLabel(order.type)}</TableCell>
                   <TableCell className="text-sm">{getStatusBadge(order.status)}</TableCell>
                   <TableCell className="text-right">
                     {order.amount !== null && order.amount !== undefined ? (
                       <span className={cn(
-                        'text-sm',
-                        order.status === 'paid' ? 'text-green-600' : ''
+                        'text-sm font-medium',
+                        Number(order.amount) > 0 ? 'text-orange-500' : ''
                       )}>
-                        ¥{Number(order.amount).toFixed(2)}
+                        ¥{Math.abs(Number(order.amount)).toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {order.status === 'paid' && (
-                      <Button variant="link" size="sm" className="text-primary p-0 h-auto">
-                        查看详情
-                      </Button>
                     )}
                   </TableCell>
                 </TableRow>
@@ -185,22 +241,24 @@ export default function OrdersPage() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                disabled={currentPage === 1}
+                disabled={currentPage <= 1}
                 onClick={() => setCurrentPage(currentPage - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-primary font-medium px-2">{currentPage}</span>
+              <span className="text-sm text-primary font-medium px-2">
+                {currentPage} / {totalPages || 1}
+              </span>
               <Button
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                disabled={currentPage === totalPages}
+                disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage(currentPage + 1)}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1) }}>
                 <SelectTrigger className="w-24 h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -216,7 +274,9 @@ export default function OrdersPage() {
                 className="w-16 h-8"
                 min={1}
                 max={totalPages}
-                defaultValue={1}
+                value={goToPage}
+                onChange={(e) => setGoToPage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleGoToPage()}
               />
               <span className="text-sm text-muted-foreground">页</span>
             </div>

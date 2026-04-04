@@ -138,8 +138,14 @@ export default function InstancesPage() {
       // 默认(全部)时隐藏已删除的实例
       list = list.filter(i => i.status !== 'released')
     }
+    if (dateFrom) {
+      list = list.filter(i => i.created_at && i.created_at >= dateFrom)
+    }
+    if (dateTo) {
+      list = list.filter(i => i.created_at && i.created_at <= dateTo + 'T23:59:59')
+    }
     return list
-  }, [instances, searchQuery, statusFilter])
+  }, [instances, searchQuery, statusFilter, dateFrom, dateTo])
 
   // 分页数据
   const pagedInstances = paginateArray(filteredInstances, currentPage, pageSize)
@@ -489,6 +495,7 @@ export default function InstancesPage() {
                 <Filter className="inline h-3 w-3 ml-1 text-muted-foreground" />
               </TableHead>
               <TableHead className="font-semibold">计算配置</TableHead>
+              <TableHead className="font-semibold">计费方式</TableHead>
               <TableHead className="font-semibold">CPU</TableHead>
               <TableHead className="font-semibold">内存</TableHead>
               <TableHead className="font-semibold">磁盘</TableHead>
@@ -566,6 +573,20 @@ export default function InstancesPage() {
                         <div>CPU {inst.cpu_cores}核</div>
                       )}
                       <div className="text-xs text-muted-foreground">{inst.cpu_cores}核 / {inst.memory}GB</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                        inst.billing_type === 'monthly' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                        inst.billing_type === 'yearly' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      }`}>
+                        {inst.billing_type === 'monthly' ? '包月' :
+                         inst.billing_type === 'yearly' ? '包年' :
+                         inst.billing_type === 'daily' ? '按天' : '按量'}
+                      </span>
+                      <div className="text-xs text-muted-foreground mt-0.5">¥{inst.hourly_price?.toFixed(2)}/小时</div>
                     </div>
                   </TableCell>
                   <TableCell>

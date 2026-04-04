@@ -9,6 +9,7 @@ export interface User {
   frozen_balance: number
   points: number
   invite_code?: string
+  last_checkin_date?: string  // 最后签到日期 YYYY-MM-DD
   status: 'active' | 'inactive' | 'banned'
   verified: boolean
   createdAt: string

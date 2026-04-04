@@ -73,6 +73,11 @@ export interface Instance {
     is_terminating: boolean
     containers?: any[]
   }>
+  // 运行时监控指标（由后端合并 metrics 后返回）
+  cpu_usage_millicores?: number | null
+  memory_usage_bytes?: number | null
+  gpu_util?: number | null
+  gpu_memory?: number | null
 }
 
 // 镜像类型定义
@@ -271,19 +276,29 @@ export function useGpuModels() {
   return { gpuModels, loading }
 }
 
-export function useOrders(page: number = 1, size: number = 20) {
+export function useOrders(
+  page: number = 1,
+  size: number = 20,
+  filters?: { search?: string; product_name?: string; start_date?: string; end_date?: string }
+) {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
+  const filterKey = JSON.stringify(filters || {})
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true)
-      const { data } = await api.get<{ list: any[]; total: number }>('/billing/orders', { page, size })
+      const params: Record<string, string | number> = { page, size }
+      if (filters?.search) params.search = filters.search
+      if (filters?.product_name && filters.product_name !== 'all') params.product_name = filters.product_name
+      if (filters?.start_date) params.start_date = filters.start_date
+      if (filters?.end_date) params.end_date = filters.end_date
+      const { data } = await api.get<{ list: any[]; total: number }>('/billing/orders', params)
       setOrders(data.list || []); setTotal(data.total || 0)
     } catch {
       setOrders([]); setTotal(0)
     } finally { setLoading(false) }
-  }, [page, size])
+  }, [page, size, filterKey])
   useEffect(() => { fetchOrders() }, [fetchOrders])
   return { orders, loading, total, refresh: fetchOrders }
 }
@@ -918,17 +933,21 @@ export function useTransactions(page: number = 1, size: number = 20, type?: stri
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
+  const [monthConsumption, setMonthConsumption] = useState(0)
+  const [totalConsumption, setTotalConsumption] = useState(0)
   const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true)
       const params: Record<string, string | number> = { page, size }
       if (type) params.type = type
-      const { data } = await api.get<{ list: any[]; total: number }>('/billing/transactions', params)
+      const { data } = await api.get<{ list: any[]; total: number; month_consumption?: number; total_consumption?: number }>('/billing/transactions', params)
       setTransactions(data.list || []); setTotal(data.total || 0)
+      setMonthConsumption(data.month_consumption ?? 0)
+      setTotalConsumption(data.total_consumption ?? 0)
     } catch { setTransactions([]); setTotal(0) } finally { setLoading(false) }
   }, [page, size, type])
   useEffect(() => { fetchTransactions() }, [fetchTransactions])
-  return { transactions, loading, total, refresh: fetchTransactions }
+  return { transactions, loading, total, monthConsumption, totalConsumption, refresh: fetchTransactions }
 }
 
 export function useStatements(year?: number) {
@@ -1050,12 +1069,24 @@ export function usePointRecords(page: number = 1, size: number = 20) {
 
 export function useDailyCheckin() {
   const [loading, setLoading] = useState(false)
+  const { user, setUser } = useAuthStore()
+
+  // 判断今天是否已签到
+  const today = new Date().toISOString().slice(0, 10)
+  const checkedInToday = user?.last_checkin_date === today
+
   const checkin = async () => {
     setLoading(true)
-    try { const { data } = await api.post<{ message: string; points: number }>('/points/daily-checkin'); return data }
-    finally { setLoading(false) }
+    try {
+      const { data } = await api.post<{ message: string; points: number; checkin_date: string }>('/points/daily-checkin')
+      // 签到成功后更新 auth store 中的用户信息
+      if (user) {
+        setUser({ ...user, points: data.points, last_checkin_date: data.checkin_date })
+      }
+      return data
+    } finally { setLoading(false) }
   }
-  return { checkin, loading }
+  return { checkin, loading, checkedInToday }
 }
 
 // ====== 推广邀请 hooks ======

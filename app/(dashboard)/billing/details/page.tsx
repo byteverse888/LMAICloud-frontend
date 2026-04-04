@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Download, Search, Calendar, Filter, Cpu, HardDrive, TrendingUp, Receipt, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Download, Search, Calendar, Filter, Cpu, HardDrive, Receipt, Loader2, ChevronLeft, ChevronRight, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,18 +15,8 @@ export default function BillingDetailsPage() {
   const [page, setPage] = useState(1)
   const pageSize = 20
 
-  const { transactions, loading, total } = useTransactions(page, pageSize, typeFilter === 'all' ? undefined : typeFilter)
+  const { transactions, loading, total, monthConsumption, totalConsumption } = useTransactions(page, pageSize, typeFilter === 'all' ? undefined : typeFilter)
   const { balance } = useBalance()
-
-  // 统计卡片：从交易数据聚合
-  const stats = useMemo(() => {
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const monthItems = transactions.filter(t => t.created_at >= monthStart)
-    const consumption = monthItems.filter(t => t.type === 'consumption').reduce((s, t) => s + Math.abs(t.amount), 0)
-    const recharge = monthItems.filter(t => t.type === 'recharge').reduce((s, t) => s + t.amount, 0)
-    return { consumption, recharge }
-  }, [transactions])
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -47,7 +37,7 @@ export default function BillingDetailsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="text-sm text-muted-foreground">本月消费</div>
-                <div className="text-2xl font-bold">¥{stats.consumption.toFixed(2)}</div>
+                <div className="text-2xl font-bold">¥{monthConsumption.toFixed(2)}</div>
               </div>
               <div className="h-10 w-10 rounded-lg bg-orange-500/8 flex items-center justify-center">
                 <Receipt className="h-5 w-5 text-orange-500" />
@@ -59,11 +49,11 @@ export default function BillingDetailsPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">本月充值</div>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">¥{stats.recharge.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">消费总计</div>
+                <div className="text-2xl font-bold text-red-500">¥{totalConsumption.toFixed(2)}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
+              <div className="h-10 w-10 rounded-lg bg-red-500/8 flex items-center justify-center">
+                <TrendingDown className="h-5 w-5 text-red-500" />
               </div>
             </div>
           </CardContent>
