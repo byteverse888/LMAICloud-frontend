@@ -8,7 +8,7 @@ import { Loader2, Bot, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AIAppsPage() {
-  const { products, loading } = useMarketProducts('ai_app')
+  const { products, loading } = useMarketProducts({ category: 'ai_app' })
 
   return (
     <div className="space-y-8 py-6">

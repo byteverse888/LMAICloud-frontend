@@ -161,6 +161,12 @@ export interface Instance {
   created_at?: string
   updatedAt: string
   updated_at?: string
+
+  // 运行时监控指标（由后端合并 metrics 后返回）
+  cpu_usage_millicores?: number | null
+  memory_usage_bytes?: number | null
+  gpu_util?: number | null
+  gpu_memory?: number | null
 }
 
 // 资源配置（创建实例时的资源选择表格行）

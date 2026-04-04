@@ -105,7 +105,7 @@ const adminNavItems: NavItem[] = [
     children: [
       { href: '/admin/users', label: '用户管理', icon: Users },
       { href: '/admin/orders', label: '订单管理', icon: ShoppingCart },
-      { href: '/admin/billing', label: '计费管理', icon: CircleDollarSign },
+      { href: '/admin/billing', label: '套餐管理', icon: CircleDollarSign },
       { href: '/admin/tickets', label: '工单管理', icon: MessageSquare },
       { href: '/admin/notifications', label: '通知管理', icon: Bell },
       { href: '/admin/referral', label: '推广管理', icon: Share2 },

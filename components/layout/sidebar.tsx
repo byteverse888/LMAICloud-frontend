@@ -77,7 +77,6 @@ export function Sidebar() {
       children: [
         { title: t('billingDetails'), href: '/billing/details', icon: FileText },
         { title: t('orders'), href: '/billing/orders', icon: Receipt },
-        { title: t('statements'), href: '/billing/statements', icon: CreditCard },
         { title: t('points'), href: '/billing/points', icon: Coins },
         // 以下功能暂时隐藏
         // { title: t('coupons'), href: '/billing/coupons', icon: Ticket },

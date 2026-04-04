@@ -211,13 +211,14 @@ export function useStorageQuota() {
 
 export function useBalance() {
   const [balance, setBalance] = useState(0)
+  const [testMode, setTestMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const fetchBalance = useCallback(async () => {
-    try { setLoading(true); const { data } = await api.get<{ balance: number }>('/billing/balance'); setBalance(data.balance) }
+    try { setLoading(true); const { data } = await api.get<{ balance: number; wechat_test_mode?: boolean }>('/billing/balance'); setBalance(data.balance); setTestMode(!!data.wechat_test_mode) }
     catch { setBalance(0) } finally { setLoading(false) }
   }, [])
   useEffect(() => { fetchBalance() }, [fetchBalance])
-  return { balance, loading, refresh: fetchBalance }
+  return { balance, testMode, loading, refresh: fetchBalance }
 }
 
 // ====== GPU 市场数据 hooks ======

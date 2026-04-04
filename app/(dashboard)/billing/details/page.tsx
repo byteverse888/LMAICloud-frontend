@@ -33,7 +33,7 @@ export default function BillingDetailsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">费用明细</h1>
+        <h1 className="text-2xl font-bold tracking-tight">账单明细</h1>
         <Button variant="outline" size="sm" className="gap-2">
           <Download className="h-4 w-4" />
           导出账单

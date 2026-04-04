@@ -172,6 +172,10 @@ export default function InstancesPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // 单个关机确认
+  const [stopTarget, setStopTarget] = useState<{ id: string; name: string } | null>(null)
+  const [stopping, setStopping] = useState(false)
+
   // 选中实例中各状态的数量（用于智能提示）
   const selectedInstances = instances.filter(i => selectedIds.includes(i.id))
   const selectedRunning = selectedInstances.filter(i => i.status === 'running').length
@@ -263,6 +267,21 @@ export default function InstancesPage() {
       toast.error('删除失败')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  // 单个关机（带确认弹窗）
+  const handleStop = async () => {
+    if (!stopTarget) return
+    try {
+      setStopping(true)
+      await stopInstance(stopTarget.id)
+      toast.success('实例关机中')
+      setStopTarget(null)
+    } catch {
+      toast.error('关机失败')
+    } finally {
+      setStopping(false)
     }
   }
 
@@ -578,7 +597,7 @@ export default function InstancesPage() {
                         <DropdownMenuItem onClick={() => startInstance(inst.id)} disabled={!['stopped', 'error'].includes(inst.status)}>
                           <Power className="h-4 w-4 mr-2" />开机
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => stopInstance(inst.id)} disabled={inst.status !== 'running'}>
+                        <DropdownMenuItem onClick={() => setStopTarget({ id: inst.id, name: inst.name })} disabled={inst.status !== 'running'}>
                           <PowerOff className="h-4 w-4 mr-2" />关机
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -685,6 +704,26 @@ export default function InstancesPage() {
             >
               {batchLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {batchAction ? batchActionConfig[batchAction].action : ''}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 关机确认弹窗 */}
+      <AlertDialog open={!!stopTarget} onOpenChange={(open) => { if (!open) setStopTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <PowerOff className="h-5 w-5" /> 关机实例
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要关闭实例 <strong>{stopTarget?.name}</strong> 吗？实例将停止运行，但资源会保留，可以重新开机。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={stopping}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStop} disabled={stopping} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {stopping && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} 确认关机
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search, Download, Eye, Loader2, RefreshCw, ShoppingCart, CreditCard, ArrowUpDown, FileText } from 'lucide-react'
-import { useAdminOrders, useAdminTransactions, useAdminStatements, useAdminOrderStats } from '@/hooks/use-api'
+import { useAdminOrders, useAdminTransactions, useAdminOrderStats } from '@/hooks/use-api'
 
 export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -19,7 +19,6 @@ export default function OrdersPage() {
 
   const { orders, loading, total, refresh } = useAdminOrders(page, 20)
   const { transactions, loading: txLoading } = useAdminTransactions(1, 50)
-  const { statements, loading: stLoading } = useAdminStatements()
   const { stats, loading: statsLoading } = useAdminOrderStats()
 
   // 前端筛选（email搜索 + 状态筛选）
@@ -198,8 +197,7 @@ export default function OrdersPage() {
           <TabsTrigger value="orders">全部订单</TabsTrigger>
           <TabsTrigger value="consumption">消费订单</TabsTrigger>
           <TabsTrigger value="recharge">充值订单</TabsTrigger>
-          <TabsTrigger value="transactions">交易流水</TabsTrigger>
-          <TabsTrigger value="statements">账单统计</TabsTrigger>
+          <TabsTrigger value="transactions">账单明细</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders">
@@ -275,46 +273,7 @@ export default function OrdersPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="statements">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>账期</TableHead>
-                    <TableHead className="text-right">充值</TableHead>
-                    <TableHead className="text-right">支出</TableHead>
-                    <TableHead className="text-right">余额</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : statements.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                        暂无账单数据
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    statements.map((st: any) => (
-                      <TableRow key={`${st.year}-${st.month}`}>
-                        <TableCell className="font-medium">{st.year}年{st.month}月</TableCell>
-                        <TableCell className="text-right text-emerald-500 font-medium">+¥{(st.recharge || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-orange-500 font-medium">-¥{(st.consumption || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold">¥{(st.net || 0).toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
       </Tabs>
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { CreditCard, Wallet, Loader2, Sparkles, RefreshCw, QrCode, CheckCircle2, XCircle } from 'lucide-react'
+import { CreditCard, Wallet, Loader2, Sparkles, RefreshCw, QrCode, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { QRCodeSVG } from 'qrcode.react'
 
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { useUserBalance, useWebSocketStatus } from '@/hooks/use-api'
+import { useBalance, useWebSocketStatus } from '@/hooks/use-api'
 import api from '@/lib/api'
 
 const presetAmounts = [50, 100, 200, 500, 1000, 2000]
@@ -29,11 +29,12 @@ export default function BillingPage() {
     qr_code_url: string
     amount: number
     expire_time: string
+    mock_available?: boolean
   } | null>(null)
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending')
   const [checkingStatus, setCheckingStatus] = useState(false)
 
-  const { balance, loading, refresh } = useUserBalance()
+  const { balance, testMode, loading, refresh } = useBalance()
 
   // 用 ref 防止充值成功的 toast/refresh 重复触发
   const successHandledRef = useRef(false)
@@ -65,8 +66,8 @@ export default function BillingPage() {
   const finalAmount = selectedAmount || (customAmount ? parseFloat(customAmount) : 0)
 
   const handlePay = async () => {
-    if (finalAmount < 1) {
-      toast.error('充值金额最少1元')
+    if (finalAmount < (testMode ? 0.01 : 1)) {
+      toast.error(testMode ? '充值金额最少0.01元' : '充值金额最少1元')
       return
     }
     
@@ -78,6 +79,7 @@ export default function BillingPage() {
         amount: number
         expire_time: string
         recharge_id: string
+        mock_available?: boolean
       }>('/billing/pay', {
         amount: finalAmount,
         payment_method: paymentMethod
@@ -87,7 +89,8 @@ export default function BillingPage() {
         order_id: data.order_id,
         qr_code_url: data.qr_code_url,
         amount: data.amount,
-        expire_time: data.expire_time
+        expire_time: data.expire_time,
+        mock_available: data.mock_available,
       })
       setPaymentStatus('pending')
       successHandledRef.current = false
@@ -325,6 +328,13 @@ export default function BillingPage() {
               </div>
             ) : (
               <>
+                {/* 测试模式提示 */}
+                {(paymentInfo?.mock_available ?? testMode) && (
+                  <div className="w-full mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                    <span className="text-xs text-amber-700 dark:text-amber-400">当前为测试模式，二维码为模拟数据，请点击下方“模拟支付成功”完成测试</span>
+                  </div>
+                )}
                 {/* 二维码展示 */}
                 <div className="w-52 h-52 bg-white rounded-lg flex items-center justify-center border p-2">
                   {paymentInfo?.qr_code_url ? (
@@ -337,10 +347,12 @@ export default function BillingPage() {
                     </div>
                   )}
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground">
-                  请使用微信扫描二维码完成支付
-                </p>
-                <p className="text-xs text-muted-foreground">金额: ¥{paymentInfo?.amount?.toFixed(2)}</p>
+                {!(paymentInfo?.mock_available ?? testMode) && (
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    请使用微信扫描二维码完成支付
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">金额: ¥{paymentInfo?.amount?.toFixed(2)}</p>
                 <div className="flex gap-2 mt-4">
                   <Button 
                     variant="outline" 
@@ -351,13 +363,15 @@ export default function BillingPage() {
                     {checkingStatus && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                     查询支付状态
                   </Button>
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={mockPaySuccess}
-                  >
-                    模拟支付成功
-                  </Button>
+                  {(paymentInfo?.mock_available ?? testMode) && (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={mockPaySuccess}
+                    >
+                      模拟支付成功
+                    </Button>
+                  )}
                 </div>
               </>
             )}

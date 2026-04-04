@@ -18,6 +18,7 @@ interface SystemSettings {
   contact_email: string
   min_recharge_amount: number
   max_recharge_amount: number
+  billing_interval_minutes: number
   instance_auto_stop_hours: number
   instance_max_per_user: number
   storage_max_gb_per_user: number
@@ -60,6 +61,7 @@ export default function SettingsPage() {
     contact_email: '',
     min_recharge_amount: 10,
     max_recharge_amount: 100000,
+    billing_interval_minutes: 60,
     instance_auto_stop_hours: 24,
     instance_max_per_user: 10,
     storage_max_gb_per_user: 100,
@@ -326,6 +328,17 @@ export default function SettingsPage() {
                     value={settings.instance_auto_stop_hours} 
                     onChange={(e) => updateSetting('instance_auto_stop_hours', Number(e.target.value))} 
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>计费间隔(分钟)</Label>
+                  <Input 
+                    type="number" 
+                    min={5}
+                    step={5}
+                    value={settings.billing_interval_minutes} 
+                    onChange={(e) => updateSetting('billing_interval_minutes', Number(e.target.value))} 
+                  />
+                  <p className="text-xs text-muted-foreground">按量计费的扣费间隔，最小5分钟，默认60分钟。扣费金额 = 时价 × (间隔/60)</p>
                 </div>
               </div>
               <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
