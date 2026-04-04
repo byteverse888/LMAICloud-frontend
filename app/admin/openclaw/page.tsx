@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import {
   RefreshCw, Search, Bot, Loader2,
   Server, Globe, Cpu, HardDrive,
-  CheckCircle, XCircle, AlertTriangle, PauseCircle, Terminal,
+  CheckCircle, XCircle, AlertTriangle, PauseCircle, Terminal, User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   Dialog, DialogContent, DialogTitle,
 } from '@/components/ui/dialog'
@@ -159,12 +162,13 @@ export default function AdminOpenClawPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[160px]">名称</TableHead>
+                <TableHead>用户</TableHead>
                 <TableHead>命名空间</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead>节点类型</TableHead>
+                <TableHead>节点</TableHead>
+                <TableHead>Pod 状态</TableHead>
+                <TableHead>Pod 节点/IP</TableHead>
                 <TableHead>配置</TableHead>
-                <TableHead>端口</TableHead>
-                <TableHead>内网 IP</TableHead>
                 <TableHead>创建时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -172,11 +176,11 @@ export default function AdminOpenClawPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell>
+                  <TableCell colSpan={10} className="h-32 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell>
                 </TableRow>
               ) : pagedInstances.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
                     <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
                     <p>暂无智能体实例</p>
                   </TableCell>
@@ -187,13 +191,61 @@ export default function AdminOpenClawPage() {
                     <Link href={`/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">{inst.name}</Link>
                     <div className="text-xs text-muted-foreground mt-0.5 font-mono">{inst.id.slice(0, 8)}...</div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      <span className="max-w-[100px] truncate" title={(inst as any).user_email || '-'}>{(inst as any).user_email || '-'}</span>
+                    </div>
+                  </TableCell>
                   <TableCell><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{inst.namespace || '-'}</code></TableCell>
                   <TableCell>{getStatusBadge(inst.status)}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="gap-1">
-                      {inst.node_type === 'edge' ? <Globe className="h-3 w-3" /> : <Server className="h-3 w-3" />}
-                      {inst.node_type === 'edge' ? '边缘' : '云端'}
-                    </Badge>
+                    <div className="flex flex-col gap-0.5">
+                      <Badge variant="outline" className="gap-1 whitespace-nowrap">
+                        {inst.node_type === 'edge' ? <Globe className="h-3 w-3" /> : <Server className="h-3 w-3" />}
+                        {inst.node_type === 'edge' ? '边缘' : '云端'}
+                      </Badge>
+                      {inst.node_type === 'edge' && inst.node_name && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground max-w-[120px] truncate block cursor-default">{inst.node_name}</span>
+                            </TooltipTrigger>
+                            <TooltipContent><p>{inst.node_name}</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {(inst as any).pod_status ? (
+                      <Badge variant={
+                        (inst as any).pod_status === 'Running' ? 'success' :
+                        (inst as any).pod_status === 'Pending' ? 'outline' :
+                        (inst as any).pod_status === 'Terminating' ? 'warning' : 'destructive'
+                      } className="text-xs whitespace-nowrap">
+                        {(inst as any).pod_status}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-xs space-y-0.5">
+                      {(inst as any).pod_node ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="max-w-[120px] truncate font-mono cursor-default">{(inst as any).pod_node}</div>
+                            </TooltipTrigger>
+                            <TooltipContent><p>{(inst as any).pod_node}</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : <span className="text-muted-foreground">-</span>}
+                      {(inst as any).pod_ip ? (
+                        <code className="text-muted-foreground">{(inst as any).pod_ip}</code>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-xs">
@@ -201,8 +253,6 @@ export default function AdminOpenClawPage() {
                       <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" />{inst.disk_gb}GB</span>
                     </div>
                   </TableCell>
-                  <TableCell><code className="text-xs">{inst.port}</code></TableCell>
-                  <TableCell><code className="text-xs font-mono">{inst.internal_ip || '-'}</code></TableCell>
                   <TableCell className="text-sm text-muted-foreground">{inst.created_at ? new Date(inst.created_at).toLocaleString() : '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button

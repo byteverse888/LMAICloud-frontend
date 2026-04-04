@@ -11,6 +11,7 @@ import {
   DollarSign,
   TrendingUp,
   Loader2,
+  Bot,
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
     { title: '节点总数', value: s.nodes, icon: HardDrive, color: 'text-green-500' },
     { title: '注册用户', value: (s.users || 0).toLocaleString(), icon: Users, color: 'text-purple-500' },
     { title: '运行实例', value: (s.running_instances || s.instances || 0).toLocaleString(), icon: Cpu, color: 'text-amber-500' },
+    { title: '智能体实例', value: `${s.oc_running || 0} / ${s.oc_total || 0}`, icon: Bot, color: 'text-violet-500' },
   ]
 
   const gpuTotal = s.gpu_total || 1
@@ -44,7 +46,7 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-bold">仪表盘</h1>
 
       {/* 统计卡片 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
         {statCards.map((item) => {
           const Icon = item.icon
           return (

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useInstances, useBalance, useStorageQuota, useSiteInfo, useCurrentUser, usePoints } from '@/hooks/use-api'
+import { useOpenClawInstances } from '@/hooks/use-openclaw'
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard')
@@ -33,12 +34,16 @@ export default function DashboardPage() {
   const { siteInfo } = useSiteInfo()
   const { user: currentUser } = useCurrentUser()
   const { points } = usePoints()
+  const { instances: ocInstances } = useOpenClawInstances()
 
   // 计算统计数据（全部来自真实 API）
   // 有效实例 = 排除已释放/错误状态
   const activeInstances = instances.filter(i => !['released', 'error'].includes(i.status))
   const runningCount = instances.filter(i => i.status === 'running').length
   const stoppedCount = instances.filter(i => i.status === 'stopped').length
+  // 智能体实例统计
+  const activeOcInstances = ocInstances.filter(i => !['released', 'error'].includes(i.status))
+  const ocRunningCount = ocInstances.filter(i => i.status === 'running').length
   const totalDiskGB = storageQuota ? +(storageQuota.total / (1024 ** 3)).toFixed(1) : 0
   const usedDiskGB = storageQuota ? +(storageQuota.used / (1024 ** 3)).toFixed(2) : 0
   const nickname = currentUser?.nickname || currentUser?.email?.split('@')[0] || '--'
@@ -116,14 +121,18 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('containerInstances')}</div>
                   <div className="text-2xl font-bold text-primary">{activeInstances.length}</div>
                 </div>
                 <div className="space-y-1">
+                  <div className="text-sm text-muted-foreground">智能体实例</div>
+                  <div className="text-2xl font-bold text-violet-500">{activeOcInstances.length}</div>
+                </div>
+                <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('running')}</div>
-                  <div className="text-2xl font-bold text-emerald-500">{runningCount}</div>
+                  <div className="text-2xl font-bold text-emerald-500">{runningCount + ocRunningCount}</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('stopped')}</div>
@@ -132,7 +141,7 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('instanceQuota')}</div>
                   <div className="text-2xl font-bold">
-                    {activeInstances.length}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
+                    {activeInstances.length + activeOcInstances.length}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
                   </div>
                 </div>
               </div>
