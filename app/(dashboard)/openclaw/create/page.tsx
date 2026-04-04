@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Bot, Check, ChevronRight, Loader2, Search,
@@ -107,6 +107,13 @@ export default function OpenClawCreatePage() {
   const router = useRouter()
   const { images } = useImages()
   const openclawImages = useMemo(() => images.filter((img: any) => img.category === 'openclaw'), [images])
+
+  // 镜像只有一个时自动选中
+  useEffect(() => {
+    if (openclawImages.length === 1 && !selectedImage) {
+      setSelectedImage(openclawImages[0].id)
+    }
+  }, [openclawImages])
 
   // ── 表单状态 ──
   const [billingType, setBillingType] = useState('hourly')
@@ -370,7 +377,7 @@ export default function OpenClawCreatePage() {
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label>实例名称 *</Label>
-                  <Input placeholder="my-agent" value={instanceName} onChange={e => setInstanceName(e.target.value)} />
+                  <Input placeholder="my-agent" value={instanceName} onChange={e => setInstanceName(e.target.value)} autoComplete="off" />
                 </div>
                 <div className="grid gap-2">
                   <Label>节点类型</Label>

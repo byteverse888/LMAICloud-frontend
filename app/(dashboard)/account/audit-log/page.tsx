@@ -30,7 +30,7 @@ export default function AuditLogPage() {
   const { logs, loading, total } = useAuditLog(page, 20, searchKeyword || undefined)
 
   const actionLabels: Record<string, string> = {
-    create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', logout: '登出', register: '注册', recharge: '充值',
+    create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', login_failed: '登录失败', logout: '登出', register: '注册', recharge: '充值',
   }
   const resourceLabels: Record<string, string> = {
     instance: '实例', openclaw: 'OpenClaw', storage: '存储', image: '镜像', account: '账号', billing: '计费',
@@ -72,6 +72,8 @@ export default function AuditLogPage() {
                   <span>
                     {l.action === 'login' ? (
                       <span className="text-blue-600 dark:text-blue-400">{actionLabels[l.action]}</span>
+                    ) : l.action === 'login_failed' ? (
+                      <span className="text-red-600 dark:text-red-400">{actionLabels[l.action]}</span>
                     ) : l.action === 'logout' ? (
                       <span className="text-muted-foreground">{actionLabels[l.action]}</span>
                     ) : (

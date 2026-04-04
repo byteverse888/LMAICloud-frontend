@@ -160,9 +160,6 @@ export default function InstanceCreatePage() {
   )
   const { images } = useImages()
 
-  useEffect(() => {
-    setInstanceName(`GPU-instance-${Date.now().toString(36).slice(-4)}`)
-  }, [])
 
   const gpuModels = [...new Set(configs.map(c => c.gpu_model))]
   const hasEdgeNodes = configs.some(c => c.node_type === 'edge')
@@ -265,6 +262,7 @@ export default function InstanceCreatePage() {
                 onChange={e => setInstanceName(e.target.value)}
                 placeholder="请输入实例名称"
                 className="max-w-sm"
+                autoComplete="off"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
                 由中文、英文字母、数字、下划线（_）、中划线（-）组成，长度 1-50 位。

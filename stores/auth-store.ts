@@ -13,7 +13,7 @@ interface AuthState {
   setToken: (token: string | null) => void
   setRefreshToken: (refreshToken: string | null) => void
   login: (email: string, password: string, captchaId?: string, captchaCode?: string) => Promise<void>
-  logout: (redirectUrl?: string) => void
+  logout: (redirectUrl?: string) => Promise<void>
   checkAuth: () => Promise<void>
 }
 
@@ -49,7 +49,14 @@ export const useAuthStore = create<AuthState>()(
         api.setRefreshToken(refresh_token)
       },
 
-      logout: (redirectUrl?: string) => {
+      logout: async (redirectUrl?: string) => {
+        // 先调用后端登出接口记录操作日志，超时3秒自动放弃
+        try {
+          await Promise.race([
+            api.post('/auth/logout'),
+            new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000)),
+          ])
+        } catch {}
         set({ user: null, token: null, refreshToken: null, isAuthenticated: false })
         api.setToken(null)
         api.setRefreshToken(null)
