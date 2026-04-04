@@ -23,9 +23,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  ArrowLeft, Power, PowerOff, Trash2, Loader2, RefreshCw,
+  ArrowLeft, Power, PowerOff, Trash2, Loader2, RefreshCw, Search, ExternalLink,
   Bot, Key, Radio, Puzzle, Activity,
-  Cpu, HardDrive, Globe, Server, Clock, Wifi,
+  Cpu, HardDrive, Globe, Server, Clock, Wifi, CreditCard,
   Plus, Pencil, CheckCircle, XCircle, AlertTriangle,
   RotateCw, ScrollText, Terminal,
 } from 'lucide-react'
@@ -51,6 +51,7 @@ const getStatusBadge = (status: string) => {
     error: { label: '异常', variant: 'destructive', dot: 'bg-red-500' },
     releasing: { label: '删除中', variant: 'warning', dot: 'bg-amber-500' },
     released: { label: '已删除', variant: 'secondary', dot: 'bg-gray-400' },
+    expired: { label: '已过期', variant: 'warning', dot: 'bg-orange-500' },
   }
   const c = cfg[status] || { label: status, variant: 'secondary', dot: 'bg-gray-400' }
   const isTransient = ['creating', 'releasing'].includes(status)
@@ -89,7 +90,7 @@ export default function OpenClawDetailPage() {
 
   // 通道弹窗
   const [showAddChannel, setShowAddChannel] = useState(false)
-  const [channelForm, setChannelForm] = useState({ type: 'telegram', name: '', config: '' })
+  const [channelForm, setChannelForm] = useState({ type: 'qq', name: '', config: '' })
   const [channelSubmitting, setChannelSubmitting] = useState(false)
   const [deleteChannelTarget, setDeleteChannelTarget] = useState<string | null>(null)
 
@@ -189,9 +190,7 @@ export default function OpenClawDetailPage() {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview" className="gap-1"><Server className="h-3.5 w-3.5" /> 概览</TabsTrigger>
-          <TabsTrigger value="keys" className="gap-1"><Key className="h-3.5 w-3.5" /> 大模型密钥</TabsTrigger>
-          <TabsTrigger value="channels" className="gap-1"><Radio className="h-3.5 w-3.5" /> 通道配置</TabsTrigger>
-          <TabsTrigger value="skills" className="gap-1"><Puzzle className="h-3.5 w-3.5" /> Skills</TabsTrigger>
+          <TabsTrigger value="apps" className="gap-1"><Bot className="h-3.5 w-3.5" /> 应用管理</TabsTrigger>
           <TabsTrigger value="monitor" className="gap-1"><Activity className="h-3.5 w-3.5" /> 监控</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1"><ScrollText className="h-3.5 w-3.5" /> 日志</TabsTrigger>
         </TabsList>
@@ -220,145 +219,223 @@ export default function OpenClawDetailPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> 创建时间</span><span>{instance.created_at ? new Date(instance.created_at).toLocaleString() : '-'}</span></div>
               </CardContent>
             </Card>
+            {/* 计费信息卡片 */}
+            <Card className="md:col-span-2">
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" /> 计费信息</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="rounded-lg border p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">计费类型</p>
+                    <Badge variant={instance.billing_type === 'yearly' ? 'default' : instance.billing_type === 'monthly' ? 'secondary' : 'outline'}>
+                      {instance.billing_type === 'yearly' ? '包年' : instance.billing_type === 'monthly' ? '包月' : '按量计费'}
+                    </Badge>
+                  </div>
+                  <div className="rounded-lg border p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">单价</p>
+                    <p className="text-lg font-bold text-primary">¥{(instance.hourly_price || 0.12).toFixed(2)}<span className="text-xs text-muted-foreground font-normal">/时</span></p>
+                  </div>
+                  <div className="rounded-lg border p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">月估算</p>
+                    <p className="text-lg font-bold">¥{((instance.hourly_price || 0.12) * 24 * 30).toFixed(2)}</p>
+                  </div>
+                  <div className="rounded-lg border p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">到期时间</p>
+                    <p className="text-sm font-medium">{instance.expired_at ? new Date(instance.expired_at).toLocaleString() : '无（按量）'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
-        {/* ===== 大模型密钥 ===== */}
-        <TabsContent value="keys">
+        {/* ===== 应用管理（三列布局，参考腾讯云 OpenClaw） ===== */}
+        <TabsContent value="apps">
           <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-base">大模型密钥</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => refreshKeys()} disabled={keysLoading}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${keysLoading ? 'animate-spin' : ''}`} /> 刷新</Button>
-                <Button size="sm" onClick={() => setShowAddKey(true)}><Plus className="h-3.5 w-3.5 mr-1" /> 添加</Button>
+            <CardContent className="p-6">
+              {/* 提示信息 */}
+              <div className="mb-5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-700 dark:text-blue-300 space-y-0.5">
+                <p>1. 注意：请保护好API Key，避免泄漏造成额外损失。</p>
+                <p>2. OpenClaw在调用模型时会携带较多上下文信息，因此Token消耗可能较高。建议使用时关注Token用量与计费情况。</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>别名</TableHead>
-                    <TableHead>API Key</TableHead>
-                    <TableHead>模型</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>余额</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keys.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="h-20 text-center text-muted-foreground">暂无密钥</TableCell></TableRow>
-                  ) : keys.map(k => (
-                    <TableRow key={k.id}>
-                      <TableCell><Badge variant="outline">{k.provider}</Badge></TableCell>
-                      <TableCell>{k.alias || '-'}</TableCell>
-                      <TableCell><code className="text-xs">{k.api_key_masked || '••••••'}</code></TableCell>
-                      <TableCell>{k.model_name || '-'}</TableCell>
-                      <TableCell>
-                        {k.check_status === 'ok' ? <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3" /> 正常</Badge>
-                          : k.check_status === 'error' ? <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> 异常</Badge>
-                          : <Badge variant="secondary">未检测</Badge>}
-                      </TableCell>
-                      <TableCell>{k.balance != null ? `¥${k.balance.toFixed(2)}` : '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => setDeleteKeyTarget(k.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ===== 通道配置 ===== */}
-        <TabsContent value="channels">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-base">通道配置</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => refreshChannels()} disabled={channelsLoading}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${channelsLoading ? 'animate-spin' : ''}`} /> 刷新</Button>
-                <Button size="sm" onClick={() => setShowAddChannel(true)}><Plus className="h-3.5 w-3.5 mr-1" /> 添加</Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>类型</TableHead>
-                    <TableHead>名称</TableHead>
-                    <TableHead>在线状态</TableHead>
-                    <TableHead>最后检查</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {channels.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="h-20 text-center text-muted-foreground">暂无通道</TableCell></TableRow>
-                  ) : channels.map(ch => (
-                    <TableRow key={ch.id}>
-                      <TableCell><Badge variant="outline">{ch.type}</Badge></TableCell>
-                      <TableCell>{ch.name || '-'}</TableCell>
-                      <TableCell>
-                        {ch.online_status === 'online' ? <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3" /> 在线</Badge>
-                          : ch.online_status === 'offline' ? <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" /> 离线</Badge>
-                          : <Badge variant="secondary">未知</Badge>}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{ch.last_check_at ? new Date(ch.last_check_at).toLocaleString() : '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => setDeleteChannelTarget(ch.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ===== Skills ===== */}
-        <TabsContent value="skills">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-base">Skills 管理</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => refreshSkills()} disabled={skillsLoading}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${skillsLoading ? 'animate-spin' : ''}`} /> 刷新</Button>
-                <Button size="sm" onClick={() => setShowAddSkill(true)}><Plus className="h-3.5 w-3.5 mr-1" /> 安装技能</Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {skills.length === 0 ? (
-                <div className="flex flex-col items-center py-10 text-muted-foreground">
-                  <Puzzle className="h-10 w-10 mb-2 opacity-40" />
-                  <p>暂无已安装技能</p>
+              {/* OpenClaw 版本 & 状态 */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <Bot className="h-8 w-8 text-primary" />
+                  <div>
+                    <h3 className="font-bold text-lg flex items-center gap-2">OpenClaw <Badge variant="secondary" className="text-xs font-normal">已是最新版本</Badge></h3>
+                    <div className="flex items-center gap-2 text-sm">
+                      {getStatusBadge(instance.status)}
+                      <Button variant="link" size="sm" className="text-blue-500 h-auto p-0" onClick={handleRestart} disabled={instance.status !== 'running'}>重启</Button>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {skills.map(skill => (
-                    <Card key={skill.id} className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium flex items-center gap-1.5">
-                            <Puzzle className="h-4 w-4 text-primary" /> {skill.name}
-                          </h4>
-                          {skill.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{skill.description}</p>}
-                          <div className="flex items-center gap-2 mt-2">
-                            {skill.version && <Badge variant="outline" className="text-xs">v{skill.version}</Badge>}
-                            {skill.status === 'installed' ? <Badge variant="success" className="text-xs">已安装</Badge>
-                              : skill.status === 'installing' ? <Badge variant="outline" className="text-xs gap-1"><Loader2 className="h-3 w-3 animate-spin" /> 安装中</Badge>
-                              : skill.status === 'error' ? <Badge variant="destructive" className="text-xs">错误</Badge>
-                              : <Badge variant="secondary" className="text-xs">{skill.status}</Badge>}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { refreshKeys(); refreshChannels(); refreshSkills() }} disabled={keysLoading || channelsLoading || skillsLoading}>
+                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${keysLoading || channelsLoading || skillsLoading ? 'animate-spin' : ''}`} /> 刷新
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* ── 模型 (Models) ── */}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 pb-3 border-b mb-4">
+                    <Key className="h-4 w-4 text-blue-500" />
+                    <h3 className="font-semibold">模型 (Models)</h3>
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    <Select value={keyForm.provider} onValueChange={v => setKeyForm(f => ({ ...f, provider: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="openai">OpenAI</SelectItem>
+                        <SelectItem value="deepseek">DeepSeek</SelectItem>
+                        <SelectItem value="qwen">通义千问</SelectItem>
+                        <SelectItem value="zhipu">智谱 AI</SelectItem>
+                        <SelectItem value="anthropic">Anthropic</SelectItem>
+                        <SelectItem value="other">自定义</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input placeholder="默认模型名称" value={keyForm.model_name} onChange={e => setKeyForm(f => ({ ...f, model_name: e.target.value }))} />
+                    <Input placeholder="API Key" type="password" value={keyForm.api_key} onChange={e => setKeyForm(f => ({ ...f, api_key: e.target.value }))} />
+                    <Button className="w-full" variant="outline" onClick={handleAddKey} disabled={keySubmitting}>
+                      {keySubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      一键添加并应用
+                    </Button>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {keyForm.provider === 'openai' ? 'OpenAI GPT系列模型，全球领先的AI大模型服务。模型API及后付费设置，'
+                        : keyForm.provider === 'deepseek' ? 'DeepSeek模型服务，提供高性价比的AI推理能力。模型API及后付费设置，'
+                        : keyForm.provider === 'qwen' ? '通义千问，阿里云大模型服务。模型API及后付费设置，'
+                        : keyForm.provider === 'zhipu' ? '智谱AI GLM系列模型。模型API及后付费设置，'
+                        : '自定义模型服务，支持OpenAI兼容API。'}
+                      <a href="#" className="text-blue-500 hover:underline inline-flex items-center gap-0.5">点此查看 <ExternalLink className="h-3 w-3" /></a>
+                    </p>
+                  </div>
+                  {/* 切换模型 */}
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-2">切换模型</p>
+                    {keysLoading ? (
+                      <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                    ) : keys.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-xs">暂无数据</div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {keys.map(k => (
+                          <div key={k.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-2.5 py-1.5">
+                            <div className="truncate">
+                              <span className="font-medium">{k.provider}</span>
+                              {k.model_name && <span className="text-muted-foreground ml-1">· {k.model_name}</span>}
+                              {k.check_status === 'ok' && <CheckCircle className="h-3 w-3 text-emerald-500 inline ml-1" />}
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => setDeleteKeyTarget(k.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => { uninstallSkill(skill.name).then(() => toast.success('卸载中')).catch(() => toast.error('卸载失败')) }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        ))}
                       </div>
-                    </Card>
-                  ))}
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {/* ── 通道 (Channels) ── */}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 pb-3 border-b mb-4">
+                    <Radio className="h-4 w-4 text-green-500" />
+                    <h3 className="font-semibold">通道 (Channels)</h3>
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    <Select value={channelForm.type} onValueChange={v => setChannelForm(f => ({ ...f, type: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="qq">QQ</SelectItem>
+                        <SelectItem value="wechat">微信</SelectItem>
+                        <SelectItem value="telegram">Telegram</SelectItem>
+                        <SelectItem value="discord">Discord</SelectItem>
+                        <SelectItem value="feishu">飞书</SelectItem>
+                        <SelectItem value="dingtalk">钉钉</SelectItem>
+                        <SelectItem value="slack">Slack</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input placeholder={channelForm.type === 'qq' ? 'QQ机器人的App ID' : channelForm.type === 'wechat' ? '微信公众号AppID' : channelForm.type === 'telegram' ? 'Bot Token' : 'App ID'} value={channelForm.name} onChange={e => setChannelForm(f => ({ ...f, name: e.target.value }))} />
+                    <Input placeholder={channelForm.type === 'qq' ? 'QQ机器人的App Secret' : channelForm.type === 'wechat' ? '微信公众号AppSecret' : channelForm.type === 'telegram' ? 'Chat ID（可选）' : 'App Secret'} type="password" value={channelForm.config} onChange={e => setChannelForm(f => ({ ...f, config: e.target.value }))} />
+                    <Button className="w-full" variant="outline" onClick={handleAddChannel} disabled={channelSubmitting}>
+                      {channelSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      添加并应用
+                    </Button>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {channelForm.type === 'qq' ? '一键解锁智能玩法，开启你的个性化QQ机器人之旅。'
+                        : channelForm.type === 'wechat' ? '接入微信公众号，打造您的智能微信助手。'
+                        : '一键接入通道，开启您的个性化机器人之旅。'}
+                      <a href="#" className="text-blue-500 hover:underline inline-flex items-center gap-0.5">查看详情 <ExternalLink className="h-3 w-3" /></a>
+                    </p>
+                  </div>
+                  {/* 已接入通道 */}
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-2">已接入通道</p>
+                    {channelsLoading ? (
+                      <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                    ) : channels.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-xs">暂无数据</div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {channels.map(ch => (
+                          <div key={ch.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-2.5 py-1.5">
+                            <div className="truncate">
+                              <Badge variant="outline" className="text-xs mr-1">{ch.type}</Badge>
+                              <span>{ch.name || '-'}</span>
+                              {ch.online_status === 'online' && <CheckCircle className="h-3 w-3 text-emerald-500 inline ml-1" />}
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => setDeleteChannelTarget(ch.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── 技能 (Skills) ── */}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 pb-3 border-b mb-4">
+                    <Puzzle className="h-4 w-4 text-purple-500" />
+                    <h3 className="font-semibold">技能 (Skills)</h3>
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input className="pl-8" placeholder="请输入ClawHub中上架的Skill名称，或输入后回车搜索" value={skillForm.name} onChange={e => setSkillForm(f => ({ ...f, name: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleInstallSkill() }} />
+                    </div>
+                    <Button className="w-full" variant="outline" onClick={handleInstallSkill} disabled={skillSubmitting}>
+                      {skillSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      安装技能
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      <a href="#" className="text-blue-500 hover:underline border-b border-dashed border-blue-300">获取更多Skills?</a>
+                    </p>
+                  </div>
+                  {/* 已安装技能 */}
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-2">已安装技能</p>
+                    <div className="border-b border-dashed mb-2" />
+                    {skillsLoading ? (
+                      <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                    ) : skills.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-xs">暂无数据</div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {skills.map(skill => (
+                          <div key={skill.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-2.5 py-1.5">
+                            <span className="font-medium truncate">{skill.name} {skill.version && skill.version}</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => { uninstallSkill(skill.name).then(() => toast.success('卸载中')).catch(() => toast.error('卸载失败')) }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

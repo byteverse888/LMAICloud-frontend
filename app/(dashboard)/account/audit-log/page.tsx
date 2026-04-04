@@ -4,9 +4,8 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { useAuditLog } from '@/hooks/use-api'
-import { History, Search, Loader2, LogIn, LogOut, Monitor } from 'lucide-react'
+import { History, Search, Loader2, Monitor } from 'lucide-react'
 
 function parseDevice(ua: string) {
   if (!ua) return ''
@@ -72,9 +71,9 @@ export default function AuditLogPage() {
                   <span className="text-muted-foreground">{l.created_at ? new Date(l.created_at).toLocaleString('zh-CN') : ''}</span>
                   <span>
                     {l.action === 'login' ? (
-                      <Badge variant="default" className="gap-1"><LogIn className="h-3 w-3" />{actionLabels[l.action]}</Badge>
+                      <span className="text-blue-600 dark:text-blue-400">{actionLabels[l.action]}</span>
                     ) : l.action === 'logout' ? (
-                      <Badge variant="secondary" className="gap-1"><LogOut className="h-3 w-3" />{actionLabels[l.action]}</Badge>
+                      <span className="text-muted-foreground">{actionLabels[l.action]}</span>
                     ) : (
                       <span>{actionLabels[l.action] || l.action}</span>
                     )}

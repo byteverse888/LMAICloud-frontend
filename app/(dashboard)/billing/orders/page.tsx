@@ -87,7 +87,7 @@ export default function OrdersPage() {
     }
     const c = cfg[status] || { cls: 'bg-slate-100 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400', label: status }
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${c.cls}`}>
+      <span className={`inline-flex items-center whitespace-nowrap gap-1 px-2 py-0.5 rounded text-xs font-medium ${c.cls}`}>
         {c.label}
       </span>
     )

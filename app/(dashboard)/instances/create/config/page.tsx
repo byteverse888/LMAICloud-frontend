@@ -66,9 +66,7 @@ const imageCategories = [
   { value: 'base', label: '基础镜像' },
   { value: 'app', label: '应用镜像' },
   { value: 'framework', label: 'AI框架' },
-  { value: 'custom', label: '自定义镜像' },
-  { value: 'external', label: '外部镜像地址' },
-  { value: 'shared', label: '与我共享' },
+  { value: 'openclaw', label: 'OpenClaw镜像' },
 ]
 
 // ============ 容器实例规格 =============
@@ -185,7 +183,7 @@ export default function InstanceCreatePage() {
   const handleCreate = async () => {
     if (!instanceName.trim()) { toast.error('请输入实例名称'); return }
     if (!selectedConfig) { toast.error('请选择资源配置'); return }
-    if (imageCategory !== 'external' && !selectedImage) { toast.error('请选择镜像'); return }
+    if (!selectedImage) { toast.error('请选择镜像'); return }
     setCreating(true)
     try {
       const payload: any = {

@@ -11,7 +11,6 @@ import {
   CreditCard,
   Loader2,
   Cpu,
-  Zap,
   TrendingUp,
   Coins,
   ShoppingCart,
@@ -36,12 +35,15 @@ export default function DashboardPage() {
   const { points } = usePoints()
 
   // 计算统计数据（全部来自真实 API）
+  // 有效实例 = 排除已释放/错误状态
+  const activeInstances = instances.filter(i => !['released', 'error'].includes(i.status))
   const runningCount = instances.filter(i => i.status === 'running').length
   const stoppedCount = instances.filter(i => i.status === 'stopped').length
   const totalDiskGB = storageQuota ? +(storageQuota.total / (1024 ** 3)).toFixed(1) : 0
   const usedDiskGB = storageQuota ? +(storageQuota.used / (1024 ** 3)).toFixed(2) : 0
   const nickname = currentUser?.nickname || currentUser?.email?.split('@')[0] || '--'
   const verified = currentUser?.verified ?? false
+  const instanceQuota = (currentUser as any)?.instance_quota ?? 20
 
   const loading = instancesLoading || balanceLoading || storageLoading
 
@@ -64,33 +66,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 快捷统计卡片 */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="card-clean hover-lift">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t('totalInstances')}</p>
-                <p className="text-2xl font-bold">{instances.length}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
-                <Server className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-clean hover-lift">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t('running')}</p>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{runningCount}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/8 flex items-center justify-center">
-                <Zap className="h-5 w-5 text-emerald-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="card-clean hover-lift">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between">
@@ -140,10 +116,10 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('containerInstances')}</div>
-                  <div className="text-2xl font-bold text-primary">{instances.length}</div>
+                  <div className="text-2xl font-bold text-primary">{activeInstances.length}</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('running')}</div>
@@ -152,6 +128,12 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('stopped')}</div>
                   <div className="text-2xl font-bold text-muted-foreground">{stoppedCount}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm text-muted-foreground">{t('instanceQuota')}</div>
+                  <div className="text-2xl font-bold">
+                    {activeInstances.length}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

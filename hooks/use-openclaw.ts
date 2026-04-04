@@ -6,7 +6,7 @@ import api from '@/lib/api'
 export interface OpenClawInstance {
   id: string
   name: string
-  status: 'creating' | 'running' | 'stopped' | 'error' | 'releasing' | 'released'
+  status: 'creating' | 'running' | 'stopped' | 'error' | 'releasing' | 'released' | 'expired'
   namespace: string
   node_name?: string
   node_type: 'center' | 'edge'
@@ -19,6 +19,9 @@ export interface OpenClawInstance {
   service_name?: string
   internal_ip?: string
   gateway_token?: string
+  billing_type?: 'hourly' | 'monthly' | 'yearly'
+  hourly_price?: number
+  expired_at?: string
   started_at?: string
   created_at: string
   updated_at?: string
@@ -115,6 +118,11 @@ export function useOpenClawInstances() {
     image_url?: string
     port?: number
     node_name?: string
+    billing_type?: string
+    duration_months?: number
+    model_keys?: Array<{ provider: string; alias?: string; api_key: string; base_url?: string; model_name?: string }>
+    channels?: Array<{ type: string; name?: string; config?: string }>
+    skills?: Array<{ name: string; description?: string; version?: string }>
   }) => {
     const { data } = await api.post<OpenClawInstance>('/openclaw/instances', body)
     await fetchInstances(true)

@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Search, MoreHorizontal, Edit, Ban, DollarSign, Trash2, Loader2, RefreshCw, Plus, UserPlus, CheckCircle } from 'lucide-react'
+import { Search, MoreHorizontal, Edit, Ban, DollarSign, Trash2, Loader2, RefreshCw, Plus, UserPlus, CheckCircle, Settings2 } from 'lucide-react'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -23,6 +23,7 @@ interface AdminUser {
   status: string
   verified: boolean
   instances: number
+  instance_quota: number
   created_at: string
 }
 
@@ -50,6 +51,12 @@ export default function UsersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null)
+
+  // 调整配额弹窗
+  const [quotaDialogOpen, setQuotaDialogOpen] = useState(false)
+  const [quotaLoading, setQuotaLoading] = useState(false)
+  const [quotaUser, setQuotaUser] = useState<AdminUser | null>(null)
+  const [quotaValue, setQuotaValue] = useState('')
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -143,6 +150,27 @@ export default function UsersPage() {
     }
   }
 
+  // 调整配额
+  const handleAdjustQuota = async () => {
+    if (!quotaUser || !quotaValue) {
+      toast.error('请填写配额值')
+      return
+    }
+    try {
+      setQuotaLoading(true)
+      await api.put(`/admin/users/${quotaUser.id}/quota?quota=${quotaValue}`)
+      toast.success('配额调整成功')
+      setQuotaDialogOpen(false)
+      setQuotaValue('')
+      setQuotaUser(null)
+      fetchUsers()
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || '调整失败')
+    } finally {
+      setQuotaLoading(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'destructive'; dotClass: string }> = {
       active: { label: '正常', variant: 'success', dotClass: 'bg-emerald-500' },
@@ -198,7 +226,7 @@ export default function UsersPage() {
                 <TableHead>状态</TableHead>
                 <TableHead>邮箱验证</TableHead>
                 <TableHead>余额</TableHead>
-                <TableHead>实例数</TableHead>
+                <TableHead>实例数/配额</TableHead>
                 <TableHead>注册时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -234,7 +262,7 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell>¥{user.balance.toFixed(2)}</TableCell>
-                    <TableCell>{user.instances}</TableCell>
+                    <TableCell>{user.instances} / {user.instance_quota ?? 20}</TableCell>
                     <TableCell>{user.created_at}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -244,6 +272,9 @@ export default function UsersPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => { setBalanceUser(user); setBalanceDialogOpen(true); }}>
                             <DollarSign className="h-4 w-4 mr-2" />调整余额
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setQuotaUser(user); setQuotaValue(String(user.instance_quota ?? 20)); setQuotaDialogOpen(true); }}>
+                            <Settings2 className="h-4 w-4 mr-2" />调整配额
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {user.status === 'active' ? (
@@ -403,6 +434,40 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 调整配额弹窗 */}
+      <Dialog open={quotaDialogOpen} onOpenChange={setQuotaDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>调整实例配额</DialogTitle>
+            <DialogDescription>
+              用户: {quotaUser?.nickname} ({quotaUser?.email})<br/>
+              当前配额: {quotaUser?.instance_quota ?? 20}，已使用: {quotaUser?.instances ?? 0}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>新配额值</Label>
+              <Input 
+                type="number"
+                min={0}
+                max={1000}
+                value={quotaValue} 
+                onChange={(e) => setQuotaValue(e.target.value)} 
+                placeholder="实例配额上限，如 20"
+              />
+              <p className="text-xs text-muted-foreground">配额范围 0 - 1000，包含容器实例和 OpenClaw 实例总数</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuotaDialogOpen(false)}>取消</Button>
+            <Button onClick={handleAdjustQuota} disabled={quotaLoading} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
+              {quotaLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              确认调整
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

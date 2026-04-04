@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Search, Calendar, Filter, Cpu, HardDrive, Receipt, Loader2, ChevronLeft, ChevronRight, TrendingDown } from 'lucide-react'
+import { Download, Search, Calendar, Filter, Cpu, HardDrive, Receipt, Loader2, ChevronLeft, ChevronRight, TrendingDown, Bot, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -121,6 +121,7 @@ export default function BillingDetailsPage() {
                 <TableRow className="bg-muted/30">
                   <TableHead>时间</TableHead>
                   <TableHead>类型</TableHead>
+                  <TableHead>计费对象</TableHead>
                   <TableHead>描述</TableHead>
                   <TableHead className="text-right">金额</TableHead>
                   <TableHead>状态</TableHead>
@@ -141,6 +142,22 @@ export default function BillingDetailsPage() {
                       >
                         {item.type === 'recharge' ? '充值' : '消费'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {item.resource_type ? (
+                        <div className="flex items-center gap-1.5">
+                          {item.resource_type === 'openclaw'
+                            ? <Bot className="h-3.5 w-3.5 text-purple-500" />
+                            : <Server className="h-3.5 w-3.5 text-blue-500" />}
+                          <span className="text-sm">
+                            {item.resource_name && item.resource_name !== 'N/A'
+                              ? item.resource_name
+                              : (item.resource_type === 'openclaw' ? 'OpenClaw实例' : '容器实例')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-medium">{item.description || '-'}</TableCell>
                     <TableCell className={`text-right font-semibold ${item.amount > 0 ? 'text-emerald-500' : 'text-orange-500'}`}>

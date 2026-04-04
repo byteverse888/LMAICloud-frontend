@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   RefreshCw, Plus, Search, MoreHorizontal,
-  Power, PowerOff, Trash2, Loader2, Bot,
-  Cpu, HardDrive, Globe, Server, Check, ChevronRight,
+  Power, PowerOff, RotateCw, Trash2, Loader2, Bot,
+  Cpu, HardDrive, Globe, Server, CreditCard, Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,16 +21,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog'
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { useOpenClawInstances } from '@/hooks/use-openclaw'
+import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
 const getStatusBadge = (status: string) => {
@@ -40,6 +38,7 @@ const getStatusBadge = (status: string) => {
     error: { label: '异常', variant: 'destructive', dot: 'bg-red-500' },
     releasing: { label: '删除中', variant: 'warning', dot: 'bg-amber-500' },
     released: { label: '已删除', variant: 'secondary', dot: 'bg-gray-400' },
+    expired: { label: '已过期', variant: 'warning', dot: 'bg-orange-500' },
   }
   const c = cfg[status] || { label: status, variant: 'secondary', dot: 'bg-gray-400' }
   const isTransient = ['creating', 'releasing'].includes(status)
@@ -57,31 +56,25 @@ const getStatusBadge = (status: string) => {
   )
 }
 
-// ============ 智能体实例规格 ============
-interface ClawSpec { cpu: number; memory: number; disk: number; label: string; desc: string; price: number }
-const clawSpecs: ClawSpec[] = [
-  { cpu: 2, memory: 4, disk: 20, label: '入门型', desc: '2核4G / 20GB', price: 0.12 },
-  { cpu: 4, memory: 8, disk: 40, label: '通用型', desc: '4核8G / 40GB', price: 0.24 },
-  { cpu: 8, memory: 16, disk: 80, label: '旗舰型', desc: '8核16G / 80GB', price: 0.48 },
-]
+const getBillingBadge = (billingType?: string) => {
+  const cfg: Record<string, { label: string; variant: any }> = {
+    hourly: { label: '按量', variant: 'outline' },
+    monthly: { label: '包月', variant: 'secondary' },
+    yearly: { label: '包年', variant: 'default' },
+  }
+  const c = cfg[billingType || 'hourly'] || cfg.hourly
+  return <Badge variant={c.variant} className="text-xs gap-1"><CreditCard className="h-3 w-3" />{c.label}</Badge>
+}
 
 export default function OpenClawPage() {
-  const { instances, loading, refresh, createInstance, startInstance, stopInstance, deleteInstance } = useOpenClawInstances()
+  const router = useRouter()
+  const { instances, loading, refresh, startInstance, stopInstance, deleteInstance } = useOpenClawInstances()
 
   // 搜索 & 筛选
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-
-  // 创建弹窗
-  const [showCreate, setShowCreate] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [selectedClawSpec, setSelectedClawSpec] = useState<ClawSpec>(clawSpecs[0])
-  const [form, setForm] = useState({
-    name: '', node_type: 'center', image_url: '', port: 18789,
-  })
-  const [showClawAdvanced, setShowClawAdvanced] = useState(false)
 
   // 删除确认
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -100,28 +93,6 @@ export default function OpenClawPage() {
   }, [instances, searchQuery, statusFilter])
 
   const pagedInstances = paginateArray(filteredInstances, currentPage, pageSize)
-
-  const handleCreate = async () => {
-    if (!form.name.trim()) { toast.error('请输入实例名称'); return }
-    try {
-      setCreating(true)
-      await createInstance({
-        name: form.name.trim(),
-        node_type: form.node_type,
-        cpu_cores: selectedClawSpec.cpu,
-        memory_gb: selectedClawSpec.memory,
-        disk_gb: selectedClawSpec.disk,
-        image_url: form.image_url || undefined,
-        port: form.port,
-      })
-      toast.success('实例创建中')
-      setShowCreate(false)
-      setSelectedClawSpec(clawSpecs[0])
-      setForm({ name: '', node_type: 'center', image_url: '', port: 18789 })
-      setShowClawAdvanced(false)
-    } catch { toast.error('创建失败') }
-    finally { setCreating(false) }
-  }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -142,6 +113,10 @@ export default function OpenClawPage() {
     try { await stopInstance(id); toast.success('已停止') } catch { toast.error('停止失败') }
   }
 
+  const handleRestart = async (id: string) => {
+    try { await api.post(`/openclaw/instances/${id}/restart`); toast.success('重启中') } catch { toast.error('重启失败') }
+  }
+
   return (
     <div className="space-y-6">
       {/* 标题栏 */}
@@ -156,7 +131,7 @@ export default function OpenClawPage() {
           <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> 刷新
           </Button>
-          <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Button size="sm" onClick={() => router.push('/openclaw/create')}>
             <Plus className="h-4 w-4 mr-1" /> 创建实例
           </Button>
         </div>
@@ -188,10 +163,10 @@ export default function OpenClawPage() {
               <TableRow>
                 <TableHead className="min-w-[180px]">名称</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead>节点类型</TableHead>
+                <TableHead>计费</TableHead>
                 <TableHead>配置</TableHead>
-                <TableHead>端口</TableHead>
-                <TableHead>内网 IP</TableHead>
+                <TableHead>价格</TableHead>
+                <TableHead>到期时间</TableHead>
                 <TableHead>创建时间</TableHead>
                 <TableHead className="text-right w-[60px]">操作</TableHead>
               </TableRow>
@@ -209,7 +184,7 @@ export default function OpenClawPage() {
                     <div className="flex flex-col items-center gap-2">
                       <Bot className="h-10 w-10 text-muted-foreground/40" />
                       <p className="text-muted-foreground font-medium">暂无智能体实例</p>
-                      <Button size="sm" className="mt-1" onClick={() => setShowCreate(true)}>
+                      <Button size="sm" className="mt-1" onClick={() => router.push('/openclaw/create')}>
                         <Plus className="h-4 w-4 mr-1" /> 创建实例
                       </Button>
                     </div>
@@ -224,20 +199,22 @@ export default function OpenClawPage() {
                       </Link>
                     </TableCell>
                     <TableCell>{getStatusBadge(inst.status)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="gap-1">
-                        {inst.node_type === 'edge' ? <Globe className="h-3 w-3" /> : <Server className="h-3 w-3" />}
-                        {inst.node_type === 'edge' ? '边缘' : '云端'}
-                      </Badge>
-                    </TableCell>
+                    <TableCell>{getBillingBadge((inst as any).billing_type)}</TableCell>
                     <TableCell>
                       <div className="text-sm space-y-0.5">
                         <div className="flex items-center gap-1"><Cpu className="h-3 w-3 text-muted-foreground" />{inst.cpu_cores}核 / {inst.memory_gb}GB</div>
                         <div className="flex items-center gap-1"><HardDrive className="h-3 w-3 text-muted-foreground" />{inst.disk_gb}GB</div>
                       </div>
                     </TableCell>
-                    <TableCell><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{inst.port}</code></TableCell>
-                    <TableCell><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">{inst.internal_ip || '-'}</code></TableCell>
+                    <TableCell>
+                      <span className="text-primary font-medium">¥{((inst as any).hourly_price || 0.12).toFixed(2)}</span>
+                      <span className="text-xs text-muted-foreground">/时</span>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {(inst as any).expired_at
+                        ? new Date((inst as any).expired_at).toLocaleDateString()
+                        : <span className="text-xs">-</span>}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{inst.created_at ? new Date(inst.created_at).toLocaleString() : '-'}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -250,6 +227,9 @@ export default function OpenClawPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleStop(inst.id)} disabled={inst.status !== 'running'}>
                             <PowerOff className="h-4 w-4 mr-2" />停止
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRestart(inst.id)} disabled={inst.status !== 'running'}>
+                            <RotateCw className="h-4 w-4 mr-2" />重启
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setDeleteTarget({ id: inst.id, name: inst.name })} disabled={['releasing', 'released'].includes(inst.status)}>
@@ -274,88 +254,6 @@ export default function OpenClawPage() {
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
       />
-
-      {/* 创建弹窗 */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[540px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> 创建智能体实例</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>实例名称 *</Label>
-              <Input placeholder="my-agent" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
-
-            {/* 规格选择卡片 */}
-            <div className="grid gap-2">
-              <Label>实例规格 *</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {clawSpecs.map(spec => {
-                  const sel = selectedClawSpec.label === spec.label
-                  return (
-                    <div
-                      key={spec.label}
-                      onClick={() => setSelectedClawSpec(spec)}
-                      className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                        sel
-                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                          : 'border-border hover:border-primary/40 hover:shadow-sm'
-                      }`}
-                    >
-                      {sel && <div className="absolute top-1.5 right-1.5"><Check className="h-3.5 w-3.5 text-primary" /></div>}
-                      <div className="text-sm font-bold text-foreground">{spec.label}</div>
-                      <div className="text-xs text-muted-foreground">{spec.desc}</div>
-                      <div className="mt-0.5">
-                        <span className="text-primary font-bold text-sm">¥{spec.price.toFixed(2)}</span>
-                        <span className="text-[10px] text-muted-foreground">/时</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>节点类型</Label>
-              <Select value={form.node_type} onValueChange={v => setForm(f => ({ ...f, node_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="center">云端节点</SelectItem>
-                  <SelectItem value="edge">边缘节点</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 高级选项 */}
-            <button
-              onClick={() => setShowClawAdvanced(!showClawAdvanced)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${showClawAdvanced ? 'rotate-90' : ''}`} />
-              <span className="font-medium">高级选项</span>
-            </button>
-            {showClawAdvanced && (
-              <div className="grid gap-4 pl-1 border-l-2 border-muted ml-1">
-                <div className="grid gap-2">
-                  <Label>端口</Label>
-                  <Input type="number" value={form.port} onChange={e => setForm(f => ({ ...f, port: parseInt(e.target.value) || 18789 }))} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>镜像地址 (可选)</Label>
-                  <Input placeholder="默认使用系统镜像" value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>取消</Button>
-            <Button onClick={handleCreate} disabled={creating}>
-              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} 创建
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* 删除确认 */}
       <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>

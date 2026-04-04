@@ -380,6 +380,7 @@ export function useInstanceMetrics(instanceId: string, refreshInterval: number =
 export interface User {
   id: string; email: string; nickname: string; phone?: string; avatar?: string
   verified: boolean; balance: number; frozen_balance: number; api_key?: string; created_at: string
+  instance_quota?: number
 }
 
 export function useCurrentUser() {
