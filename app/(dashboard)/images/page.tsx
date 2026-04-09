@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Store, Layers, Download, Rocket, Image as ImageIcon, Loader2, Search, HardDrive, User, Cpu, Box } from 'lucide-react'
+import { Store, Layers, Rocket, Image as ImageIcon, Loader2, Search, HardDrive, User, Cpu, Box } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -161,17 +161,8 @@ export default function ImagesPage() {
                 </CardContent>
                 
                 {/* 底部按钮 */}
-                <CardFooter className="flex gap-3 px-4 py-4 border-t border-border/50">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    拉取镜像
-                  </Button>
-                  <Button 
-                    className="flex-1"
-                  >
+                <CardFooter className="px-4 py-4 border-t border-border/50">
+                  <Button className="w-full">
                     <Rocket className="h-4 w-4 mr-2" />
                     部署应用
                   </Button>

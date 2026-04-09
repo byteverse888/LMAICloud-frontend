@@ -258,11 +258,12 @@ export default function InstanceCreatePage() {
           <CardContent className="space-y-4">
             <FormRow label="实例名称" required>
               <Input
+                name="container-instance-label"
                 value={instanceName}
                 onChange={e => setInstanceName(e.target.value)}
                 placeholder="请输入实例名称"
                 className="max-w-sm"
-                autoComplete="off"
+                autoComplete="instance-nope"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
                 由中文、英文字母、数字、下划线（_）、中划线（-）组成，长度 1-50 位。

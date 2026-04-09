@@ -161,6 +161,10 @@ export default function WebTerminal({
         setConnected(false)
         term.writeln('')
         term.writeln(`\x1b[33m连接已关闭 (code: ${event.code})\x1b[0m`)
+        // Shell 正常退出 (code=1000) 时自动关闭终端窗口
+        if (event.code === 1000 && onClose) {
+          setTimeout(() => onClose(), 800)
+        }
       }
 
       ws.onerror = () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,12 +75,20 @@ export default function OpenClawDetailPage() {
   const instanceId = params.id as string
   const { token } = useAuthStore()
 
-  const { instance, loading, refresh, startInstance, stopInstance, deleteInstance } = useOpenClawInstance(instanceId)
+  const { instance, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance } = useOpenClawInstance(instanceId)
   const { keys, loading: keysLoading, refresh: refreshKeys, addKey, updateKey, deleteKey } = useOpenClawModelKeys(instanceId)
   const { channels, loading: channelsLoading, refresh: refreshChannels, addChannel, updateChannel, deleteChannel } = useOpenClawChannels(instanceId)
   const { skills, loading: skillsLoading, refresh: refreshSkills, installSkill, uninstallSkill } = useOpenClawSkills(instanceId)
   const { monitorStatus, loading: monitorLoading, refresh: refreshMonitor } = useOpenClawMonitor(instanceId)
   const { logs, loading: logsLoading, refresh: refreshLogs } = useOpenClawLogs(instanceId)
+
+  // 轮询：实例处于过渡态时每 5s 静默刷新
+  const isTransient = instance && ['creating', 'starting', 'stopping', 'releasing'].includes(instance.status)
+  useEffect(() => {
+    if (!isTransient) return
+    const iv = setInterval(silentRefresh, 5000)
+    return () => clearInterval(iv)
+  }, [isTransient, silentRefresh])
 
   // 密钥弹窗
   const [showAddKey, setShowAddKey] = useState(false)
@@ -206,6 +214,7 @@ export default function OpenClawDetailPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">命名空间</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{instance.namespace || '-'}</code></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">节点类型</span><Badge variant="outline">{instance.node_type === 'edge' ? '边缘' : '云端'}</Badge></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">节点名</span><span>{instance.node_name || '-'}</span></div>
+                <div className="flex justify-between items-start"><span className="text-muted-foreground shrink-0">镜像</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono text-right break-all max-w-[260px]">{instance.image_url || '-'}</code></div>
               </CardContent>
             </Card>
             <Card>

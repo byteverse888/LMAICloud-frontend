@@ -20,6 +20,28 @@ import { useImages } from '@/hooks/use-api'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
+// ====== 边缘节点列表 Hook ======
+function useEdgeNodes() {
+  const [nodes, setNodes] = useState<{ name: string; status: string; ip?: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        const { data } = await api.get<{ list: { name: string; status: string; ip?: string }[] }>('/openclaw/edge-nodes')
+        if (!cancelled) setNodes(data.list || [])
+      } catch {
+        if (!cancelled) setNodes([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+  return { nodes, loading }
+}
+
 // ====== 规格定义 ======
 interface ClawSpec {
   cpu: number; memory: number; disk: number
@@ -122,8 +144,18 @@ export default function OpenClawCreatePage() {
   const [selectedImage, setSelectedImage] = useState('')
   const [instanceName, setInstanceName] = useState('')
   const [nodeType, setNodeType] = useState('center')
+  const [nodeName, setNodeName] = useState('')
   const [port, setPort] = useState(18789)
   const [customImageUrl, setCustomImageUrl] = useState('')
+
+  // 边缘节点列表
+  const { nodes: edgeNodes, loading: edgeLoading } = useEdgeNodes()
+
+  // 切换节点类型时重置 node_name
+  const handleNodeTypeChange = (v: string) => {
+    setNodeType(v)
+    if (v === 'center') setNodeName('')
+  }
 
   // 模型/通道/技能 — 表单 + 已添加列表
   const [modelKeys, setModelKeys] = useState<ModelKeyItem[]>([])
@@ -193,6 +225,10 @@ export default function OpenClawCreatePage() {
         disk_gb: selectedSpec.disk,
         port,
         billing_type: billingType,
+      }
+      if (nodeType === 'edge') {
+        if (!nodeName) { toast.error('请选择边缘节点'); setCreating(false); return }
+        body.node_name = nodeName
       }
       if (billingType === 'monthly') body.duration_months = durationMonths
       if (selectedImage) {
@@ -374,14 +410,14 @@ export default function OpenClawCreatePage() {
                 <Settings2 className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold">基本信息</h3>
               </div>
-              <div className="grid gap-4">
+                <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label>实例名称 *</Label>
-                  <Input placeholder="my-agent" value={instanceName} onChange={e => setInstanceName(e.target.value)} autoComplete="off" />
+                  <Input name="openclaw-instance-label" placeholder="my-agent" value={instanceName} onChange={e => setInstanceName(e.target.value)} autoComplete="openclaw-nope" />
                 </div>
                 <div className="grid gap-2">
                   <Label>节点类型</Label>
-                  <Select value={nodeType} onValueChange={setNodeType}>
+                  <Select value={nodeType} onValueChange={handleNodeTypeChange}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="center">云端节点</SelectItem>
@@ -389,6 +425,33 @@ export default function OpenClawCreatePage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {nodeType === 'edge' && (
+                  <div className="grid gap-2">
+                    <Label>边缘节点 *</Label>
+                    {edgeLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> 加载节点列表...
+                      </div>
+                    ) : edgeNodes.length === 0 ? (
+                      <p className="text-sm text-red-500">无可用边缘节点，请检查集群配置</p>
+                    ) : (
+                      <Select value={nodeName} onValueChange={setNodeName}>
+                        <SelectTrigger><SelectValue placeholder="选择边缘节点" /></SelectTrigger>
+                        <SelectContent>
+                          {edgeNodes.map(n => (
+                            <SelectItem key={n.name} value={n.name}>
+                              <div className="flex items-center gap-2">
+                                <span className={`h-1.5 w-1.5 rounded-full ${n.status === 'online' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                <span className="font-mono text-xs">{n.name}</span>
+                                {n.ip && <span className="text-muted-foreground text-xs">({n.ip})</span>}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -419,9 +482,9 @@ export default function OpenClawCreatePage() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Input placeholder="模型名称" value={mkForm.model_name} onChange={e => setMkForm(f => ({ ...f, model_name: e.target.value }))} />
+                      <Input name="oc-model-name" autoComplete="oc-nope" placeholder="模型名称" value={mkForm.model_name} onChange={e => setMkForm(f => ({ ...f, model_name: e.target.value }))} />
                     )}
-                    <Input placeholder={getPreset(mkForm.provider).placeholder || 'API Key'} type="password" value={mkForm.api_key} onChange={e => setMkForm(f => ({ ...f, api_key: e.target.value }))} />
+                    <Input name="oc-model-apikey" autoComplete="oc-nope" placeholder={getPreset(mkForm.provider).placeholder || 'API Key'} value={mkForm.api_key} onChange={e => setMkForm(f => ({ ...f, api_key: e.target.value }))} className="font-mono" />
                     <Button className="w-full" variant="outline" onClick={handleAddModelKey}>
                       一键添加并应用
                     </Button>
@@ -470,8 +533,8 @@ export default function OpenClawCreatePage() {
                         {channelTypes.map(ct => <SelectItem key={ct.id} value={ct.id}>{ct.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Input placeholder={getChannelConfig(chForm.type).nameLabel} value={chForm.name} onChange={e => setChForm(f => ({ ...f, name: e.target.value }))} />
-                    <Input placeholder={getChannelConfig(chForm.type).configLabel} type="password" value={chForm.config} onChange={e => setChForm(f => ({ ...f, config: e.target.value }))} />
+                    <Input name="oc-channel-name" autoComplete="oc-nope" placeholder={getChannelConfig(chForm.type).nameLabel} value={chForm.name} onChange={e => setChForm(f => ({ ...f, name: e.target.value }))} />
+                    <Input name="oc-channel-secret" autoComplete="oc-nope" placeholder={getChannelConfig(chForm.type).configLabel} value={chForm.config} onChange={e => setChForm(f => ({ ...f, config: e.target.value }))} className="font-mono" />
                     <Button className="w-full" variant="outline" onClick={handleAddChannel}>
                       添加并应用
                     </Button>

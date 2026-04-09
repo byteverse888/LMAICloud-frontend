@@ -30,8 +30,10 @@ export interface Instance {
   created_at: string
   started_at?: string
   node_id: string
+  node_name?: string
   node_type?: string
   resource_type?: string
+  expired_at?: string
   internal_ip?: string
   instance_count?: number
   image_url?: string

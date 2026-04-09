@@ -90,18 +90,19 @@ export default function AdminAuditLogPage() {
                 <TableHead>资源类型</TableHead>
                 <TableHead>资源名称</TableHead>
                 <TableHead>IP地址</TableHead>
+                <TableHead>详情</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center">
+                  <TableCell colSpan={7} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : logs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">暂无日志</TableCell>
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">暂无日志</TableCell>
                 </TableRow>
               ) : (
                 logs.map((log: any) => (
@@ -116,8 +117,18 @@ export default function AdminAuditLogPage() {
                     <TableCell>
                       <Badge variant="secondary">{resourceTypeLabels[log.resource_type] || log.resource_type}</Badge>
                     </TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">{log.resource_name || '-'}</TableCell>
+                    <TableCell className="text-sm max-w-[200px] truncate" title={log.resource_name || ''}>{log.resource_name || '-'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{log.ip_address || '-'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[300px]">
+                      <span className="relative group cursor-default">
+                        <span className="truncate block">{log.detail || '-'}</span>
+                        {log.detail && (
+                          <span className="invisible group-hover:visible absolute z-50 left-0 top-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md p-3 max-w-[420px] whitespace-pre-wrap break-words text-xs leading-relaxed">
+                            {log.detail}
+                          </span>
+                        )}
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

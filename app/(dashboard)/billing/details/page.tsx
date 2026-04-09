@@ -159,7 +159,30 @@ export default function BillingDetailsPage() {
                         <span className="text-muted-foreground text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{item.description || '-'}</TableCell>
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">
+                          {item.billing_cycle === 'hourly' && item.period_start && item.period_end ? (
+                            <>按量计费</>
+                          ) : (
+                            <>{item.description || '-'}</>
+                          )}
+                        </div>
+                        {item.billing_cycle === 'hourly' && item.period_start && item.period_end && (
+                          <div className="text-xs text-muted-foreground">
+                            <span>{new Date(item.period_start).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                            <span> ~ </span>
+                            <span>{new Date(item.period_end).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            {item.hourly_price != null && (
+                              <span className="ml-2">¥{Number(item.hourly_price).toFixed(2)}/时</span>
+                            )}
+                            {item.duration_seconds != null && (
+                              <span className="ml-1">× {Math.floor(item.duration_seconds / 60)}分钟</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className={`text-right font-semibold ${item.amount > 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                       {item.amount > 0 ? '+' : ''}¥{Math.abs(item.amount).toFixed(2)}
                     </TableCell>

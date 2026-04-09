@@ -144,7 +144,12 @@ export function useOpenClawInstances() {
     setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'releasing' as const } : i))
   }
 
-  return { instances, loading, total, refresh: fetchInstances, silentRefresh, createInstance, startInstance, stopInstance, deleteInstance }
+  const forceDeleteInstance = async (id: string) => {
+    await api.post(`/openclaw/instances/${id}/force`)
+    setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'released' as const } : i))
+  }
+
+  return { instances, loading, total, refresh: fetchInstances, silentRefresh, createInstance, startInstance, stopInstance, deleteInstance, forceDeleteInstance }
 }
 
 // ====== 实例详情 ======
@@ -153,20 +158,22 @@ export function useOpenClawInstance(instanceId: string) {
   const [instance, setInstance] = useState<OpenClawInstance | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchInstance = useCallback(async () => {
+  const fetchInstance = useCallback(async (silent = false) => {
     if (!instanceId) return
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const { data } = await api.get<OpenClawInstance>(`/openclaw/instances/${instanceId}`)
       setInstance(data)
     } catch {
       setInstance(null)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [instanceId])
 
   useEffect(() => { fetchInstance() }, [fetchInstance])
+
+  const silentRefresh = useCallback(() => fetchInstance(true), [fetchInstance])
 
   const startInstance = async () => {
     await api.post(`/openclaw/instances/${instanceId}/start`)
@@ -186,7 +193,7 @@ export function useOpenClawInstance(instanceId: string) {
     return data
   }
 
-  return { instance, loading, refresh: fetchInstance, startInstance, stopInstance, deleteInstance, updateSpec }
+  return { instance, loading, refresh: fetchInstance, silentRefresh, startInstance, stopInstance, deleteInstance, updateSpec }
 }
 
 // ====== 大模型密钥 ======

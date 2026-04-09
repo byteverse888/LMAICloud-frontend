@@ -61,14 +61,15 @@ export default function AuditLogPage() {
             <p className="text-center text-muted-foreground py-8">暂无操作记录</p>
           ) : (
             <div>
-              <div className="grid grid-cols-6 text-sm font-medium text-muted-foreground border-b pb-2 mb-2">
+              <div className="grid grid-cols-[140px_60px_80px_1fr_120px_1.5fr] gap-2 text-sm font-medium text-muted-foreground border-b pb-2 mb-2">
                 <span>时间</span><span>操作</span><span>资源类型</span><span>资源名称</span><span>IP地址</span><span>详情</span>
               </div>
               {logs.map((l: any) => {
                 const isAuth = ['login', 'logout', 'register'].includes(l.action)
+                const detailText = isAuth && l.detail ? parseDevice(l.detail) : (l.detail || '-')
                 return (
-                <div key={l.id} className="grid grid-cols-6 text-sm py-2 border-b border-border/50 items-center">
-                  <span className="text-muted-foreground">{l.created_at ? new Date(l.created_at).toLocaleString('zh-CN') : ''}</span>
+                <div key={l.id} className="grid grid-cols-[140px_60px_80px_1fr_120px_1.5fr] gap-2 text-sm py-2 border-b border-border/50 items-start">
+                  <span className="text-muted-foreground whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleString('zh-CN') : ''}</span>
                   <span>
                     {l.action === 'login' ? (
                       <span className="text-blue-600 dark:text-blue-400">{actionLabels[l.action]}</span>
@@ -81,13 +82,20 @@ export default function AuditLogPage() {
                     )}
                   </span>
                   <span>{resourceLabels[l.resource_type] || l.resource_type}</span>
-                  <span className="truncate">{l.resource_name || '-'}</span>
+                  <span className="truncate" title={l.resource_name || ''}>{l.resource_name || '-'}</span>
                   <span className="text-muted-foreground font-mono text-xs">{l.ip_address || '-'}</span>
-                  <span className="text-muted-foreground text-xs truncate">
-                    {isAuth && l.detail ? (
-                      <span className="flex items-center gap-1"><Monitor className="h-3 w-3 shrink-0" />{parseDevice(l.detail)}</span>
-                    ) : (
-                      l.detail || '-'
+                  <span className="relative group text-muted-foreground text-xs cursor-default min-w-0">
+                    <span className="truncate block">
+                      {isAuth && l.detail ? (
+                        <span className="inline-flex items-center gap-1"><Monitor className="h-3 w-3 shrink-0" />{parseDevice(l.detail)}</span>
+                      ) : (
+                        l.detail || '-'
+                      )}
+                    </span>
+                    {detailText && detailText !== '-' && (
+                      <span className="invisible group-hover:visible absolute z-50 left-0 top-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md p-3 max-w-[420px] whitespace-pre-wrap break-words text-xs leading-relaxed">
+                        {l.detail || '-'}
+                      </span>
                     )}
                   </span>
                 </div>

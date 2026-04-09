@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   RefreshCw, Plus, Search, MoreHorizontal,
   Power, PowerOff, RotateCw, Trash2, Loader2, Bot,
-  Cpu, HardDrive, Globe, Server, CreditCard, Clock,
+  Cpu, HardDrive, Globe, Server, CreditCard, Clock, Cloud, Radio,
+  FileText, Terminal, XCircle, AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,11 +26,26 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { useOpenClawInstances } from '@/hooks/use-openclaw'
+import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+
+const WebTerminal = dynamic(
+  () => import('@/components/terminal/web-terminal'),
+  { ssr: false, loading: () => <div className="h-96 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div> }
+)
 
 const getStatusBadge = (status: string) => {
   const cfg: Record<string, { label: string; variant: any; dot: string }> = {
@@ -68,7 +85,18 @@ const getBillingBadge = (billingType?: string) => {
 
 export default function OpenClawPage() {
   const router = useRouter()
-  const { instances, loading, refresh, startInstance, stopInstance, deleteInstance } = useOpenClawInstances()
+  const { instances, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance, forceDeleteInstance } = useOpenClawInstances()
+  const { token } = useAuthStore()
+
+  // 轮询：有过渡态实例时每 5s 静默刷新（不触发 loading 动画）
+  const hasTransientInstances = instances.some((i: any) =>
+    ['creating', 'starting', 'stopping', 'releasing'].includes(i.status)
+  )
+  useEffect(() => {
+    if (!hasTransientInstances) return
+    const iv = setInterval(silentRefresh, 5000)
+    return () => clearInterval(iv)
+  }, [hasTransientInstances, silentRefresh])
 
   // 搜索 & 筛选
   const [searchQuery, setSearchQuery] = useState('')
@@ -79,6 +107,20 @@ export default function OpenClawPage() {
   // 删除确认
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // 强制删除确认
+  const [forceDeleteTarget, setForceDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [forceDeleting, setForceDeleting] = useState(false)
+
+  // 日志弹窗
+  const [logInstance, setLogInstance] = useState<{ id: string; name: string } | null>(null)
+  const [logTail, setLogTail] = useState(100)
+  const [instanceLogs, setInstanceLogs] = useState('')
+  const [logsLoading, setLogsLoading] = useState(false)
+  const logsEndRef = useRef<HTMLDivElement>(null)
+
+  // WebShell 终端
+  const [termInstance, setTermInstance] = useState<{ id: string; name: string } | null>(null)
 
   const filteredInstances = useMemo(() => {
     let list = instances
@@ -116,6 +158,41 @@ export default function OpenClawPage() {
   const handleRestart = async (id: string) => {
     try { await api.post(`/openclaw/instances/${id}/restart`); toast.success('重启中') } catch { toast.error('重启失败') }
   }
+
+  const handleForceDelete = async () => {
+    if (!forceDeleteTarget) return
+    try {
+      setForceDeleting(true)
+      await forceDeleteInstance(forceDeleteTarget.id)
+      toast.success('实例已强制删除')
+      setForceDeleteTarget(null)
+    } catch { toast.error('强制删除失败') }
+    finally { setForceDeleting(false) }
+  }
+
+  // 日志
+  const fetchInstanceLogs = useCallback(async (instanceId: string, tail: number) => {
+    try {
+      setLogsLoading(true)
+      const { data } = await api.get<{ logs: string }>(`/openclaw/instances/${instanceId}/logs`, { tail })
+      setInstanceLogs(data.logs || '')
+    } catch { setInstanceLogs('[Error] 获取日志失败') }
+    finally { setLogsLoading(false) }
+  }, [])
+
+  const refreshInstanceLogs = () => {
+    if (logInstance) fetchInstanceLogs(logInstance.id, logTail)
+  }
+
+  useEffect(() => {
+    if (logInstance) fetchInstanceLogs(logInstance.id, logTail)
+  }, [logInstance, logTail, fetchInstanceLogs])
+
+  useEffect(() => {
+    if (logInstance && logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [instanceLogs, logInstance])
 
   return (
     <div className="space-y-6">
@@ -161,26 +238,27 @@ export default function OpenClawPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[180px]">名称</TableHead>
+                <TableHead className="min-w-[120px]">名称</TableHead>
                 <TableHead>状态</TableHead>
+                <TableHead>镜像</TableHead>
+                <TableHead>节点</TableHead>
                 <TableHead>计费</TableHead>
                 <TableHead>配置</TableHead>
-                <TableHead>价格</TableHead>
+                <TableHead>内网 IP</TableHead>
                 <TableHead>到期时间</TableHead>
-                <TableHead>创建时间</TableHead>
                 <TableHead className="text-right w-[60px]">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={9} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : pagedInstances.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={9} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Bot className="h-10 w-10 text-muted-foreground/40" />
                       <p className="text-muted-foreground font-medium">暂无智能体实例</p>
@@ -194,11 +272,46 @@ export default function OpenClawPage() {
                 pagedInstances.map(inst => (
                   <TableRow key={inst.id} className="hover:bg-primary/3 transition-colors">
                     <TableCell>
-                      <Link href={`/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">
-                        {inst.name}
-                      </Link>
+                      <div>
+                        <Link href={`/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">
+                          {inst.name}
+                        </Link>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {inst.created_at ? new Date(inst.created_at).toLocaleString() : '-'}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(inst.status)}</TableCell>
+                    <TableCell>
+                      <span className="text-xs font-mono text-muted-foreground max-w-[140px] truncate block" title={inst.image_url || ''}>
+                        {inst.image_url ? inst.image_url.split('/').pop() : '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {(inst as any).node_type === 'edge' ? (
+                          <Badge variant="outline" className="gap-1 text-xs border-orange-300 text-orange-600 dark:text-orange-400">
+                            <Radio className="h-3 w-3" />边缘
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-xs border-blue-300 text-blue-600 dark:text-blue-400">
+                            <Cloud className="h-3 w-3" />云端
+                          </Badge>
+                        )}
+                        {(inst as any).node_name && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs text-muted-foreground font-mono max-w-[80px] truncate block">
+                                  {(inst as any).node_name}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent><p className="font-mono text-xs">{(inst as any).node_name}</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{getBillingBadge((inst as any).billing_type)}</TableCell>
                     <TableCell>
                       <div className="text-sm space-y-0.5">
@@ -207,15 +320,13 @@ export default function OpenClawPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-primary font-medium">¥{((inst as any).hourly_price || 0.12).toFixed(2)}</span>
-                      <span className="text-xs text-muted-foreground">/时</span>
+                      <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">{inst.internal_ip || '-'}</code>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {(inst as any).expired_at
                         ? new Date((inst as any).expired_at).toLocaleDateString()
                         : <span className="text-xs">-</span>}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{inst.created_at ? new Date(inst.created_at).toLocaleString() : '-'}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -232,8 +343,18 @@ export default function OpenClawPage() {
                             <RotateCw className="h-4 w-4 mr-2" />重启
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setLogInstance({ id: inst.id, name: inst.name })}>
+                            <FileText className="h-4 w-4 mr-2" />查看日志
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTermInstance({ id: inst.id, name: inst.name })} disabled={inst.status !== 'running'}>
+                            <Terminal className="h-4 w-4 mr-2" />WebShell
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setDeleteTarget({ id: inst.id, name: inst.name })} disabled={['releasing', 'released'].includes(inst.status)}>
                             <Trash2 className="h-4 w-4 mr-2" />删除
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setForceDeleteTarget({ id: inst.id, name: inst.name })} disabled={inst.status === 'released'}>
+                            <XCircle className="h-4 w-4 mr-2" />强制删除
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -272,6 +393,78 @@ export default function OpenClawPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 强制删除确认 */}
+      <AlertDialog open={!!forceDeleteTarget} onOpenChange={open => { if (!open) setForceDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600"><AlertTriangle className="h-5 w-5" /> 强制删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要强制删除实例 <strong>{forceDeleteTarget?.name}</strong> 吗？
+              此操作将直接清理 K8s 资源并更新数据库，无论实例当前状态如何。<strong>此操作不可恢复！</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={forceDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceDelete} disabled={forceDeleting} className="bg-red-600 hover:bg-red-700 text-white">
+              {forceDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} 确认强制删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* WebShell 终端弹窗 */}
+      <Dialog open={!!termInstance} onOpenChange={(open) => { if (!open) setTermInstance(null) }}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden">
+          <DialogTitle className="sr-only">WebShell 终端</DialogTitle>
+          {termInstance && token && (
+            <WebTerminal
+              instanceId={termInstance.id}
+              token={token}
+              instanceName={termInstance.name}
+              wsPath="/ws/openclaw/terminal"
+              onClose={() => setTermInstance(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 日志弹窗 */}
+      <Dialog open={!!logInstance} onOpenChange={(open) => { if (!open) setLogInstance(null) }}>
+        <DialogContent className="sm:max-w-[800px] max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-8">
+              <span>实例日志 - {logInstance?.name}</span>
+              <div className="flex items-center gap-2">
+                <Select value={String(logTail)} onValueChange={(v) => setLogTail(Number(v))}>
+                  <SelectTrigger className="w-28 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100 行</SelectItem>
+                    <SelectItem value="200">200 行</SelectItem>
+                    <SelectItem value="500">500 行</SelectItem>
+                    <SelectItem value="1000">1000 行</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={refreshInstanceLogs} disabled={logsLoading}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="bg-black rounded p-3 h-[60vh] overflow-auto font-mono text-xs text-green-400 whitespace-pre-wrap">
+            {logsLoading ? (
+              <div className="flex justify-center items-center h-full"><Loader2 className="h-6 w-6 animate-spin text-white" /></div>
+            ) : (
+              <>
+                {instanceLogs || '(无日志)'}
+                <div ref={logsEndRef} />
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

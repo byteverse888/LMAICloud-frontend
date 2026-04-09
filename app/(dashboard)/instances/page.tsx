@@ -10,7 +10,7 @@ import {
   Power, PowerOff, Trash2, Terminal, Loader2,
   ChevronDown, ChevronUp, List, Activity, Calendar,
   FileText, XCircle, AlertTriangle, Server, BookOpen, RotateCcw,
-  Play, Square,
+  Play, Square, Cpu, HardDrive,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -494,21 +494,19 @@ export default function InstancesPage() {
                 状态
                 <Filter className="inline h-3 w-3 ml-1 text-muted-foreground" />
               </TableHead>
-              <TableHead className="font-semibold">计算配置</TableHead>
-              <TableHead className="font-semibold">计费方式</TableHead>
-              <TableHead className="font-semibold">CPU</TableHead>
-              <TableHead className="font-semibold">内存</TableHead>
-              <TableHead className="font-semibold">磁盘</TableHead>
+              <TableHead className="font-semibold">配置</TableHead>
+              <TableHead className="font-semibold">镜像</TableHead>
+              <TableHead className="font-semibold">计费</TableHead>
+              <TableHead className="font-semibold">节点</TableHead>
               <TableHead className="font-semibold">内网 IP</TableHead>
-              <TableHead className="font-semibold">网络</TableHead>
-
+              <TableHead className="font-semibold">到期时间</TableHead>
               <TableHead className="font-semibold text-right sticky right-0 z-20 bg-muted/30">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-40 text-center">
+                <TableCell colSpan={9} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <span className="text-sm text-muted-foreground">加载中...</span>
@@ -517,7 +515,7 @@ export default function InstancesPage() {
               </TableRow>
             ) : filteredInstances.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-48 text-center">
+                <TableCell colSpan={9} className="h-48 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-16 w-16 rounded-2xl bg-muted/60 flex items-center justify-center">
                       <Server className="h-8 w-8 text-muted-foreground/50" />
@@ -566,14 +564,18 @@ export default function InstancesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">
-                      {inst.gpu_model && inst.gpu_count > 0 ? (
+                    <div className="text-sm space-y-0.5">
+                      {inst.gpu_model && inst.gpu_count > 0 && (
                         <div className="font-medium">{inst.gpu_model} x {inst.gpu_count}</div>
-                      ) : (
-                        <div>CPU {inst.cpu_cores}核</div>
                       )}
-                      <div className="text-xs text-muted-foreground">{inst.cpu_cores}核 / {inst.memory}GB</div>
+                      <div className="flex items-center gap-1"><Cpu className="h-3 w-3 text-muted-foreground" />{inst.cpu_cores}核 / {inst.memory}GB</div>
+                      <div className="flex items-center gap-1"><HardDrive className="h-3 w-3 text-muted-foreground" />{inst.disk || '-'}GB</div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-mono text-muted-foreground max-w-[140px] truncate block" title={inst.image_url || ''}>
+                      {inst.image_url ? inst.image_url.split('/').pop() : '-'}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -590,21 +592,24 @@ export default function InstancesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-mono">{fmtCpu(inst.cpu_usage_millicores)}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs font-mono">{fmtMem(inst.memory_usage_bytes)}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{inst.disk || '-'} GB</div>
+                    <div className="flex items-center gap-1.5">
+                      {inst.node_type === 'edge' ? (
+                        <Badge variant="outline" className="gap-1 text-xs border-orange-300 text-orange-600 dark:text-orange-400">边缘</Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 text-xs border-blue-300 text-blue-600 dark:text-blue-400">云端</Badge>
+                      )}
+                      {inst.node_name && (
+                        <span className="text-xs text-muted-foreground font-mono max-w-[80px] truncate block" title={inst.node_name}>
+                          {inst.node_name}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">{inst.internal_ip || '-'}</code>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {inst.node_type === 'edge' ? '边缘节点' : '内网互通'}
-                    </span>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {inst.expired_at ? new Date(inst.expired_at).toLocaleDateString() : <span className="text-xs">-</span>}
                   </TableCell>
 
                   <TableCell className={`text-right sticky right-0 z-10 transition-colors ${selectedIds.includes(inst.id) ? 'bg-primary/12 dark:bg-primary/25' : 'bg-card group-hover:bg-primary/3'}`}>
