@@ -228,7 +228,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm">{t('myBalance')}</span>
-                <Link href="/billing/details">
+                <Link href="/billing">
                   <Button size="sm" variant="default">
                     {t('recharge')}
                   </Button>

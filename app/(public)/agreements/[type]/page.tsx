@@ -4,14 +4,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
-import api from '@/lib/api'
-
-const typeMap: Record<string, string> = {
-  user: 'user_agreement',
-  privacy: 'privacy_policy',
-  service: 'service_agreement',
-  recharge: 'recharge_agreement',
-}
 
 const titleMap: Record<string, string> = {
   user: '用户协议',
@@ -27,15 +19,16 @@ export default function AgreementPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const key = typeMap[type]
-    if (!key) {
+    if (!titleMap[type]) {
       setContent('协议类型不存在')
       setLoading(false)
       return
     }
-    api.get<Record<string, string>>('/system/agreements')
-      .then(({ data }) => setContent(data[key] || '暂无内容'))
-      .catch(() => setContent('加载失败'))
+    // 从前端静态文件读取协议内容
+    fetch(`/agreements/${type}.html`)
+      .then(res => res.ok ? res.text() : Promise.reject('Not found'))
+      .then(html => setContent(html))
+      .catch(() => setContent('暂无内容'))
       .finally(() => setLoading(false))
   }, [type])
 

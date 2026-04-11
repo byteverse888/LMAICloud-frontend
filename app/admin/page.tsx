@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAdminDashboard } from '@/hooks/use-api'
 import {
   Server,
-  HardDrive,
   Users,
   Cpu,
   Activity,
@@ -31,14 +30,14 @@ export default function AdminDashboard() {
   }
 
   const statCards = [
-    { title: '集群数量', value: s.clusters, icon: Server, color: 'text-blue-500' },
-    { title: '节点总数', value: s.nodes, icon: HardDrive, color: 'text-green-500' },
+    { title: '集群 / 节点', value: `${s.clusters || 0} / ${s.nodes || 0}`, icon: Server, color: 'text-blue-500' },
     { title: '注册用户', value: (s.users || 0).toLocaleString(), icon: Users, color: 'text-purple-500' },
-    { title: '运行实例', value: (s.running_instances || s.instances || 0).toLocaleString(), icon: Cpu, color: 'text-amber-500' },
-    { title: '智能体实例', value: `${s.oc_running || 0} / ${s.oc_total || 0}`, icon: Bot, color: 'text-violet-500' },
+    { title: 'GPU 实例', value: `${s.running_instances || 0} / ${s.instances || 0}`, subtitle: '运行/总数', icon: Cpu, color: 'text-amber-500' },
+    { title: '智能体实例', value: `${s.oc_running || 0} / ${s.oc_total || 0}`, subtitle: '运行/总数', icon: Bot, color: 'text-violet-500' },
+    { title: '今日新用户', value: (s.today_new_users || 0).toLocaleString(), icon: TrendingUp, color: 'text-green-500' },
   ]
 
-  const gpuTotal = s.gpu_total || 1
+  const gpuTotal = s.gpu_total || 0
   const gpuUsed = s.gpu_used || 0
 
   return (
@@ -91,13 +90,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">使用率</span>
                 <span className="font-medium">
-                  {((gpuUsed / gpuTotal) * 100).toFixed(1)}%
+                  {gpuTotal > 0 ? ((gpuUsed / gpuTotal) * 100).toFixed(1) : '0.0'}%
                 </span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-green-500 rounded-full"
-                  style={{ width: `${(gpuUsed / gpuTotal) * 100}%` }}
+                  style={{ width: `${gpuTotal > 0 ? (gpuUsed / gpuTotal) * 100 : 0}%` }}
                 />
               </div>
             </div>
@@ -126,10 +125,15 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">今日新增用户</span>
-                <span className="font-medium flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  {s.today_new_users || 0}
+                <span className="text-muted-foreground">今日消费</span>
+                <span className="font-medium text-orange-500">
+                  ¥{(s.today_expense || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">本月消费</span>
+                <span className="font-medium text-orange-500">
+                  ¥{(s.month_expense || 0).toLocaleString()}
                 </span>
               </div>
             </div>

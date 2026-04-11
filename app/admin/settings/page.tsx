@@ -31,10 +31,6 @@ interface SystemSettings {
   icp_link: string
   police_number: string
   copyright_text: string
-  user_agreement: string
-  privacy_policy: string
-  service_agreement: string
-  recharge_agreement: string
   captcha_enabled: boolean
   announcement_text: string
 }
@@ -74,16 +70,11 @@ export default function SettingsPage() {
     icp_link: '',
     police_number: '',
     copyright_text: '',
-    user_agreement: '',
-    privacy_policy: '',
-    service_agreement: '',
-    recharge_agreement: '',
     captcha_enabled: true,
     announcement_text: '',
   })
 
-  // 协议编辑/预览状态
-  const [agreementEditMode, setAgreementEditMode] = useState<Record<string, boolean>>({})
+  // 协议已迁移至静态文件，无需编辑状态
 
   // 邮件配置
   const [emailConfig, setEmailConfig] = useState<EmailConfig>({
@@ -218,7 +209,6 @@ export default function SettingsPage() {
           <TabsTrigger value="brand">品牌配置</TabsTrigger>
           <TabsTrigger value="billing">计费设置</TabsTrigger>
           <TabsTrigger value="email">邮件配置</TabsTrigger>
-          <TabsTrigger value="agreements">协议管理</TabsTrigger>
           <TabsTrigger value="security">安全设置</TabsTrigger>
         </TabsList>
 
@@ -685,58 +675,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* 协议管理 */}
-        <TabsContent value="agreements">
-          <div className="space-y-6">
-            {[
-              { key: 'user_agreement' as const, title: '用户协议', desc: '登录页面底部展示的用户协议内容（支持HTML）' },
-              { key: 'privacy_policy' as const, title: '隐私政策', desc: '隐私政策内容（支持HTML）' },
-              { key: 'service_agreement' as const, title: '产品服务协议', desc: '产品服务协议内容（支持HTML）' },
-              { key: 'recharge_agreement' as const, title: '用户充值协议', desc: '充值页面展示的充值协议内容（支持HTML）' },
-            ].map(({ key, title, desc }) => (
-              <Card key={key}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div>
-                    <CardTitle className="text-lg">{title}</CardTitle>
-                    <CardDescription>{desc}</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAgreementEditMode(prev => ({ ...prev, [key]: !prev[key] }))}
-                  >
-                    {agreementEditMode[key] ? '预览' : '编辑'}
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  {agreementEditMode[key] ? (
-                    <textarea
-                      className="w-full min-h-[300px] rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={settings[key]}
-                      onChange={(e) => updateSetting(key, e.target.value)}
-                      placeholder={`请输入${title}内容...`}
-                    />
-                  ) : (
-                    <div className="rounded-md border border-input bg-muted/30 p-4 min-h-[200px] max-h-[400px] overflow-y-auto">
-                      {settings[key] ? (
-                        <div
-                          className="prose dark:prose-invert max-w-none prose-sm"
-                          dangerouslySetInnerHTML={{ __html: settings[key] }}
-                        />
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">暂无内容，点击“编辑”添加</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-            <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              保存协议
-            </Button>
-          </div>
-        </TabsContent>
       </Tabs>
     </div>
   )
