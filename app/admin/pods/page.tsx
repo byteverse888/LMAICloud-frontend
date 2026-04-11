@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { useAdminPods, useAdminNamespaces } from '@/hooks/use-api'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -344,7 +345,13 @@ export default function PodsPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="block truncate text-primary">{pod.instance_name}</span>
+                              {pod.instance_id ? (
+                                <Link href={`/instances/${pod.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                                  {pod.instance_name}
+                                </Link>
+                              ) : (
+                                <span className="block truncate text-primary">{pod.instance_name}</span>
+                              )}
                             </TooltipTrigger>
                             <TooltipContent><p>{pod.instance_name}</p></TooltipContent>
                           </Tooltip>
@@ -671,7 +678,8 @@ function PodTerminal({ ns, name, instanceName, onClose }: { ns: string; name: st
       safeFit()
       term.writeln('\x1b[33m正在连接终端...\x1b[0m')
 
-      const wsBase = (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8884')
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+      const wsBase = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
       const wsUrl = `${wsBase}/api/v1/admin/pods/ws/${ns}/${name}/exec?token=${token}`
       const socket = new WebSocket(wsUrl)
       wsRef.current = socket

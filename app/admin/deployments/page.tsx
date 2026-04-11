@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useAdminDeployments, useAdminNamespaces } from '@/hooks/use-api'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -264,7 +265,13 @@ export default function DeploymentsPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="block truncate text-primary">{dep.instance_name}</span>
+                              {dep.instance_id ? (
+                                <Link href={`/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                                  {dep.instance_name}
+                                </Link>
+                              ) : (
+                                <span className="block truncate text-primary">{dep.instance_name}</span>
+                              )}
                             </TooltipTrigger>
                             <TooltipContent><p>{dep.instance_name}</p></TooltipContent>
                           </Tooltip>

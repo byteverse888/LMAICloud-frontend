@@ -971,6 +971,44 @@ export function useAdminStorageClasses(search?: string) {
   return { storageClasses, loading, total, refresh: fetchSCs }
 }
 
+// ====== 管理后台 - ConfigMap 管理 ======
+export function useAdminConfigMaps(namespace?: string, search?: string) {
+  const [configMaps, setConfigMaps] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchConfigMaps = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/config/configmaps', params)
+      setConfigMaps(data.list || []); setTotal(data.total || 0)
+    } catch { setConfigMaps([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchConfigMaps() }, [fetchConfigMaps])
+  return { configMaps, loading, total, refresh: fetchConfigMaps }
+}
+
+// ====== 管理后台 - Secret 管理 ======
+export function useAdminSecrets(namespace?: string, search?: string) {
+  const [secrets, setSecrets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchSecrets = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/config/secrets', params)
+      setSecrets(data.list || []); setTotal(data.total || 0)
+    } catch { setSecrets([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchSecrets() }, [fetchSecrets])
+  return { secrets, loading, total, refresh: fetchSecrets }
+}
+
 // ====== 计费相关 hooks ======
 
 export function useTransactions(page: number = 1, size: number = 20, type?: string) {

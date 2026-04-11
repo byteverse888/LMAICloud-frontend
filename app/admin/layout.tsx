@@ -39,6 +39,8 @@ import {
   Package,
   MonitorCog,
   AppWindow,
+  FolderTree,
+  FileCode,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,9 +81,11 @@ const adminNavItems: NavItem[] = [
     children: [
       { href: '/admin/clusters', label: '集群管理', icon: Server },
       { href: '/admin/nodes', label: '节点管理', icon: HardDrive },
+      { href: '/admin/namespaces', label: '命名空间', icon: FolderTree },
       { href: '/admin/storage', label: '存储管理', icon: Database },
       { href: '/admin/services', label: '服务管理', icon: Network },
       { href: '/admin/workloads', label: '工作负载', icon: Box },
+      { href: '/admin/configmaps', label: '配置管理', icon: FileCode },
       { href: '/admin/pods', label: '容器管理', icon: Container },
       { href: '/admin/openclaw', label: '智能体管理', icon: Bot },
     ],
