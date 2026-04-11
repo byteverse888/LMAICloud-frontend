@@ -30,7 +30,6 @@ import {
   Box,
   Database,
   Globe,
-  Bot,
   CircleDollarSign,
   ClipboardList,
   Store,
@@ -87,7 +86,6 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/workloads', label: '工作负载', icon: Box },
       { href: '/admin/configmaps', label: '配置管理', icon: FileCode },
       { href: '/admin/pods', label: '容器管理', icon: Container },
-      { href: '/admin/openclaw', label: '智能体管理', icon: Bot },
     ],
   },
   {

@@ -264,7 +264,7 @@ export default function AdminOpenClawPage() {
               ) : pagedInstances.map(inst => (
                 <TableRow key={inst.id} className="hover:bg-primary/3">
                   <TableCell>
-                    <Link href={`/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">{inst.name}</Link>
+                    <Link href={`/admin/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">{inst.name}</Link>
                     <div className="text-xs text-muted-foreground mt-0.5 font-mono">{inst.id.slice(0, 8)}...</div>
                   </TableCell>
                   <TableCell>

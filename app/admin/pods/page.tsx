@@ -346,7 +346,11 @@ export default function PodsPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               {pod.instance_id ? (
-                                <Link href={`/instances/${pod.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                                <Link href={`/admin/instances/${pod.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                                  {pod.instance_name}
+                                </Link>
+                              ) : pod.openclaw_instance_id ? (
+                                <Link href={`/admin/openclaw/${pod.openclaw_instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
                                   {pod.instance_name}
                                 </Link>
                               ) : (

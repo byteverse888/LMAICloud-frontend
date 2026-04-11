@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useAdminDeployments, useAdminDaemonSets, useAdminStatefulSets, useAdminNamespaces } from '@/hooks/use-api'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -167,7 +168,15 @@ function DeploymentsTab() {
                   <TableRow key={`${dep.namespace}/${dep.name}`}>
                     <TableCell className="font-medium max-w-[120px]">
                       {dep.instance_name ? (
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate text-primary">{dep.instance_name}</span></TooltipTrigger><TooltipContent><p>{dep.instance_name}</p></TooltipContent></Tooltip></TooltipProvider>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                          {dep.instance_id ? (
+                            <Link href={`/admin/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">{dep.instance_name}</Link>
+                          ) : dep.openclaw_instance_id ? (
+                            <Link href={`/admin/openclaw/${dep.openclaw_instance_id}`} className="block truncate text-primary hover:underline" target="_blank">{dep.instance_name}</Link>
+                          ) : (
+                            <span className="block truncate text-primary">{dep.instance_name}</span>
+                          )}
+                        </TooltipTrigger><TooltipContent><p>{dep.instance_name}</p></TooltipContent></Tooltip></TooltipProvider>
                       ) : <span className="text-muted-foreground text-xs">-</span>}
                     </TableCell>
                     <TableCell className="max-w-[120px]">

@@ -266,7 +266,11 @@ export default function DeploymentsPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               {dep.instance_id ? (
-                                <Link href={`/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                                <Link href={`/admin/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                                  {dep.instance_name}
+                                </Link>
+                              ) : dep.openclaw_instance_id ? (
+                                <Link href={`/admin/openclaw/${dep.openclaw_instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
                                   {dep.instance_name}
                                 </Link>
                               ) : (
