@@ -435,24 +435,6 @@ export default function InstancesPage() {
           <Button variant="outline" size="icon" onClick={() => refresh()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <div className="flex border rounded-md">
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-r-none"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4 mr-1" /> 列表
-            </Button>
-            <Button
-              variant={viewMode === 'monitor' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-l-none"
-              onClick={() => setViewMode('monitor')}
-            >
-              <Activity className="h-4 w-4 mr-1" /> 监控
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -460,16 +442,6 @@ export default function InstancesPage() {
       {showAdvancedSearch && (
         <Card className="animate-scale-in">
           <CardContent className="flex items-center gap-4 p-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">用户</span>
-              <Select value={userFilter} onValueChange={setUserFilter}>
-                <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">当前用户</SelectItem>
-                  <SelectItem value="all">所有用户</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">创建时间</span>
               <Input type="date" className="w-36 h-8" value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="开始日期与时间" />
@@ -490,7 +462,7 @@ export default function InstancesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="ghost" size="sm" className="ml-auto text-muted-foreground" onClick={() => { setUserFilter('current'); setDateFrom(''); setDateTo(''); handleStatusFilterChange('all') }}>
+            <Button variant="ghost" size="sm" className="ml-auto text-muted-foreground" onClick={() => { setDateFrom(''); setDateTo(''); handleStatusFilterChange('all') }}>
               <RotateCcw className="h-3.5 w-3.5 mr-1" /> 重置
             </Button>
           </CardContent>

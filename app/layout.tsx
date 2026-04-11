@@ -9,7 +9,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'LMAICloud - GPU算力云平台',
+  title: '龙虾云 - GPU算力云平台',
   description: '大模型AI云平台，提供GPU算力租赁服务',
 }
 

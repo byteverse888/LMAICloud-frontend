@@ -123,6 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { theme, setTheme } = useTheme()
   const [countdown, setCountdown] = useState(3)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true, '/admin/products': true, '/admin/operations': true })
+  const [copyrightText, setCopyrightText] = useState('')
   
   // 修改密码对话框状态
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
@@ -135,6 +136,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
+
+  // 获取版权信息
+  useEffect(() => {
+    api.get<{ copyright_text?: string }>('/system/site-info')
+      .then(({ data }) => { if (data.copyright_text) setCopyrightText(data.copyright_text) })
+      .catch(() => {})
+  }, [])
 
   // 未登录跳转登录页
   useEffect(() => {
@@ -383,6 +391,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6">
           {children}
         </div>
+        {/* 版权页脚 */}
+        {copyrightText && (
+          <footer className="py-4 text-center text-xs text-muted-foreground border-t mx-6">
+            {copyrightText}
+          </footer>
+        )}
       </main>
 
       {/* 修改密码对话框 */}

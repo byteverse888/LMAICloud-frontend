@@ -54,7 +54,7 @@ export function Sidebar() {
   const t = useTranslations('nav')
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const [expandedItems, setExpandedItems] = useState<string[]>(['billing', 'account'])
-  const [siteName, setSiteName] = useState('LMAICloud')
+  const [siteName, setSiteName] = useState('龙虾云')
 
   // 获取平台名称
   useEffect(() => {

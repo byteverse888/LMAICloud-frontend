@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -30,8 +30,15 @@ export default function RegisterPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [isResending, setIsResending] = useState(false)
+  const [siteName, setSiteName] = useState('龙虾云')
 
   const [agreeTerms, setAgreeTerms] = useState(false)
+
+  useEffect(() => {
+    api.get<{ site_name?: string }>('/system/site-info')
+      .then(({ data }) => { if (data.site_name) setSiteName(data.site_name) })
+      .catch(() => {})
+  }, [])
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -176,7 +183,7 @@ export default function RegisterPage() {
           </div>
           <CardTitle className="text-2xl font-bold">{t('register')}</CardTitle>
           <CardDescription>
-            创建您的 LMAICloud 账号
+            创建您的 {siteName} 账号
           </CardDescription>
         </CardHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>

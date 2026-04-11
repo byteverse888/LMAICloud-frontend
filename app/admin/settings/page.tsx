@@ -56,7 +56,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<SystemSettings>({
-    site_name: 'LMAICloud',
+    site_name: '龙虾云',
     site_description: '',
     contact_email: '',
     min_recharge_amount: 10,
@@ -92,7 +92,7 @@ export default function SettingsPage() {
     smtp_user: '',
     smtp_password: '',
     smtp_from_email: '',
-    smtp_from_name: 'LMAICloud',
+    smtp_from_name: '龙虾云',
     smtp_use_tls: true,
     notification_enabled: true,
     verification_required: true,
@@ -441,7 +441,7 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <Label>发件人名称</Label>
                         <Input 
-                          placeholder="LMAICloud"
+                          placeholder="龙虾云"
                           value={emailConfig.smtp_from_name} 
                           onChange={(e) => updateEmailConfig('smtp_from_name', e.target.value)} 
                         />

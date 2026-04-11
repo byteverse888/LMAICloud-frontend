@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUIStore } from '@/stores/ui-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -8,6 +8,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
+import api from '@/lib/api'
 
 export default function DashboardLayout({
   children,
@@ -17,6 +18,14 @@ export default function DashboardLayout({
   const { sidebarCollapsed } = useUIStore()
   const { isLoading, isAuthenticated, token, checkAuth } = useAuthStore()
   const router = useRouter()
+  const [copyrightText, setCopyrightText] = useState('')
+
+  // 获取版权信息
+  useEffect(() => {
+    api.get<{ copyright_text?: string }>('/system/site-info')
+      .then(({ data }) => { if (data.copyright_text) setCopyrightText(data.copyright_text) })
+      .catch(() => {})
+  }, [])
 
   // 页面加载/刷新时验证 token 并加载用户信息
   useEffect(() => {
@@ -55,6 +64,12 @@ export default function DashboardLayout({
       >
         <Header />
         <main className="p-5 lg:p-7">{children}</main>
+        {/* 版权页脚 */}
+        {copyrightText && (
+          <footer className="py-4 text-center text-xs text-muted-foreground border-t mx-5 lg:mx-7">
+            {copyrightText}
+          </footer>
+        )}
       </div>
     </div>
   )

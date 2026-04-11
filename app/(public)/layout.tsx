@@ -28,7 +28,7 @@ export default function PublicLayout({
 }) {
   const t = useTranslations('header')
   const pathname = usePathname()
-  const [siteInfo, setSiteInfo] = useState<SiteInfo>({ site_name: 'LMAICloud' })
+  const [siteInfo, setSiteInfo] = useState<SiteInfo>({ site_name: '龙虾云' })
   const [announcementDismissed, setAnnouncementDismissed] = useState(false)
 
   useEffect(() => {

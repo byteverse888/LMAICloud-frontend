@@ -31,6 +31,8 @@ export default function LoginPage() {
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaImage, setCaptchaImage] = useState('')
   const [captchaEnabled, setCaptchaEnabled] = useState(false)
+  const [siteName, setSiteName] = useState('龙虾云')
+  const [copyrightText, setCopyrightText] = useState('© 2026 龙虾云. All rights reserved.')
 
   // 获取验证码
   const fetchCaptcha = async () => {
@@ -50,11 +52,13 @@ export default function LoginPage() {
 
   // 检查验证码是否启用
   useEffect(() => {
-    api.get<{ captcha_enabled?: boolean }>('/system/site-info')
+    api.get<{ captcha_enabled?: boolean; site_name?: string; copyright_text?: string }>('/system/site-info')
       .then(({ data }) => {
         const enabled = data.captcha_enabled !== false
         setCaptchaEnabled(enabled)
         if (enabled) fetchCaptcha()
+        if (data.site_name) setSiteName(data.site_name)
+        if (data.copyright_text) setCopyrightText(data.copyright_text)
       })
       .catch(() => {})
   }, [])
@@ -156,7 +160,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 bg-white/25 backdrop-blur rounded-lg flex items-center justify-center shadow-lg shadow-black/10">
               <span className="text-xl font-bold text-white">L</span>
             </div>
-            <span className="text-xl font-bold text-white drop-shadow-sm">LMAICloud</span>
+            <span className="text-xl font-bold text-white drop-shadow-sm">{siteName}</span>
           </div>
         </div>
 
@@ -193,7 +197,7 @@ export default function LoginPage() {
 
         {/* 底部 */}
         <div className="relative z-10 text-white/70 text-sm">
-          © 2026 LMAICloud. All rights reserved.
+          {copyrightText}
         </div>
       </div>
 
@@ -212,7 +216,7 @@ export default function LoginPage() {
               </div>
             </div>
             <h2 className="text-2xl font-bold">欢迎回来</h2>
-            <p className="text-muted-foreground mt-2">登录您的 LMAICloud 账号</p>
+            <p className="text-muted-foreground mt-2">登录您的 {siteName} 账号</p>
           </div>
 
           <Tabs value={loginType} onValueChange={(v) => setLoginType(v as 'password' | 'code')} className="w-full">
@@ -347,7 +351,7 @@ export default function LoginPage() {
           
           {/* 小屏幕显示版权信息 */}
           <div className="mt-6 text-center text-xs text-muted-foreground lg:hidden">
-            © 2026 LMAICloud. All rights reserved.
+            {copyrightText}
           </div>
         </motion.div>
       </div>

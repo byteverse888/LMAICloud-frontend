@@ -1306,7 +1306,7 @@ export function useSiteInfo() {
   useEffect(() => {
     api.get<any>('/system/site-info')
       .then(({ data }) => setSiteInfo(data))
-      .catch(() => setSiteInfo({ site_name: 'LMAICloud', site_description: '大模型AI算力云平台', captcha_enabled: true }))
+      .catch(() => setSiteInfo({ site_name: '龙虾云', site_description: '大模型AI算力云平台', captcha_enabled: true }))
       .finally(() => setLoading(false))
   }, [])
   return { siteInfo, loading }

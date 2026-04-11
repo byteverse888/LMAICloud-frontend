@@ -47,7 +47,7 @@ export default function ImagesPage() {
     displayName: img.name,
     version: img.tag,
     sizeDisplay: img.size_gb > 0 ? `${img.size_gb}G` : '-',
-    author: 'LMAICloud',
+    author: '龙虾云',
     priceTag: '免费',
     aigcType: categoryLabelMap[img.category || img.type] || '其他',
     supportModels: img.name,

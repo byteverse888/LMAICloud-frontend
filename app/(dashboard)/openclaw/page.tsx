@@ -224,18 +224,13 @@ export default function OpenClawPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">管理您的智能体实例</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> 刷新
-          </Button>
-          <Button size="sm" onClick={() => router.push('/openclaw/create')}>
-            <Plus className="h-4 w-4 mr-1" /> 创建实例
-          </Button>
-        </div>
       </div>
 
       {/* 搜索和筛选 */}
       <div className="flex items-center gap-3">
+        <Button size="sm" onClick={() => router.push('/openclaw/create')}>
+          <Plus className="h-4 w-4 mr-1" /> 创建实例
+        </Button>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="搜索实例名称..." className="pl-9 h-9" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
@@ -250,6 +245,10 @@ export default function OpenClawPage() {
             <SelectItem value="error">异常</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> 刷新
+        </Button>
       </div>
 
       {/* 实例表格 */}
