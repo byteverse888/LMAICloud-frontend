@@ -61,14 +61,14 @@ export default function AuditLogPage() {
             <p className="text-center text-muted-foreground py-8">暂无操作记录</p>
           ) : (
             <div>
-              <div className="grid grid-cols-[140px_60px_80px_1fr_120px_1.5fr] gap-2 text-sm font-medium text-muted-foreground border-b pb-2 mb-2">
+              <div className="grid grid-cols-[140px_60px_90px_120px_100px_1fr] gap-1 text-sm font-medium text-muted-foreground border-b pb-2 mb-2">
                 <span>时间</span><span>操作</span><span>资源类型</span><span>资源名称</span><span>IP地址</span><span>详情</span>
               </div>
               {logs.map((l: any) => {
                 const isAuth = ['login', 'logout', 'register'].includes(l.action)
                 const detailText = isAuth && l.detail ? parseDevice(l.detail) : (l.detail || '-')
                 return (
-                <div key={l.id} className="grid grid-cols-[140px_60px_80px_1fr_120px_1.5fr] gap-2 text-sm py-2 border-b border-border/50 items-start">
+                <div key={l.id} className="grid grid-cols-[140px_60px_90px_120px_100px_1fr] gap-1 text-sm py-2 border-b border-border/50 items-start">
                   <span className="text-muted-foreground whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleString('zh-CN') : ''}</span>
                   <span>
                     {l.action === 'login' ? (
@@ -82,7 +82,7 @@ export default function AuditLogPage() {
                     )}
                   </span>
                   <span>{resourceLabels[l.resource_type] || l.resource_type}</span>
-                  <span className="truncate" title={l.resource_name || ''}>{l.resource_name || '-'}</span>
+                  <span className="truncate max-w-full" title={l.resource_name || ''}>{l.resource_name || '-'}</span>
                   <span className="text-muted-foreground font-mono text-xs">{l.ip_address || '-'}</span>
                   <span className="relative group text-muted-foreground text-xs cursor-default min-w-0">
                     <span className="truncate block">

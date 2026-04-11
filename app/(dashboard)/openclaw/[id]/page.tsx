@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,11 +24,14 @@ import {
 } from '@/components/ui/select'
 import {
   ArrowLeft, Power, PowerOff, Trash2, Loader2, RefreshCw, Search, ExternalLink,
-  Bot, Key, Radio, Puzzle, Activity,
-  Cpu, HardDrive, Globe, Server, Clock, Wifi, CreditCard,
+  Bot, Key, Radio, Puzzle, Activity, MemoryStick,
+  Cpu, HardDrive, Globe, Server, Clock, Wifi, CreditCard, Network,
   Plus, Pencil, CheckCircle, XCircle, AlertTriangle,
-  RotateCw, ScrollText, Terminal,
+  RotateCw, ScrollText, Terminal, ChevronRight, ChevronDown, ArrowUpCircle, Save, X,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
 import { toast } from 'react-hot-toast'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -78,8 +81,8 @@ export default function OpenClawDetailPage() {
   const { instance, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance } = useOpenClawInstance(instanceId)
   const { keys, loading: keysLoading, refresh: refreshKeys, addKey, updateKey, deleteKey } = useOpenClawModelKeys(instanceId)
   const { channels, loading: channelsLoading, refresh: refreshChannels, addChannel, updateChannel, deleteChannel } = useOpenClawChannels(instanceId)
-  const { skills, loading: skillsLoading, refresh: refreshSkills, installSkill, uninstallSkill } = useOpenClawSkills(instanceId)
-  const { monitorStatus, loading: monitorLoading, refresh: refreshMonitor } = useOpenClawMonitor(instanceId)
+  const { skills, loading: skillsLoading, refresh: refreshSkills, installSkill, updateSkill, uninstallSkill } = useOpenClawSkills(instanceId)
+  const { monitorModels, monitorChannels, monitorStatus, loading: monitorLoading, refresh: refreshMonitor } = useOpenClawMonitor(instanceId)
   const { logs, loading: logsLoading, refresh: refreshLogs } = useOpenClawLogs(instanceId)
 
   // 轮询：实例处于过渡态时每 5s 静默刷新
@@ -106,6 +109,45 @@ export default function OpenClawDetailPage() {
   const [showAddSkill, setShowAddSkill] = useState(false)
   const [skillForm, setSkillForm] = useState({ name: '', description: '', version: '' })
   const [skillSubmitting, setSkillSubmitting] = useState(false)
+
+  // 模型名 Combobox 自定义模式
+  const [customModelName, setCustomModelName] = useState(false)
+
+  // Key 折叠展开 / 编辑
+  const [expandedKeyId, setExpandedKeyId] = useState<string | null>(null)
+  const [editingKeyId, setEditingKeyId] = useState<string | null>(null)
+  const [editKeyForm, setEditKeyForm] = useState({ provider: '', model_name: '', api_key: '', base_url: '' })
+
+  // Channel 折叠展开 / 编辑
+  const [expandedChannelId, setExpandedChannelId] = useState<string | null>(null)
+  const [editingChannelId, setEditingChannelId] = useState<string | null>(null)
+  const [editChannelForm, setEditChannelForm] = useState({ type: '', name: '', config: '' })
+
+  // Skill 升级 popover
+  const [upgradingSkillId, setUpgradingSkillId] = useState<string | null>(null)
+  const [upgradeVersion, setUpgradeVersion] = useState('')
+
+  // 预置模型列表
+  const MODEL_PRESETS: Record<string, string[]> = {
+    openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'o1', 'o1-mini'],
+    deepseek: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+    qwen: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-long'],
+    zhipu: ['glm-4', 'glm-4-flash', 'glm-3-turbo'],
+    anthropic: ['claude-3.5-sonnet', 'claude-3-opus', 'claude-3-haiku'],
+    other: [],
+  }
+
+  // 监控数据 Map
+  const monitorModelMap = useMemo(() => {
+    const m = new Map<string, any>()
+    monitorModels?.forEach((item: any) => { if (item.key_id) m.set(item.key_id, item) })
+    return m
+  }, [monitorModels])
+  const monitorChannelMap = useMemo(() => {
+    const m = new Map<string, any>()
+    monitorChannels?.forEach((item: any) => { if (item.channel_id) m.set(item.channel_id, item) })
+    return m
+  }, [monitorChannels])
 
   // WebShell 终端
   const [terminalOpen, setTerminalOpen] = useState(false)
@@ -154,6 +196,47 @@ export default function OpenClawDetailPage() {
     catch { toast.error('安装失败') } finally { setSkillSubmitting(false) }
   }
 
+  // Key 编辑保存
+  const handleSaveEditKey = async () => {
+    if (!editingKeyId) return
+    try {
+      await updateKey(editingKeyId, {
+        ...(editKeyForm.api_key ? { api_key: editKeyForm.api_key } : {}),
+        ...(editKeyForm.base_url !== undefined ? { base_url: editKeyForm.base_url } : {}),
+        ...(editKeyForm.model_name ? { model_name: editKeyForm.model_name } : {}),
+      })
+      toast.success('密钥已更新'); setEditingKeyId(null)
+    } catch { toast.error('更新失败') }
+  }
+
+  // Key 启用/禁用
+  const handleToggleKey = async (keyId: string, active: boolean) => {
+    try { await updateKey(keyId, { is_active: active }); toast.success(active ? '已启用' : '已禁用') } catch { toast.error('操作失败') }
+  }
+
+  // Channel 编辑保存
+  const handleSaveEditChannel = async () => {
+    if (!editingChannelId) return
+    try {
+      await updateChannel(editingChannelId, {
+        ...(editChannelForm.name ? { name: editChannelForm.name } : {}),
+        ...(editChannelForm.config ? { config: editChannelForm.config } : {}),
+      })
+      toast.success('通道已更新'); setEditingChannelId(null)
+    } catch { toast.error('更新失败') }
+  }
+
+  // Channel 启用/禁用
+  const handleToggleChannel = async (chId: string, active: boolean) => {
+    try { await updateChannel(chId, { is_active: active }); toast.success(active ? '已启用' : '已禁用') } catch { toast.error('操作失败') }
+  }
+
+  // Skill 升级
+  const handleUpgradeSkill = async (skillId: string) => {
+    if (!upgradeVersion.trim()) { toast.error('请输入版本号'); return }
+    try { await updateSkill(skillId, { version: upgradeVersion.trim() }); toast.success('升级中'); setUpgradingSkillId(null); setUpgradeVersion('') } catch { toast.error('升级失败') }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
@@ -170,10 +253,20 @@ export default function OpenClawDetailPage() {
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" /> {instance.name}
+              <span className="ml-1">{getStatusBadge(instance.status)}</span>
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">ID: {instance.id}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              ID: {instance.id}
+              {(instance.deployment_name || (instance as any).pod_node_name) && (
+                <>
+                  {instance.deployment_name && <> · Deployment: <code className="bg-muted/50 px-1 rounded">{instance.deployment_name}</code></>}
+                  {(instance as any).pod_node_name && <> · 节点: <code className="bg-muted/50 px-1 rounded">{(instance as any).pod_node_name}</code></>}
+                </>
+              )}
+              {!instance.deployment_name && instance.node_name && <> · 节点: <code className="bg-muted/50 px-1 rounded">{instance.node_name}</code></>}
+            </p>
           </div>
-          <div className="ml-2">{getStatusBadge(instance.status)}</div>
+
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={openTerminal} disabled={instance.status !== 'running'}>
@@ -206,26 +299,67 @@ export default function OpenClawDetailPage() {
         {/* ===== 概览 ===== */}
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Deployment 运行状态 */}
             <Card>
-              <CardHeader><CardTitle className="text-base">基本信息</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" /> Deployment 状态
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">名称</span><span className="font-medium">{instance.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">状态</span>{getStatusBadge(instance.status)}</div>
-                <div className="flex justify-between"><span className="text-muted-foreground">命名空间</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{instance.namespace || '-'}</code></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">节点类型</span><Badge variant="outline">{instance.node_type === 'edge' ? '边缘' : '云端'}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">节点名</span><span>{instance.node_name || '-'}</span></div>
-                <div className="flex justify-between items-start"><span className="text-muted-foreground shrink-0">镜像</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono text-right break-all max-w-[260px]">{instance.image_url || '-'}</code></div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Deployment</span>
+                  <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{(instance as any).deployment_info?.name || instance.deployment_name || '-'}</code>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">副本就绪</span>
+                  <span className="font-medium">
+                    {(instance as any).deployment_info
+                      ? `${(instance as any).deployment_info.ready_replicas} / ${(instance as any).deployment_info.replicas}`
+                      : '-'}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground shrink-0">镜像</span>
+                  <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono truncate max-w-[260px]" title={instance.image_url || '-'}>{instance.image_url || '-'}</code>
+                </div>
+                {(instance as any).pod_info && (instance as any).pod_info.length > 0 && (
+                  <>
+                    <Separator />
+                    {(instance as any).pod_info.map((pod: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground shrink-0">关联 Pod</span>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono truncate max-w-[180px]" title={pod.name}>{pod.name}</code>
+                          <Badge variant={pod.status === 'Running' ? 'success' : pod.status === 'Pending' ? 'outline' : 'destructive'} className="text-xs shrink-0">
+                            {pod.status}
+                          </Badge>
+                          {pod.restart_count > 0 && <span className="text-xs text-amber-500 shrink-0">重启: {pod.restart_count}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+                <Separator />
+                <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> 创建时间</span><span>{instance.created_at ? new Date(instance.created_at).toLocaleString() : '-'}</span></div>
               </CardContent>
             </Card>
+
+            {/* 资源 & 连接 */}
             <Card>
               <CardHeader><CardTitle className="text-base">资源 & 连接</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Cpu className="h-3.5 w-3.5" /> CPU</span><span>{instance.cpu_cores} 核</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">内存</span><span>{instance.memory_gb} GB</span></div>
+                <Separator />
+                <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" /> 内存</span><span>{instance.memory_gb} GB</span></div>
+                <Separator />
                 <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><HardDrive className="h-3.5 w-3.5" /> 磁盘</span><span>{instance.disk_gb} GB</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">端口</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{instance.port}</code></div>
+                <Separator />
+                <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Network className="h-3.5 w-3.5" /> 端口</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{instance.port}</code></div>
+                <Separator />
                 <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Wifi className="h-3.5 w-3.5" /> 内网 IP</span><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">{instance.internal_ip || '-'}</code></div>
-                <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> 创建时间</span><span>{instance.created_at ? new Date(instance.created_at).toLocaleString() : '-'}</span></div>
               </CardContent>
             </Card>
             {/* 计费信息卡片 */}
@@ -257,32 +391,19 @@ export default function OpenClawDetailPage() {
           </div>
         </TabsContent>
 
-        {/* ===== 应用管理（三列布局，参考腾讯云 OpenClaw） ===== */}
+        {/* ===== 应用管理（三列布局） ===== */}
         <TabsContent value="apps">
           <Card>
             <CardContent className="p-6">
-              {/* 提示信息 */}
-              <div className="mb-5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-700 dark:text-blue-300 space-y-0.5">
-                <p>1. 注意：请保护好API Key，避免泄漏造成额外损失。</p>
-                <p>2. OpenClaw在调用模型时会携带较多上下文信息，因此Token消耗可能较高。建议使用时关注Token用量与计费情况。</p>
-              </div>
-              {/* OpenClaw 版本 & 状态 */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <Bot className="h-8 w-8 text-primary" />
-                  <div>
-                    <h3 className="font-bold text-lg flex items-center gap-2">OpenClaw <Badge variant="secondary" className="text-xs font-normal">已是最新版本</Badge></h3>
-                    <div className="flex items-center gap-2 text-sm">
-                      {getStatusBadge(instance.status)}
-                      <Button variant="link" size="sm" className="text-blue-500 h-auto p-0" onClick={handleRestart} disabled={instance.status !== 'running'}>重启</Button>
-                    </div>
-                  </div>
+              {/* 提示信息 + 刷新按钮 */}
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-700 dark:text-blue-300 space-y-0.5 flex-1">
+                  <p>1. 注意：请保护好API Key，避免泄漏造成额外损失。</p>
+                  <p>2. OpenClaw在调用模型时会携带较多上下文信息，因此Token消耗可能较高。建议使用时关注Token用量与计费情况。</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { refreshKeys(); refreshChannels(); refreshSkills() }} disabled={keysLoading || channelsLoading || skillsLoading}>
-                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${keysLoading || channelsLoading || skillsLoading ? 'animate-spin' : ''}`} /> 刷新
-                  </Button>
-                </div>
+                <Button variant="outline" size="sm" onClick={() => { refreshKeys(); refreshChannels(); refreshSkills(); refreshMonitor() }} disabled={keysLoading || channelsLoading || skillsLoading}>
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${keysLoading || channelsLoading || skillsLoading ? 'animate-spin' : ''}`} /> 刷新
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -293,7 +414,7 @@ export default function OpenClawDetailPage() {
                     <h3 className="font-semibold">模型 (Models)</h3>
                   </div>
                   <div className="space-y-3 flex-1">
-                    <Select value={keyForm.provider} onValueChange={v => setKeyForm(f => ({ ...f, provider: v }))}>
+                    <Select value={keyForm.provider} onValueChange={v => { setKeyForm(f => ({ ...f, provider: v, model_name: '' })); setCustomModelName(false) }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="openai">OpenAI</SelectItem>
@@ -304,22 +425,38 @@ export default function OpenClawDetailPage() {
                         <SelectItem value="other">自定义</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input placeholder="默认模型名称" value={keyForm.model_name} onChange={e => setKeyForm(f => ({ ...f, model_name: e.target.value }))} />
+                    {/* 模型名: 下拉 + 可输入 */}
+                    {customModelName || (MODEL_PRESETS[keyForm.provider]?.length === 0) ? (
+                      <div className="flex gap-1">
+                        <Input placeholder="输入模型名称" value={keyForm.model_name} onChange={e => setKeyForm(f => ({ ...f, model_name: e.target.value }))} />
+                        {MODEL_PRESETS[keyForm.provider]?.length > 0 && (
+                          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setCustomModelName(false); setKeyForm(f => ({ ...f, model_name: '' })) }}><X className="h-4 w-4" /></Button>
+                        )}
+                      </div>
+                    ) : (
+                      <Select value={keyForm.model_name} onValueChange={v => { if (v === '__custom__') { setCustomModelName(true); setKeyForm(f => ({ ...f, model_name: '' })) } else { setKeyForm(f => ({ ...f, model_name: v })) } }}>
+                        <SelectTrigger><SelectValue placeholder="选择模型" /></SelectTrigger>
+                        <SelectContent>
+                          {(MODEL_PRESETS[keyForm.provider] || []).map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          <SelectItem value="__custom__">自定义...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Input placeholder="API Key" type="password" value={keyForm.api_key} onChange={e => setKeyForm(f => ({ ...f, api_key: e.target.value }))} />
                     <Button className="w-full" variant="outline" onClick={handleAddKey} disabled={keySubmitting}>
                       {keySubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                       一键添加并应用
                     </Button>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      {keyForm.provider === 'openai' ? 'OpenAI GPT系列模型，全球领先的AI大模型服务。模型API及后付费设置，'
-                        : keyForm.provider === 'deepseek' ? 'DeepSeek模型服务，提供高性价比的AI推理能力。模型API及后付费设置，'
-                        : keyForm.provider === 'qwen' ? '通义千问，阿里云大模型服务。模型API及后付费设置，'
-                        : keyForm.provider === 'zhipu' ? '智谱AI GLM系列模型。模型API及后付费设置，'
+                      {keyForm.provider === 'openai' ? 'OpenAI GPT系列模型，全球领先的AI大模型服务。'
+                        : keyForm.provider === 'deepseek' ? 'DeepSeek模型服务，提供高性价比的AI推理能力。'
+                        : keyForm.provider === 'qwen' ? '通义千问，阿里云大模型服务。'
+                        : keyForm.provider === 'zhipu' ? '智谱AI GLM系列模型。'
                         : '自定义模型服务，支持OpenAI兼容API。'}
                       <a href="#" className="text-blue-500 hover:underline inline-flex items-center gap-0.5">点此查看 <ExternalLink className="h-3 w-3" /></a>
                     </p>
                   </div>
-                  {/* 切换模型 */}
+                  {/* 切换模型 - 折叠展开式 */}
                   <div className="border-t pt-3 mt-3">
                     <p className="text-xs text-muted-foreground font-medium mb-2">切换模型</p>
                     {keysLoading ? (
@@ -328,18 +465,65 @@ export default function OpenClawDetailPage() {
                       <div className="text-center py-4 text-muted-foreground text-xs">暂无数据</div>
                     ) : (
                       <div className="space-y-1.5">
-                        {keys.map(k => (
-                          <div key={k.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-2.5 py-1.5">
-                            <div className="truncate">
-                              <span className="font-medium">{k.provider}</span>
-                              {k.model_name && <span className="text-muted-foreground ml-1">· {k.model_name}</span>}
-                              {k.check_status === 'ok' && <CheckCircle className="h-3 w-3 text-emerald-500 inline ml-1" />}
+                        {keys.map(k => {
+                          const isExpanded = expandedKeyId === k.id
+                          const isEditing = editingKeyId === k.id
+                          const mon = monitorModelMap.get(k.id)
+                          return (
+                            <div key={k.id} className="bg-muted/30 rounded-md">
+                              {/* 收起行 */}
+                              <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm">
+                                <button className="shrink-0 p-0.5" onClick={() => setExpandedKeyId(isExpanded ? null : k.id)}>
+                                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </button>
+                                <span className="font-medium truncate flex-1">{k.provider}/{k.model_name || '-'}</span>
+                                <span className={`text-xs flex items-center gap-1 shrink-0 ${k.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${k.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                  {k.is_active ? '应用中' : '未应用'}
+                                </span>
+                                <Switch checked={k.is_active} onCheckedChange={(v) => handleToggleKey(k.id, v)} className="scale-75" />
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => setDeleteKeyTarget(k.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              {/* 展开面板 */}
+                              {isExpanded && (
+                                <div className="px-3 pb-3 text-xs space-y-1.5 border-t mx-2 pt-2">
+                                  {isEditing ? (
+                                    <div className="space-y-2">
+                                      <Input size={1} placeholder="API Key" type="password" value={editKeyForm.api_key} onChange={e => setEditKeyForm(f => ({ ...f, api_key: e.target.value }))} className="h-7 text-xs" />
+                                      <Input size={1} placeholder="Base URL (可选)" value={editKeyForm.base_url} onChange={e => setEditKeyForm(f => ({ ...f, base_url: e.target.value }))} className="h-7 text-xs" />
+                                      <Input size={1} placeholder="模型名" value={editKeyForm.model_name} onChange={e => setEditKeyForm(f => ({ ...f, model_name: e.target.value }))} className="h-7 text-xs" />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" className="h-6 text-xs" onClick={handleSaveEditKey}><Save className="h-3 w-3 mr-1" />保存</Button>
+                                        <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingKeyId(null)}>取消</Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">API Key</span><span className="font-mono">{k.api_key_masked || 'sk-***'}</span></div>
+                                      {k.base_url && <div className="flex justify-between"><span className="text-muted-foreground">Base URL</span><span className="font-mono truncate max-w-[160px]" title={k.base_url}>{k.base_url}</span></div>}
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">状态</span>
+                                        <span className={`font-medium ${(mon?.check_status || k.check_status) === 'ok' ? 'text-emerald-600' : (mon?.check_status || k.check_status) === 'error' ? 'text-red-500' : ''}`}>
+                                          {(mon?.check_status || k.check_status) === 'ok' ? <><CheckCircle className="h-3 w-3 inline mr-0.5" />正常</> : (mon?.check_status || k.check_status) === 'error' ? <><XCircle className="h-3 w-3 inline mr-0.5" />异常</> : '-'}
+                                        </span>
+                                      </div>
+                                      {(mon?.balance ?? k.balance) != null && <div className="flex justify-between"><span className="text-muted-foreground">余额</span><span>${(mon?.balance ?? k.balance)?.toFixed(2)}</span></div>}
+                                      {(mon?.tokens_used ?? k.tokens_used) != null && <div className="flex justify-between"><span className="text-muted-foreground">Token用量</span><span>{mon?.tokens_used ?? k.tokens_used}</span></div>}
+                                      <Separator />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => { setEditingKeyId(k.id); setEditKeyForm({ provider: k.provider, model_name: k.model_name || '', api_key: '', base_url: k.base_url || '' }) }}>
+                                          <Pencil className="h-3 w-3 mr-1" />编辑
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => setDeleteKeyTarget(k.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -377,7 +561,7 @@ export default function OpenClawDetailPage() {
                       <a href="#" className="text-blue-500 hover:underline inline-flex items-center gap-0.5">查看详情 <ExternalLink className="h-3 w-3" /></a>
                     </p>
                   </div>
-                  {/* 已接入通道 */}
+                  {/* 已接入通道 - 折叠展开式 */}
                   <div className="border-t pt-3 mt-3">
                     <p className="text-xs text-muted-foreground font-medium mb-2">已接入通道</p>
                     {channelsLoading ? (
@@ -386,18 +570,63 @@ export default function OpenClawDetailPage() {
                       <div className="text-center py-4 text-muted-foreground text-xs">暂无数据</div>
                     ) : (
                       <div className="space-y-1.5">
-                        {channels.map(ch => (
-                          <div key={ch.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-2.5 py-1.5">
-                            <div className="truncate">
-                              <Badge variant="outline" className="text-xs mr-1">{ch.type}</Badge>
-                              <span>{ch.name || '-'}</span>
-                              {ch.online_status === 'online' && <CheckCircle className="h-3 w-3 text-emerald-500 inline ml-1" />}
+                        {channels.map(ch => {
+                          const isExpanded = expandedChannelId === ch.id
+                          const isEditing = editingChannelId === ch.id
+                          const mon = monitorChannelMap.get(ch.id)
+                          const onlineStatus = mon?.online_status || ch.online_status
+                          return (
+                            <div key={ch.id} className="bg-muted/30 rounded-md">
+                              {/* 收起行 */}
+                              <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm">
+                                <button className="shrink-0 p-0.5" onClick={() => setExpandedChannelId(isExpanded ? null : ch.id)}>
+                                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </button>
+                                <Badge variant="outline" className="text-xs shrink-0">{ch.type}</Badge>
+                                <span className="truncate flex-1">{ch.name || '-'}</span>
+                                <span className={`text-xs flex items-center gap-1 shrink-0 ${
+                                  onlineStatus === 'online' ? 'text-emerald-600' : onlineStatus === 'error' ? 'text-red-500' : 'text-muted-foreground'
+                                }`}>
+                                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                                    onlineStatus === 'online' ? 'bg-emerald-500' : onlineStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
+                                  }`} />
+                                  {onlineStatus === 'online' ? '运行中' : onlineStatus === 'error' ? '异常' : '离线'}
+                                </span>
+                                <Switch checked={ch.is_active} onCheckedChange={(v) => handleToggleChannel(ch.id, v)} className="scale-75" />
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => setDeleteChannelTarget(ch.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              {/* 展开面板 */}
+                              {isExpanded && (
+                                <div className="px-3 pb-3 text-xs space-y-1.5 border-t mx-2 pt-2">
+                                  {isEditing ? (
+                                    <div className="space-y-2">
+                                      <Input size={1} placeholder="名称/AppID" value={editChannelForm.name} onChange={e => setEditChannelForm(f => ({ ...f, name: e.target.value }))} className="h-7 text-xs" />
+                                      <Input size={1} placeholder="配置/Secret" type="password" value={editChannelForm.config} onChange={e => setEditChannelForm(f => ({ ...f, config: e.target.value }))} className="h-7 text-xs" />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" className="h-6 text-xs" onClick={handleSaveEditChannel}><Save className="h-3 w-3 mr-1" />保存</Button>
+                                        <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingChannelId(null)}>取消</Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">名称/AppID</span><span>{ch.name || '-'}</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">配置</span><span className="font-mono">******</span></div>
+                                      {ch.last_check_at && <div className="flex justify-between"><span className="text-muted-foreground">最近检测</span><span>{new Date(ch.last_check_at).toLocaleString()}</span></div>}
+                                      <Separator />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => { setEditingChannelId(ch.id); setEditChannelForm({ type: ch.type, name: ch.name || '', config: '' }) }}>
+                                          <Pencil className="h-3 w-3 mr-1" />编辑
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => setDeleteChannelTarget(ch.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -412,7 +641,7 @@ export default function OpenClawDetailPage() {
                   <div className="space-y-3 flex-1">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-8" placeholder="请输入ClawHub中上架的Skill名称，或输入后回车搜索" value={skillForm.name} onChange={e => setSkillForm(f => ({ ...f, name: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleInstallSkill() }} />
+                      <Input className="pl-8" placeholder="请输入Skill名称" value={skillForm.name} onChange={e => setSkillForm(f => ({ ...f, name: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleInstallSkill() }} />
                     </div>
                     <Button className="w-full" variant="outline" onClick={handleInstallSkill} disabled={skillSubmitting}>
                       {skillSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -422,7 +651,7 @@ export default function OpenClawDetailPage() {
                       <a href="#" className="text-blue-500 hover:underline border-b border-dashed border-blue-300">获取更多Skills?</a>
                     </p>
                   </div>
-                  {/* 已安装技能 */}
+                  {/* 已安装技能 - 增强版 */}
                   <div className="border-t pt-3 mt-3">
                     <p className="text-xs text-muted-foreground font-medium mb-2">已安装技能</p>
                     <div className="border-b border-dashed mb-2" />
@@ -432,14 +661,49 @@ export default function OpenClawDetailPage() {
                       <div className="text-center py-4 text-muted-foreground text-xs">暂无数据</div>
                     ) : (
                       <div className="space-y-1.5">
-                        {skills.map(skill => (
-                          <div key={skill.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-2.5 py-1.5">
-                            <span className="font-medium truncate">{skill.name} {skill.version && skill.version}</span>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 shrink-0" onClick={() => { uninstallSkill(skill.name).then(() => toast.success('卸载中')).catch(() => toast.error('卸载失败')) }}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
+                        {skills.map(skill => {
+                          const statusCfg: Record<string, { color: string; label: string; spin?: boolean }> = {
+                            installed: { color: 'text-emerald-600', label: '已安装' },
+                            installing: { color: 'text-blue-500', label: '安装中', spin: true },
+                            uninstalling: { color: 'text-amber-500', label: '卸载中', spin: true },
+                            error: { color: 'text-red-500', label: '异常' },
+                          }
+                          const sc = statusCfg[skill.status] || { color: 'text-muted-foreground', label: skill.status }
+                          return (
+                            <div key={skill.id} className="bg-muted/30 rounded-md px-2.5 py-1.5">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2 truncate flex-1">
+                                  <span className="font-medium truncate">{skill.name}</span>
+                                  {skill.version && <span className="text-xs text-muted-foreground">{skill.version}</span>}
+                                  <span className={`text-xs flex items-center gap-1 ${sc.color}`}>
+                                    {sc.spin && <Loader2 className="h-3 w-3 animate-spin" />}
+                                    {sc.label}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {/* 升级按钮 */}
+                                  {skill.status === 'installed' && (
+                                    upgradingSkillId === skill.id ? (
+                                      <div className="flex items-center gap-1">
+                                        <Input size={1} placeholder="新版本" value={upgradeVersion} onChange={e => setUpgradeVersion(e.target.value)} className="h-6 w-20 text-xs" onKeyDown={e => { if (e.key === 'Enter') handleUpgradeSkill(skill.id) }} />
+                                        <Button size="icon" className="h-6 w-6" onClick={() => handleUpgradeSkill(skill.id)}><Save className="h-3 w-3" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setUpgradingSkillId(null); setUpgradeVersion('') }}><X className="h-3 w-3" /></Button>
+                                      </div>
+                                    ) : (
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" title="升级" onClick={() => { setUpgradingSkillId(skill.id); setUpgradeVersion(skill.version || '') }}>
+                                        <ArrowUpCircle className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )
+                                  )}
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => { uninstallSkill(skill.name).then(() => toast.success('卸载中')).catch(() => toast.error('卸载失败')) }}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              {skill.description && <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -451,7 +715,71 @@ export default function OpenClawDetailPage() {
 
         {/* ===== 监控 ===== */}
         <TabsContent value="monitor">
-          <Card>
+          <div className="space-y-4">
+            {/* CPU / 内存监控 */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Cpu className="h-4 w-4 text-primary" /> CPU 使用率
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>当前使用</span>
+                      <span className="font-medium">
+                        {monitorStatus?.cpu_usage_millicores != null
+                          ? monitorStatus.cpu_usage_millicores < 1000
+                            ? `${monitorStatus.cpu_usage_millicores}m`
+                            : `${(monitorStatus.cpu_usage_millicores / 1000).toFixed(1)} 核`
+                          : '-'}
+                        {monitorStatus?.cpu_cores ? ` / ${monitorStatus.cpu_cores} 核` : (instance?.cpu_cores ? ` / ${instance.cpu_cores} 核` : '')}
+                      </span>
+                    </div>
+                    <Progress
+                      value={monitorStatus?.cpu_usage_millicores != null && (monitorStatus?.cpu_cores || instance?.cpu_cores)
+                        ? Math.min(100, monitorStatus.cpu_usage_millicores / ((monitorStatus.cpu_cores || instance.cpu_cores) * 1000) * 100)
+                        : 0}
+                      className="h-2"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MemoryStick className="h-4 w-4 text-primary" /> 内存使用率
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>当前使用</span>
+                      <span className="font-medium">
+                        {monitorStatus?.memory_usage_bytes != null
+                          ? monitorStatus.memory_usage_bytes < 1024 * 1024 * 1024
+                            ? `${(monitorStatus.memory_usage_bytes / (1024 * 1024)).toFixed(0)} Mi`
+                            : `${(monitorStatus.memory_usage_bytes / (1024 * 1024 * 1024)).toFixed(1)} Gi`
+                          : '-'}
+                        {(monitorStatus?.memory_gb || instance?.memory_gb) ? ` / ${monitorStatus?.memory_gb || instance.memory_gb} Gi` : ''}
+                      </span>
+                    </div>
+                    <Progress
+                      value={monitorStatus?.memory_usage_bytes != null && (monitorStatus?.memory_gb || instance?.memory_gb)
+                        ? Math.min(100, monitorStatus.memory_usage_bytes / ((monitorStatus.memory_gb || instance.memory_gb) * 1024 * 1024 * 1024) * 100)
+                        : 0}
+                      className="h-2"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Separator />
+
+            {/* 实时状态 */}
+            <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="text-base">实时状态</CardTitle>
               <Button variant="outline" size="sm" onClick={() => refreshMonitor()} disabled={monitorLoading}>
@@ -502,6 +830,7 @@ export default function OpenClawDetailPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         </TabsContent>
 
         {/* ===== 日志 ===== */}
@@ -630,7 +959,7 @@ export default function OpenClawDetailPage() {
 
       {/* ===== WebShell 终端弹窗 ===== */}
       <Dialog open={terminalOpen} onOpenChange={setTerminalOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden" onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogTitle className="sr-only">OpenClaw 终端</DialogTitle>
           {terminalOpen && token && (
             <WebTerminal

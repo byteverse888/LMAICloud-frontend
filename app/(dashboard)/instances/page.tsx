@@ -662,7 +662,7 @@ export default function InstancesPage() {
 
       {/* WebShell 弹窗 */}
       <Dialog open={!!termInstance} onOpenChange={(open) => { if (!open) setTermInstance(null) }}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden" onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogTitle className="sr-only">WebShell 终端</DialogTitle>
           {termInstance && token && (
             <WebTerminal

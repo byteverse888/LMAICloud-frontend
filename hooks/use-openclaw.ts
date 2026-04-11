@@ -25,6 +25,8 @@ export interface OpenClawInstance {
   started_at?: string
   created_at: string
   updated_at?: string
+  // K8s 运行时信息
+  pod_node_name?: string
 }
 
 export interface ModelKey {
@@ -82,6 +84,11 @@ export interface MonitorStatus {
   skills_installed?: number
   health: boolean
   ready: boolean
+  // K8s 资源监控
+  cpu_usage_millicores?: number | null
+  memory_usage_bytes?: number | null
+  cpu_cores?: number | null
+  memory_gb?: number | null
 }
 
 interface ListResponse<T> { list: T[]; total: number }
@@ -295,12 +302,16 @@ export function useOpenClawSkills(instanceId: string) {
     await api.post(`/openclaw/instances/${instanceId}/skills`, body)
     await fetchSkills()
   }
+  const updateSkill = async (skillId: string, body: { version?: string; description?: string }) => {
+    await api.put(`/openclaw/instances/${instanceId}/skills/${skillId}`, body)
+    await fetchSkills()
+  }
   const uninstallSkill = async (skillName: string) => {
     await api.delete(`/openclaw/instances/${instanceId}/skills/${skillName}`)
     await fetchSkills()
   }
 
-  return { skills, loading, refresh: fetchSkills, installSkill, uninstallSkill }
+  return { skills, loading, refresh: fetchSkills, installSkill, updateSkill, uninstallSkill }
 }
 
 // ====== 监控 ======

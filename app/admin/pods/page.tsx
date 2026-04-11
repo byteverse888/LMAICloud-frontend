@@ -545,7 +545,7 @@ export default function PodsPage() {
 
       {/* 终端对话框 */}
       <Dialog open={termOpen} onOpenChange={setTermOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] p-0 [&>button]:hidden">
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] p-0 [&>button]:hidden" onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogTitle className="sr-only">Pod 终端</DialogTitle>
           {termPod && termOpen && (
             <PodTerminal ns={termPod.ns} name={termPod.name} instanceName={termPod.instanceName} onClose={() => setTermOpen(false)} />
@@ -682,12 +682,16 @@ function PodTerminal({ ns, name, instanceName, onClose }: { ns: string; name: st
         setError(null)
         term.writeln('\x1b[32m终端已连接\x1b[0m')
         term.writeln('')
+        try {
+          socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }))
+        } catch { /* ignore */ }
       }
       socket.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.type === 'output') term.write(msg.data)
           else if (msg.type === 'error') term.writeln(`\x1b[31m错误: ${msg.data}\x1b[0m`)
+          else if (msg.type === 'info') term.writeln(`\x1b[33m${msg.data}\x1b[0m`)
           else if (msg.type === 'connected') { term.writeln(`\x1b[32m${msg.data}\x1b[0m`); term.writeln('') }
         } catch { term.write(event.data) }
       }
@@ -696,6 +700,9 @@ function PodTerminal({ ns, name, instanceName, onClose }: { ns: string; name: st
         setConnected(false)
         term.writeln('')
         term.writeln(`\x1b[33m连接已关闭 (code: ${event.code})\x1b[0m`)
+        if (event.code === 1000 && onClose) {
+          setTimeout(() => onClose(), 800)
+        }
       }
       socket.onerror = () => {
         if (!mountedRef.current) return

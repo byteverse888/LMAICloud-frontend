@@ -24,9 +24,9 @@
   "nav": {
     "home": "主页",
     "instances": "容器实例",
-    "openclaw": "智能体实例",
+    "openclaw": "龙虾实例",
     "storage": "文件存储",
-    "images": "镜像",
+    "images": "镜像市场",
     "publicData": "公开数据",
     "billing": "费用",
     "billingDetails": "账单明细",

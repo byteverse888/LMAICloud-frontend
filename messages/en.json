@@ -24,9 +24,9 @@
   "nav": {
     "home": "Home",
     "instances": "Instances",
-    "openclaw": "Agent Instances",
+    "openclaw": "Lobster Instances",
     "storage": "Storage",
-    "images": "Images",
+    "images": "Image Market",
     "publicData": "Public Data",
     "billing": "Billing",
     "billingDetails": "Billing Details",

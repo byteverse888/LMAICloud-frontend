@@ -196,6 +196,10 @@ export default function InstanceDetailPage() {
         <div className="flex items-center gap-2">
           {instance.status === 'running' ? (
             <>
+              <Button variant="outline" onClick={() => setTerminalOpen(true)}>
+                <Terminal className="h-4 w-4 mr-2" />
+                登录终端
+              </Button>
               <Button variant="outline" onClick={handleStop}>
                 <PowerOff className="h-4 w-4 mr-2" />
                 关机
@@ -216,34 +220,6 @@ export default function InstanceDetailPage() {
             删除
           </Button>
         </div>
-      </div>
-
-      {/* 快速连接 */}
-      <div className="grid gap-4 md:grid-cols-1">
-        <Card className="card-clean overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="card-header-bar text-base flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/8">
-                <Terminal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              Web Terminal
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              通过浏览器直接访问容器终端进行交互式操作
-            </p>
-            <Button 
-              className="w-full" 
-              variant="outline" 
-              onClick={() => setTerminalOpen(true)}
-              disabled={!['running', 'error'].includes(instance.status)}
-            >
-              <Terminal className="h-4 w-4 mr-2" />
-              打开 Web Terminal
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
       {/* 详细信息 */}
@@ -291,23 +267,18 @@ export default function InstanceDetailPage() {
                 {instance.pod_info && instance.pod_info.length > 0 && (
                   <>
                     <Separator />
-                    <div className="space-y-2">
-                      <span className="text-muted-foreground text-sm">关联 Pod</span>
-                      {instance.pod_info.map((pod, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <code className="text-xs">{pod.name}</code>
-                            <Badge variant={pod.status === 'Running' ? 'success' : pod.status === 'Pending' ? 'outline' : 'destructive'} className="text-xs">
-                              {pod.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            {pod.ip && <span>IP: {pod.ip}</span>}
-                            {pod.restart_count > 0 && <span className="text-amber-500">重启: {pod.restart_count}</span>}
-                          </div>
+                    {instance.pod_info.map((pod, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground shrink-0">关联 Pod</span>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono truncate max-w-[180px]" title={pod.name}>{pod.name}</code>
+                          <Badge variant={pod.status === 'Running' ? 'success' : pod.status === 'Pending' ? 'outline' : 'destructive'} className="text-xs shrink-0">
+                            {pod.status}
+                          </Badge>
+                          {pod.restart_count > 0 && <span className="text-xs text-amber-500 shrink-0">重启: {pod.restart_count}</span>}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </>
                 )}
               </CardContent>
