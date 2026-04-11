@@ -81,7 +81,7 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/nodes', label: '节点管理', icon: HardDrive },
       { href: '/admin/storage', label: '存储管理', icon: Database },
       { href: '/admin/services', label: '服务管理', icon: Network },
-      { href: '/admin/deployments', label: '部署管理', icon: Box },
+      { href: '/admin/workloads', label: '工作负载', icon: Box },
       { href: '/admin/pods', label: '容器管理', icon: Container },
       { href: '/admin/openclaw', label: '智能体管理', icon: Bot },
     ],

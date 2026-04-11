@@ -88,7 +88,8 @@ export interface Image {
   name: string
   tag: string
   size_gb: number
-  type: 'base' | 'app' | 'community' | 'custom'
+  type: 'base' | 'app' | 'community' | 'custom' | 'openclaw' | 'framework'
+  category?: string
   description?: string
   image_url?: string
   created_at: string
@@ -163,20 +164,22 @@ export function useInstances() {
 }
 
 // ====== 镜像相关 hooks ======
-export function useImages() {
+export function useImages(category?: string) {
   const [images, setImages] = useState<Image[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const fetchImages = useCallback(async () => {
     try {
       setLoading(true)
-      const { data } = await api.get<ListResponse<Image>>('/images')
+      const params: Record<string, string> = {}
+      if (category) params.category = category
+      const { data } = await api.get<ListResponse<Image>>('/images', params)
       setImages(data.list || []); setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取镜像列表失败')
       setImages([])
     } finally { setLoading(false) }
-  }, [])
+  }, [category])
   useEffect(() => { fetchImages() }, [fetchImages])
   return { images, loading, error, refresh: fetchImages }
 }
@@ -817,6 +820,44 @@ export function useAdminDeployments(namespace?: string, search?: string) {
   }, [namespace, search])
   useEffect(() => { fetchDeployments() }, [fetchDeployments])
   return { deployments, loading, total, refresh: fetchDeployments }
+}
+
+// ====== 管理后台 - DaemonSet 管理 ======
+export function useAdminDaemonSets(namespace?: string, search?: string) {
+  const [daemonSets, setDaemonSets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchDaemonSets = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/workloads/daemonsets', params)
+      setDaemonSets(data.list || []); setTotal(data.total || 0)
+    } catch { setDaemonSets([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchDaemonSets() }, [fetchDaemonSets])
+  return { daemonSets, loading, total, refresh: fetchDaemonSets }
+}
+
+// ====== 管理后台 - StatefulSet 管理 ======
+export function useAdminStatefulSets(namespace?: string, search?: string) {
+  const [statefulSets, setStatefulSets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchStatefulSets = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/workloads/statefulsets', params)
+      setStatefulSets(data.list || []); setTotal(data.total || 0)
+    } catch { setStatefulSets([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchStatefulSets() }, [fetchStatefulSets])
+  return { statefulSets, loading, total, refresh: fetchStatefulSets }
 }
 
 // ====== 管理后台 - Service 管理 ======

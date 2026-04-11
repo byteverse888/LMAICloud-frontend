@@ -35,7 +35,7 @@ const CATEGORIES = [
   { value: 'base', label: '基础镜像' },
   { value: 'app', label: '应用镜像' },
   { value: 'framework', label: 'AI框架' },
-  { value: 'openclaw', label: 'OpenClaw镜像' },
+  { value: 'openclaw', label: '智能体' },
 ]
 
 export default function ImagesPage() {

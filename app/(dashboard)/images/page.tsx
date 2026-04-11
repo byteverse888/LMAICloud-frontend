@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Store, Layers, Rocket, Image as ImageIcon, Loader2, Search, HardDrive, User, Cpu, Box } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -18,10 +19,27 @@ import {
 } from '@/components/ui/select'
 import { useImages } from '@/hooks/use-api'
 
+const categoryOptions = [
+  { value: '__all__', label: '全部分类' },
+  { value: 'base', label: '基础镜像' },
+  { value: 'framework', label: 'AI框架' },
+  { value: 'app', label: '应用镜像' },
+  { value: 'openclaw', label: '智能体' },
+]
+
+const categoryLabelMap: Record<string, string> = {
+  base: '基础镜像',
+  framework: 'AI框架',
+  app: '应用镜像',
+  openclaw: '智能体',
+}
+
 export default function ImagesPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('market')
   const [searchQuery, setSearchQuery] = useState('')
-  const { images, loading, refresh } = useImages()
+  const [categoryFilter, setCategoryFilter] = useState('__all__')
+  const { images, loading, refresh } = useImages(categoryFilter === '__all__' ? undefined : categoryFilter)
 
   // 扩展镜像数据
   const displayImages = images.map(img => ({
@@ -31,7 +49,7 @@ export default function ImagesPage() {
     sizeDisplay: img.size_gb > 0 ? `${img.size_gb}G` : '-',
     author: 'LMAICloud',
     priceTag: '免费',
-    aigcType: img.type === 'base' ? '基础镜像' : img.type === 'app' ? '应用镜像' : 'AI框架',
+    aigcType: categoryLabelMap[img.category || img.type] || '其他',
     supportModels: img.name,
   }))
 
@@ -39,6 +57,14 @@ export default function ImagesPage() {
     img.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (img.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handleDeploy = (image: typeof displayImages[0]) => {
+    if (image.category === 'openclaw' || image.type === 'openclaw') {
+      router.push(`/openclaw/create?imageId=${image.id}`)
+    } else {
+      router.push(`/instances/create?imageId=${image.id}`)
+    }
+  }
 
   const getPriceTagStyle = (tag: string) => {
     switch (tag) {
@@ -75,6 +101,16 @@ export default function ImagesPage() {
           </TabsList>
           <div className="flex items-center gap-3">
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="全部分类" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -162,7 +198,7 @@ export default function ImagesPage() {
                 
                 {/* 底部按钮 */}
                 <CardFooter className="px-4 py-4 border-t border-border/50">
-                  <Button className="w-full">
+                  <Button className="w-full" onClick={() => handleDeploy(image)}>
                     <Rocket className="h-4 w-4 mr-2" />
                     部署应用
                   </Button>

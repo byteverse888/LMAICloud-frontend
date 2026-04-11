@@ -508,19 +508,6 @@ export default function InstanceDetailPage() {
             <CardContent className="space-y-1">
               <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
-                    <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium">实例名称</div>
-                    <p className="text-sm text-muted-foreground">{instance.name}</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">修改</Button>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
-                <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors">
                     <HardDrive className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   </div>
@@ -530,19 +517,6 @@ export default function InstanceDetailPage() {
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">扩容</Button>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
-                    <Save className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium">保存为镜像</div>
-                    <p className="text-sm text-muted-foreground">将当前实例环境保存为自定义镜像</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">保存</Button>
               </div>
             </CardContent>
           </Card>

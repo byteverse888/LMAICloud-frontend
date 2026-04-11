@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Bot, Check, ChevronRight, Loader2, Search,
   Key, Radio, Puzzle, Plus, Trash2, Settings2, ExternalLink,
@@ -127,15 +127,22 @@ const emptySkill = (): SkillItem => ({ name: '', description: '', version: '' })
 
 export default function OpenClawCreatePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const presetImageId = searchParams.get('imageId') || ''
   const { images } = useImages()
   const openclawImages = useMemo(() => images.filter((img: any) => img.category === 'openclaw'), [images])
 
-  // 镜像只有一个时自动选中
+  // 镜像只有一个时自动选中，或通过 URL 参数自动选中
   useEffect(() => {
-    if (openclawImages.length === 1 && !selectedImage) {
+    if (presetImageId) {
+      const match = openclawImages.find((img: any) => img.id === presetImageId)
+      if (match && !selectedImage) {
+        setSelectedImage(presetImageId)
+      }
+    } else if (openclawImages.length === 1 && !selectedImage) {
       setSelectedImage(openclawImages[0].id)
     }
-  }, [openclawImages])
+  }, [openclawImages, presetImageId])
 
   // ── 表单状态 ──
   const [billingType, setBillingType] = useState('hourly')

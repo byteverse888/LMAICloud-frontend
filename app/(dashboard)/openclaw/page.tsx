@@ -8,7 +8,7 @@ import {
   RefreshCw, Plus, Search, MoreHorizontal,
   Power, PowerOff, RotateCw, Trash2, Loader2, Bot,
   Cpu, HardDrive, Globe, Server, CreditCard, Clock, Cloud, Radio,
-  FileText, Terminal, XCircle, AlertTriangle,
+  FileText, Terminal, XCircle, AlertTriangle, Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,8 +27,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import {
   Tooltip,
   TooltipContent,
@@ -111,6 +112,25 @@ export default function OpenClawPage() {
   // 强制删除确认
   const [forceDeleteTarget, setForceDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [forceDeleting, setForceDeleting] = useState(false)
+
+  // 修改名字
+  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const handleRename = async () => {
+    if (!renameTarget || !renameValue.trim()) return
+    try {
+      setRenaming(true)
+      await api.patch(`/openclaw/instances/${renameTarget.id}/rename`, { name: renameValue.trim() })
+      toast.success('名称已修改')
+      setRenameTarget(null)
+      silentRefresh()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || '修改失败')
+    } finally {
+      setRenaming(false)
+    }
+  }
 
   // 日志弹窗
   const [logInstance, setLogInstance] = useState<{ id: string; name: string } | null>(null)
@@ -350,6 +370,10 @@ export default function OpenClawPage() {
                             <Terminal className="h-4 w-4 mr-2" />WebShell
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => { setRenameTarget({ id: inst.id, name: inst.name }); setRenameValue(inst.name) }}>
+                            <Pencil className="h-4 w-4 mr-2" />修改名字
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setDeleteTarget({ id: inst.id, name: inst.name })} disabled={['releasing', 'released'].includes(inst.status)}>
                             <Trash2 className="h-4 w-4 mr-2" />删除
                           </DropdownMenuItem>
@@ -412,6 +436,26 @@ export default function OpenClawPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 修改名字弹窗 */}
+      <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open) setRenameTarget(null) }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>修改实例名称</DialogTitle>
+            <DialogDescription>为实例 <strong>{renameTarget?.name}</strong> 设置新名称</DialogDescription>
+          </DialogHeader>
+          <div className="py-3">
+            <Label htmlFor="oc-rename-input" className="mb-2 block">新名称</Label>
+            <Input id="oc-rename-input" value={renameValue} onChange={e => setRenameValue(e.target.value)} placeholder="输入新名称" maxLength={64} onKeyDown={e => { if (e.key === 'Enter') handleRename() }} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={renaming}>取消</Button>
+            <Button onClick={handleRename} disabled={renaming || !renameValue.trim()}>
+              {renaming && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}确认
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* WebShell 终端弹窗 */}
       <Dialog open={!!termInstance} onOpenChange={(open) => { if (!open) setTermInstance(null) }}>

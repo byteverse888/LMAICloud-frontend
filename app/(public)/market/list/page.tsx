@@ -143,7 +143,7 @@ export default function MarketListPage() {
       gpuCount: gpuCount.toString(),
       billingType,
     })
-    router.push(`/instances/create/config?${params.toString()}`)
+    router.push(`/instances/create?${params.toString()}`)
   }
 
   const billingTypes = [
