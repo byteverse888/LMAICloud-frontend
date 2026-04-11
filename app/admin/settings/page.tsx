@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, Mail, CheckCircle, AlertCircle, Megaphone } from 'lucide-react'
-import api from '@/lib/api'
+import api, { toFullUrl } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 interface SystemSettings {
@@ -102,6 +102,7 @@ export default function SettingsPage() {
   const [emailSaving, setEmailSaving] = useState(false)
   const [testingEmail, setTestingEmail] = useState(false)
   const [testEmail, setTestEmail] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   useEffect(() => {
     fetchSettings()
@@ -229,27 +230,11 @@ export default function SettingsPage() {
               <CardDescription>配置平台基本信息</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>平台名称</Label>
-                  <Input 
-                    value={settings.site_name} 
-                    onChange={(e) => updateSetting('site_name', e.target.value)} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>客服邮箱</Label>
-                  <Input 
-                    value={settings.contact_email} 
-                    onChange={(e) => updateSetting('contact_email', e.target.value)} 
-                  />
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label>平台描述</Label>
+                <Label>客服邮箱</Label>
                 <Input 
-                  value={settings.site_description} 
-                  onChange={(e) => updateSetting('site_description', e.target.value)} 
+                  value={settings.contact_email} 
+                  onChange={(e) => updateSetting('contact_email', e.target.value)} 
                 />
               </div>
               <div className="space-y-2">
@@ -574,14 +559,92 @@ export default function SettingsPage() {
               <CardDescription>配置Logo、备案信息、版权等</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>平台名称</Label>
+                  <Input 
+                    value={settings.site_name} 
+                    onChange={(e) => updateSetting('site_name', e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>平台描述</Label>
+                  <Input 
+                    value={settings.site_description} 
+                    onChange={(e) => updateSetting('site_description', e.target.value)} 
+                  />
+                </div>
+              </div>
+              <Separator />
               <div className="space-y-2">
-                <Label>Logo URL</Label>
-                <Input 
-                  placeholder="https://example.com/logo.png"
-                  value={settings.site_logo} 
-                  onChange={(e) => updateSetting('site_logo', e.target.value)} 
-                />
-                <p className="text-xs text-muted-foreground">推荐尺寸: 200x200, 支持 PNG/SVG 格式</p>
+                <Label>Logo</Label>
+                <div className="flex items-start gap-4">
+                  {/* Logo 预览 */}
+                  <div className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden">
+                    {settings.site_logo ? (
+                      <img src={toFullUrl(settings.site_logo)} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-2xl font-bold text-muted-foreground">L</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingLogo}
+                        onClick={() => {
+                          const input = document.createElement('input')
+                          input.type = 'file'
+                          input.accept = 'image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon'
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0]
+                            if (!file) return
+                            if (file.size > 2 * 1024 * 1024) {
+                              toast.error('Logo 文件过大，最大允许 2MB')
+                              return
+                            }
+                            try {
+                              setUploadingLogo(true)
+                              const formData = new FormData()
+                              formData.append('file', file)
+                              const { data } = await api.post<{ url: string }>('/admin/settings/upload-logo', formData)
+                              updateSetting('site_logo', data.url)
+                              toast.success('Logo 上传成功')
+                            } catch (err: any) {
+                              toast.error(err.response?.data?.detail || 'Logo 上传失败')
+                            } finally {
+                              setUploadingLogo(false)
+                            }
+                          }
+                          input.click()
+                        }}
+                      >
+                        {uploadingLogo ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                        上传图片
+                      </Button>
+                      {settings.site_logo && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-600"
+                          onClick={() => updateSetting('site_logo', '')}
+                        >
+                          清除
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">推荐尺寸: 200x200，支持 PNG/JPG/SVG/WEBP/ICO 格式，最大 2MB</p>
+                    <Input 
+                      placeholder="或者直接输入 Logo URL"
+                      value={settings.site_logo} 
+                      onChange={(e) => updateSetting('site_logo', e.target.value)} 
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>页脚文字</Label>
@@ -589,6 +652,14 @@ export default function SettingsPage() {
                   placeholder="例：XXX科技有限公司"
                   value={settings.footer_text} 
                   onChange={(e) => updateSetting('footer_text', e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>版权信息</Label>
+                <Input 
+                  placeholder="©2021-2026 XXX科技有限公司"
+                  value={settings.copyright_text} 
+                  onChange={(e) => updateSetting('copyright_text', e.target.value)} 
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -601,29 +672,11 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>ICP备案链接</Label>
-                  <Input 
-                    placeholder="https://beian.miit.gov.cn/"
-                    value={settings.icp_link} 
-                    onChange={(e) => updateSetting('icp_link', e.target.value)} 
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
                   <Label>公安备案号</Label>
                   <Input 
                     placeholder="京公网安备XXXXXXXXXXX号"
                     value={settings.police_number} 
                     onChange={(e) => updateSetting('police_number', e.target.value)} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>版权信息</Label>
-                  <Input 
-                    placeholder="©2021-2026 XXX科技有限公司"
-                    value={settings.copyright_text} 
-                    onChange={(e) => updateSetting('copyright_text', e.target.value)} 
                   />
                 </div>
               </div>

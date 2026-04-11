@@ -40,7 +40,7 @@ import {
   Bell,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import api from '@/lib/api'
+import api, { toFullUrl } from '@/lib/api'
 
 interface NavItem {
   title: string
@@ -55,11 +55,15 @@ export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const [expandedItems, setExpandedItems] = useState<string[]>(['billing', 'account'])
   const [siteName, setSiteName] = useState('龙虾云')
+  const [siteLogo, setSiteLogo] = useState('')
 
-  // 获取平台名称
+  // 获取平台名称和Logo
   useEffect(() => {
-    api.get<{ site_name: string }>('/system/site-info')
-      .then(({ data }) => setSiteName(data.site_name))
+    api.get<{ site_name: string; site_logo?: string }>('/system/site-info')
+      .then(({ data }) => {
+        setSiteName(data.site_name)
+        if (data.site_logo) setSiteLogo(data.site_logo)
+      })
       .catch(() => {})
   }, [])
 
@@ -90,7 +94,7 @@ export function Sidebar() {
       href: '/account',
       icon: User,
       children: [
-        { title: t('security'), href: '/account/security', icon: Shield },
+        { title: t('userManagement'), href: '/account', icon: Users },
         { title: t('auditLog'), href: '/account/audit-log', icon: ClipboardList },
         { title: t('referral'), href: '/account/referral', icon: Share2 },
         { title: t('notifications'), href: '/notifications', icon: Bell },
@@ -211,9 +215,13 @@ export function Sidebar() {
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
         {!sidebarCollapsed && (
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
-              <span className="text-sm font-bold text-primary">L</span>
-            </div>
+            {siteLogo ? (
+              <img src={toFullUrl(siteLogo)} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                <span className="text-sm font-bold text-primary">L</span>
+              </div>
+            )}
             <span className="text-[15px] font-semibold text-foreground">{siteName}</span>
           </Link>
         )}

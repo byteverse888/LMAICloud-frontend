@@ -45,6 +45,7 @@
     "points": "Points",
     "subAccounts": "Sub Accounts",
     "settings": "Settings",
+    "userManagement": "User Management",
     "tickets": "Tickets"
   },
   "auth": {

@@ -45,6 +45,7 @@
     "points": "我的积分",
     "subAccounts": "子账号",
     "settings": "设置",
+    "userManagement": "用户管理",
     "tickets": "工单"
   },
   "auth": {
@@ -92,7 +93,7 @@
     "pointsDetail": "积分明细",
     "referralCenter": "推广中心",
     "balanceInfo": "费用信息",
-    "myBalance": "我的余额",
+    "myBalance": "账户余额",
     "recharge": "去充值",
     "available": "可用",
     "frozen": "冻结",

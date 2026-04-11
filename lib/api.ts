@@ -117,8 +117,10 @@ class ApiClient {
       url += `?${searchParams.toString()}`
     }
 
+    const isFormData = fetchOptions.body instanceof FormData
+
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...fetchOptions.headers,
     }
 
@@ -182,9 +184,10 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, body?: unknown) {
+    const isFormData = body instanceof FormData
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body as BodyInit : (body ? JSON.stringify(body) : undefined),
     })
   }
 
@@ -209,3 +212,15 @@ class ApiClient {
 
 export const api = new ApiClient(API_BASE_URL)
 export default api
+
+/**
+ * 将后端返回的相对路径（如 /api/v1/system/logo/xxx.png）转为完整URL
+ */
+export function toFullUrl(path?: string): string {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  // API_BASE_URL 形如 http://host:port/api/v1，截取到 /api/v1 之前的部分
+  const idx = API_BASE_URL.indexOf('/api/')
+  const origin = idx > 0 ? API_BASE_URL.substring(0, idx) : API_BASE_URL
+  return `${origin}${path}`
+}

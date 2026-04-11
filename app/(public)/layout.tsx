@@ -8,7 +8,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { UserNav } from '@/components/layout/user-nav'
 import { Button } from '@/components/ui/button'
 import { Bell, Crown, ChevronDown, Megaphone, X } from 'lucide-react'
-import api from '@/lib/api'
+import api, { toFullUrl } from '@/lib/api'
 
 interface SiteInfo {
   site_name: string
@@ -33,7 +33,10 @@ export default function PublicLayout({
 
   useEffect(() => {
     api.get<SiteInfo>('/system/site-info')
-      .then(({ data }) => setSiteInfo(data))
+      .then(({ data }) => {
+        setSiteInfo(data)
+        if (data.site_name) document.title = `${data.site_name} - GPU算力云平台`
+      })
       .catch(() => {})
   }, [])
 
@@ -63,7 +66,7 @@ export default function PublicLayout({
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
             {siteInfo.site_logo ? (
-              <img src={siteInfo.site_logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+              <img src={toFullUrl(siteInfo.site_logo)} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
             ) : (
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">L</span>
@@ -130,17 +133,13 @@ export default function PublicLayout({
       {/* 页脚 */}
       <footer className="border-t py-6 text-center text-sm text-muted-foreground space-y-1">
         <div>{siteInfo.copyright_text || `©2021-2026 ${siteInfo.site_name}`}</div>
-        <div className="flex items-center justify-center gap-4">
-          {siteInfo.icp_number && (
-            <a href={siteInfo.icp_link || 'https://beian.miit.gov.cn/'} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-              {siteInfo.icp_number}
-            </a>
-          )}
-          {siteInfo.police_number && (
-            <span>{siteInfo.police_number}</span>
-          )}
-        </div>
-        {siteInfo.footer_text && <div>{siteInfo.footer_text}</div>}
+        {(siteInfo.footer_text || siteInfo.icp_number) && (
+          <div className="flex items-center justify-center gap-2 text-xs">
+            {siteInfo.footer_text && <span>{siteInfo.footer_text}</span>}
+            {siteInfo.footer_text && siteInfo.icp_number && <span>|</span>}
+            {siteInfo.icp_number && <span>{siteInfo.icp_number}</span>}
+          </div>
+        )}
       </footer>
     </div>
   )

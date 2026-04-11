@@ -18,12 +18,21 @@ export default function DashboardLayout({
   const { sidebarCollapsed } = useUIStore()
   const { isLoading, isAuthenticated, token, checkAuth } = useAuthStore()
   const router = useRouter()
+  const [footerText, setFooterText] = useState('')
   const [copyrightText, setCopyrightText] = useState('')
+  const [icpNumber, setIcpNumber] = useState('')
+  const [icpLink, setIcpLink] = useState('https://beian.miit.gov.cn/')
 
-  // 获取版权信息
+  // 获取版权和备案信息
   useEffect(() => {
-    api.get<{ copyright_text?: string }>('/system/site-info')
-      .then(({ data }) => { if (data.copyright_text) setCopyrightText(data.copyright_text) })
+    api.get<{ copyright_text?: string; site_name?: string; footer_text?: string; icp_number?: string; icp_link?: string }>('/system/site-info')
+      .then(({ data }) => {
+        if (data.footer_text) setFooterText(data.footer_text)
+        if (data.copyright_text) setCopyrightText(data.copyright_text)
+        if (data.site_name) document.title = `${data.site_name} - GPU算力云平台`
+        if (data.icp_number) setIcpNumber(data.icp_number)
+        if (data.icp_link) setIcpLink(data.icp_link)
+      })
       .catch(() => {})
   }, [])
 
@@ -65,9 +74,16 @@ export default function DashboardLayout({
         <Header />
         <main className="p-5 lg:p-7">{children}</main>
         {/* 版权页脚 */}
-        {copyrightText && (
-          <footer className="py-4 text-center text-xs text-muted-foreground border-t mx-5 lg:mx-7">
-            {copyrightText}
+        {(footerText || copyrightText || icpNumber) && (
+          <footer className="py-4 text-center text-xs text-muted-foreground border-t mx-5 lg:mx-7 space-y-1">
+            {copyrightText && <div>{copyrightText}</div>}
+            {(footerText || icpNumber) && (
+              <div className="flex items-center justify-center gap-2">
+                {footerText && <span>{footerText}</span>}
+                {footerText && icpNumber && <span>|</span>}
+                {icpNumber && <span>{icpNumber}</span>}
+              </div>
+            )}
           </footer>
         )}
       </div>

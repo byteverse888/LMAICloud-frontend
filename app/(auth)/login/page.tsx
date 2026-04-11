@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuthStore } from '@/stores/auth-store'
-import api from '@/lib/api'
+import api, { toFullUrl } from '@/lib/api'
 
 export default function LoginPage() {
   const t = useTranslations('auth')
@@ -32,7 +32,11 @@ export default function LoginPage() {
   const [captchaImage, setCaptchaImage] = useState('')
   const [captchaEnabled, setCaptchaEnabled] = useState(false)
   const [siteName, setSiteName] = useState('龙虾云')
+  const [footerText, setFooterText] = useState('')
   const [copyrightText, setCopyrightText] = useState('© 2026 龙虾云. All rights reserved.')
+  const [siteLogo, setSiteLogo] = useState('')
+  const [icpNumber, setIcpNumber] = useState('')
+  const [icpLink, setIcpLink] = useState('https://beian.miit.gov.cn/')
 
   // 获取验证码
   const fetchCaptcha = async () => {
@@ -52,13 +56,20 @@ export default function LoginPage() {
 
   // 检查验证码是否启用
   useEffect(() => {
-    api.get<{ captcha_enabled?: boolean; site_name?: string; copyright_text?: string }>('/system/site-info')
+    api.get<{ captcha_enabled?: boolean; site_name?: string; copyright_text?: string; footer_text?: string; site_logo?: string; icp_number?: string; icp_link?: string }>('/system/site-info')
       .then(({ data }) => {
         const enabled = data.captcha_enabled !== false
         setCaptchaEnabled(enabled)
         if (enabled) fetchCaptcha()
-        if (data.site_name) setSiteName(data.site_name)
+        if (data.site_name) {
+          setSiteName(data.site_name)
+          document.title = `${data.site_name} - 登录`
+        }
         if (data.copyright_text) setCopyrightText(data.copyright_text)
+        if (data.footer_text) setFooterText(data.footer_text)
+        if (data.site_logo) setSiteLogo(data.site_logo)
+        if (data.icp_number) setIcpNumber(data.icp_number)
+        if (data.icp_link) setIcpLink(data.icp_link)
       })
       .catch(() => {})
   }, [])
@@ -157,9 +168,13 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/25 backdrop-blur rounded-lg flex items-center justify-center shadow-lg shadow-black/10">
-              <span className="text-xl font-bold text-white">L</span>
-            </div>
+            {siteLogo ? (
+              <img src={toFullUrl(siteLogo)} alt="Logo" className="w-10 h-10 rounded-lg object-contain" />
+            ) : (
+              <div className="w-10 h-10 bg-white/25 backdrop-blur rounded-lg flex items-center justify-center shadow-lg shadow-black/10">
+                <span className="text-xl font-bold text-white">L</span>
+              </div>
+            )}
             <span className="text-xl font-bold text-white drop-shadow-sm">{siteName}</span>
           </div>
         </div>
@@ -196,8 +211,15 @@ export default function LoginPage() {
         </div>
 
         {/* 底部 */}
-        <div className="relative z-10 text-white/70 text-sm">
-          {copyrightText}
+        <div className="relative z-10 text-white/70 text-sm space-y-1">
+          <div>{copyrightText}</div>
+          {(footerText || icpNumber) && (
+            <div className="flex items-center justify-start gap-2 text-xs">
+              {footerText && <span>{footerText}</span>}
+              {footerText && icpNumber && <span>|</span>}
+              {icpNumber && <span>{icpNumber}</span>}
+            </div>
+          )}
         </div>
       </div>
 
@@ -211,9 +233,13 @@ export default function LoginPage() {
         >
           <div className="text-center mb-8">
             <div className="lg:hidden flex justify-center mb-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="text-xl font-bold text-primary">L</span>
-              </div>
+              {siteLogo ? (
+                <img src={toFullUrl(siteLogo)} alt="Logo" className="w-10 h-10 rounded-lg object-contain" />
+              ) : (
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <span className="text-xl font-bold text-primary">L</span>
+                </div>
+              )}
             </div>
             <h2 className="text-2xl font-bold">欢迎回来</h2>
             <p className="text-muted-foreground mt-2">登录您的 {siteName} 账号</p>

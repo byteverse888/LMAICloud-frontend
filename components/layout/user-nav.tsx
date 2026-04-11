@@ -118,7 +118,7 @@ export function UserNav() {
         {/* 余额与积分信息 */}
         <div className="px-3 py-2 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">可用余额：</span>
+            <span className="text-sm text-muted-foreground">账户余额：</span>
             <span className={cn(
               'font-medium',
               (user.balance || 0) < 0 ? 'text-red-500' : ''
@@ -127,7 +127,7 @@ export function UserNav() {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">积分余额：</span>
+            <span className="text-sm text-muted-foreground">我的积分：</span>
             <span className="font-medium text-amber-600 dark:text-amber-400">{user.points || 0}</span>
           </div>
         </div>

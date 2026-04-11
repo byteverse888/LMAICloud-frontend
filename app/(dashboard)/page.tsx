@@ -70,37 +70,7 @@ export default function DashboardPage() {
         {loading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
       </div>
 
-      {/* 快捷统计卡片 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="card-clean hover-lift">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t('balance')}</p>
-                <p className={`text-2xl font-bold ${balance < 0 ? 'text-red-500' : ''}`}>
-                  ¥{balance.toFixed(2)}
-                </p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-clean hover-lift">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t('points')}</p>
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{points}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-amber-500/8 flex items-center justify-center">
-                <Coins className="h-5 w-5 text-amber-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* 快捷统计卡片（余额/积分已在右侧费用信息中展示，此处隐藏避免重复） */}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* 左侧主内容区 */}
@@ -232,10 +202,6 @@ export default function DashboardPage() {
                     <ExternalLink className="h-4 w-4" />
                   </Link>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <BadgeCheck className="h-4 w-4" />
-                {verified ? t('verified') : t('notVerified')}
               </div>
               <div className="flex items-center gap-2 text-sm mb-1">
                 <Coins className="h-4 w-4 text-amber-500" />

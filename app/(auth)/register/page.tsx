@@ -36,7 +36,12 @@ export default function RegisterPage() {
 
   useEffect(() => {
     api.get<{ site_name?: string }>('/system/site-info')
-      .then(({ data }) => { if (data.site_name) setSiteName(data.site_name) })
+      .then(({ data }) => {
+        if (data.site_name) {
+          setSiteName(data.site_name)
+          document.title = `${data.site_name} - 注册`
+        }
+      })
       .catch(() => {})
   }, [])
 
