@@ -170,9 +170,9 @@ function DeploymentsTab() {
                       {dep.instance_name ? (
                         <TooltipProvider><Tooltip><TooltipTrigger asChild>
                           {dep.instance_id ? (
-                            <Link href={`/admin/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">{dep.instance_name}</Link>
+                            <Link href={`/admin/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline">{dep.instance_name}</Link>
                           ) : dep.openclaw_instance_id ? (
-                            <Link href={`/admin/openclaw/${dep.openclaw_instance_id}`} className="block truncate text-primary hover:underline" target="_blank">{dep.instance_name}</Link>
+                            <Link href={`/admin/openclaw/${dep.openclaw_instance_id}`} className="block truncate text-primary hover:underline">{dep.instance_name}</Link>
                           ) : (
                             <span className="block truncate text-primary">{dep.instance_name}</span>
                           )}
