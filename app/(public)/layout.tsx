@@ -28,7 +28,7 @@ export default function PublicLayout({
 }) {
   const t = useTranslations('header')
   const pathname = usePathname()
-  const [siteInfo, setSiteInfo] = useState<SiteInfo>({ site_name: '龙虾云' })
+  const [siteInfo, setSiteInfo] = useState<SiteInfo>({ site_name: '' })
   const [announcementDismissed, setAnnouncementDismissed] = useState(false)
 
   useEffect(() => {
@@ -65,13 +65,7 @@ export default function PublicLayout({
         {/* 左侧 Logo + 导航 */}
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
-            {siteInfo.site_logo ? (
-              <img src={toFullUrl(siteInfo.site_logo)} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
-            ) : (
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">L</span>
-              </div>
-            )}
+            <img src={siteInfo.site_logo ? toFullUrl(siteInfo.site_logo) : '/logo.png'} alt="Logo" className="w-8 h-8 rounded-lg object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
             <span className="font-semibold text-xl">{siteInfo.site_name}</span>
           </Link>
 

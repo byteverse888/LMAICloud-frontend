@@ -54,7 +54,7 @@ export function Sidebar() {
   const t = useTranslations('nav')
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const [expandedItems, setExpandedItems] = useState<string[]>(['billing', 'account'])
-  const [siteName, setSiteName] = useState('龙虾云')
+  const [siteName, setSiteName] = useState('')
   const [siteLogo, setSiteLogo] = useState('')
 
   // 获取平台名称和Logo
@@ -215,13 +215,7 @@ export function Sidebar() {
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
         {!sidebarCollapsed && (
           <Link href="/" className="flex items-center gap-2.5 group">
-            {siteLogo ? (
-              <img src={toFullUrl(siteLogo)} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
-            ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
-                <span className="text-sm font-bold text-primary">L</span>
-              </div>
-            )}
+            <img src={siteLogo ? toFullUrl(siteLogo) : '/logo.png'} alt="Logo" className="h-8 w-8 rounded-lg object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
             <span className="text-[15px] font-semibold text-foreground">{siteName}</span>
           </Link>
         )}

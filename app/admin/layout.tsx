@@ -278,11 +278,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-64 border-r bg-card flex flex-col">
         <div className="flex h-16 items-center justify-between px-4 border-b">
           <Link href="/admin" className="flex items-center gap-2 font-bold text-lg">
-            {siteLogo ? (
-              <img src={toFullUrl(siteLogo)} alt="Logo" className="h-7 w-7 rounded object-contain" />
-            ) : (
-              <Server className="h-6 w-6 text-primary" />
-            )}
+            <img src={siteLogo ? toFullUrl(siteLogo) : '/logo.png'} alt="Logo" className="h-7 w-7 rounded object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
             {siteName ? `${siteName} 管理后台` : '管理后台'}
           </Link>
         </div>

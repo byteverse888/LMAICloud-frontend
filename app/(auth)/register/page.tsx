@@ -30,7 +30,7 @@ export default function RegisterPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [isResending, setIsResending] = useState(false)
-  const [siteName, setSiteName] = useState('龙虾云')
+  const [siteName, setSiteName] = useState('')
 
   const [agreeTerms, setAgreeTerms] = useState(false)
 

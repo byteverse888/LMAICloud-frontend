@@ -56,7 +56,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<SystemSettings>({
-    site_name: '龙虾云',
+    site_name: '',
     site_description: '',
     contact_email: '',
     min_recharge_amount: 10,
@@ -92,7 +92,7 @@ export default function SettingsPage() {
     smtp_user: '',
     smtp_password: '',
     smtp_from_email: '',
-    smtp_from_name: '龙虾云',
+    smtp_from_name: '',
     smtp_use_tls: true,
     notification_enabled: true,
     verification_required: true,
@@ -426,10 +426,11 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <Label>发件人名称</Label>
                         <Input 
-                          placeholder="龙虾云"
+                          placeholder={settings.site_name || '平台名称'}
                           value={emailConfig.smtp_from_name} 
                           onChange={(e) => updateEmailConfig('smtp_from_name', e.target.value)} 
                         />
+                        <p className="text-xs text-muted-foreground">留空则自动使用品牌配置中的平台名称</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
@@ -581,11 +582,7 @@ export default function SettingsPage() {
                 <div className="flex items-start gap-4">
                   {/* Logo 预览 */}
                   <div className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden">
-                    {settings.site_logo ? (
-                      <img src={toFullUrl(settings.site_logo)} alt="Logo" className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-2xl font-bold text-muted-foreground">L</span>
-                    )}
+                    <img src={settings.site_logo ? toFullUrl(settings.site_logo) : '/logo.png'} alt="Logo" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
                   </div>
                   <div className="flex-1 space-y-2">
                     <div className="flex gap-2">

@@ -31,9 +31,9 @@ export default function LoginPage() {
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaImage, setCaptchaImage] = useState('')
   const [captchaEnabled, setCaptchaEnabled] = useState(false)
-  const [siteName, setSiteName] = useState('龙虾云')
+  const [siteName, setSiteName] = useState('')
   const [footerText, setFooterText] = useState('')
-  const [copyrightText, setCopyrightText] = useState('© 2026 龙虾云. All rights reserved.')
+  const [copyrightText, setCopyrightText] = useState('')
   const [siteLogo, setSiteLogo] = useState('')
   const [icpNumber, setIcpNumber] = useState('')
   const [icpLink, setIcpLink] = useState('https://beian.miit.gov.cn/')
@@ -168,13 +168,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            {siteLogo ? (
-              <img src={toFullUrl(siteLogo)} alt="Logo" className="w-10 h-10 rounded-lg object-contain" />
-            ) : (
-              <div className="w-10 h-10 bg-white/25 backdrop-blur rounded-lg flex items-center justify-center shadow-lg shadow-black/10">
-                <span className="text-xl font-bold text-white">L</span>
-              </div>
-            )}
+            <img src={siteLogo ? toFullUrl(siteLogo) : '/logo.png'} alt="Logo" className="w-10 h-10 rounded-lg object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
             <span className="text-xl font-bold text-white drop-shadow-sm">{siteName}</span>
           </div>
         </div>
@@ -233,13 +227,7 @@ export default function LoginPage() {
         >
           <div className="text-center mb-8">
             <div className="lg:hidden flex justify-center mb-4">
-              {siteLogo ? (
-                <img src={toFullUrl(siteLogo)} alt="Logo" className="w-10 h-10 rounded-lg object-contain" />
-              ) : (
-                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <span className="text-xl font-bold text-primary">L</span>
-                </div>
-              )}
+              <img src={siteLogo ? toFullUrl(siteLogo) : '/logo.png'} alt="Logo" className="w-10 h-10 rounded-lg object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
             </div>
             <h2 className="text-2xl font-bold">欢迎回来</h2>
             <p className="text-muted-foreground mt-2">登录您的 {siteName} 账号</p>
