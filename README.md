@@ -103,7 +103,24 @@ admin@example.com	Admin@1234	管理员
 
 ```bash
 npm run build
-npm start
+# npm start
+
+# 守护模式
+npm install -g pm2
+pm2 start "npx next start -p 3000" --name lmai-frontend
+
+# 用 PM2 守护（进程崩溃自动重启）
+pm2 start "node .next/standalone/server.js" --name lmai-frontend
+pm2 startup   # 开机自启
+pm2 save
+
+# standlone模式
+cp -r public .next/standalone/public
+cp -r .next/static .next/standalone/.next/static
+node .next/standalone/server.js  # 监听 3000 端口
+
+或者跑在docker里面
+
 ```
 
 ## 主要页面
