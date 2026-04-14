@@ -105,14 +105,25 @@ admin@example.com	Admin@1234	管理员
 npm run build
 # npm start
 
+# 用 PM2 守护（进程崩溃自动重启）
+# pm2 start "node .next/standalone/server.js" --name lmai-frontend
+pm2 startup   # 开机自启
+pm2 save
+
 # 守护模式
 npm install -g pm2
 pm2 start "npx next start -p 3000" --name lmai-frontend
 
-# 用 PM2 守护（进程崩溃自动重启）
-pm2 start "node .next/standalone/server.js" --name lmai-frontend
-pm2 startup   # 开机自启
-pm2 save
+# 重启
+pm2 restart lmai-frontend
+# 停止
+pm2 stop lmai-frontend
+# 删除进程
+pm2 delete lmai-frontend
+# 查看状态
+pm2 status
+# 查看日志
+pm2 logs lmai-frontend
 
 # standlone模式
 cp -r public .next/standalone/public
