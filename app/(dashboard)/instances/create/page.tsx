@@ -175,6 +175,18 @@ export default function InstanceCreatePage() {
   }, [presetImageId, images])
 
   const gpuModels = [...new Set(configs.map(c => c.gpu_model))]
+  // 按 GPU 型号+显存分类（同型号同显存归为一类）
+  const gpuCategories = [...new Map(
+    configs
+      .filter(c => c.resource_type === 'vGPU' && c.gpu_model && c.gpu_model !== 'N/A')
+      .map(c => {
+        const key = `${c.gpu_model}|${c.gpu_memory || 0}`
+        const label = c.gpu_memory && c.gpu_memory > 0
+          ? `${c.gpu_model.replace(/NVIDIA-/i, '').replace(/-/g, ' ')} ${c.gpu_memory}G`
+          : c.gpu_model.replace(/NVIDIA-/i, '').replace(/-/g, ' ')
+        return [key, { value: c.gpu_model, label, memory: c.gpu_memory || 0 }] as const
+      })
+  ).values()]
   const hasEdgeNodes = configs.some(c => c.node_type === 'edge')
   const filteredConfigs = configs.filter(c => {
     // 节点类型过滤
@@ -386,7 +398,7 @@ export default function InstanceCreatePage() {
                   { value: 'all', label: '全部' },
                   { value: 'vGPU', label: 'vGPU' },
                   { value: 'no_gpu', label: '无卡启动' },
-                  ...gpuModels.filter(m => m !== 'intel' && m !== 'AMD').map(m => ({ value: m, label: m })),
+                  ...gpuCategories.map(g => ({ value: g.value, label: g.label })),
                 ].map(opt => (
                   <button
                     key={opt.value}
@@ -455,7 +467,7 @@ export default function InstanceCreatePage() {
                           <TableCell className="text-sm">{cfg.cpu_model}</TableCell>
                           <TableCell className="text-sm">
                             {cfg.resource_type === 'vGPU'
-                              ? <span className="text-primary font-medium">{cfg.gpu_model} {cfg.gpu_memory}G&times;1</span>
+                              ? <span className="text-primary font-medium">{cfg.gpu_model?.replace(/NVIDIA-/i, '').replace(/-/g, ' ')} {cfg.gpu_memory ? `${cfg.gpu_memory}G` : ''}&times;1</span>
                               : <span className="text-muted-foreground">--</span>}
                           </TableCell>
                           <TableCell className="text-sm">

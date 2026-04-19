@@ -405,7 +405,7 @@ export function useCurrentUser() {
 // ====== 管理后台 Hooks ======
 export interface AdminNode {
   id: string; name: string; cluster: string; status: 'online' | 'offline' | 'busy'
-  node_type: 'edge' | 'center'; gpu_model: string; gpu_count: number; gpu_available: number
+  node_type: 'edge' | 'center'; gpu_model: string; gpu_count: number; gpu_available: number; gpu_memory?: number
   cpu_cores: number; memory: number; hourly_price: number; created_at: string
   cpu_usage_percent?: number; memory_usage_percent?: number; gpu_usage_percent?: number
 }

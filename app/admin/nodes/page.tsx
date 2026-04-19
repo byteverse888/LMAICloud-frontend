@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Search, MoreHorizontal, Edit, Trash2, Power, RefreshCw, Loader2, Server, Cpu, Cloud, HardDrive } from 'lucide-react'
+import { Search, MoreHorizontal, Edit, Trash2, Power, RefreshCw, Loader2, Server, Cloud, HardDrive } from 'lucide-react'
 import { useAdminNodes, useDeleteAdminNode } from '@/hooks/use-api'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { toast } from 'react-hot-toast'
@@ -21,6 +21,7 @@ export default function NodesPage() {
   const [nodeTypeTab, setNodeTypeTab] = useState<'all' | 'edge' | 'cloud'>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [gpuModelFilter, setGpuModelFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   
@@ -30,12 +31,16 @@ export default function NodesPage() {
   // 前端tab值 cloud 对应后端 node_type 值 center
   const nodeTypeMap: Record<string, string> = { all: 'all', edge: 'edge', cloud: 'center' }
   
+  // 提取所有 GPU 型号（去重，排除 N/A）
+  const gpuModels = [...new Set(nodes.map(n => n.gpu_model).filter(m => m && m !== 'N/A' && m !== 'Unknown GPU'))]
+
   const filteredNodes = nodes.filter(node => {
     const matchesSearch = node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           node.id.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === 'all' || node.status === statusFilter
     const matchesType = nodeTypeTab === 'all' || node.node_type === nodeTypeMap[nodeTypeTab]
-    return matchesSearch && matchesStatus && matchesType
+    const matchesGpu = gpuModelFilter === 'all' || node.gpu_model === gpuModelFilter
+    return matchesSearch && matchesStatus && matchesType && matchesGpu
   })
   const pagedNodes = paginateArray(filteredNodes, currentPage, pageSize)
 
@@ -43,6 +48,7 @@ export default function NodesPage() {
   const handleSearchChange = (v: string) => { setSearchQuery(v); setCurrentPage(1) }
   const handleStatusChange = (v: string) => { setStatusFilter(v); setCurrentPage(1) }
   const handleTypeChange = (v: string) => { setNodeTypeTab(v as 'all' | 'edge' | 'cloud'); setCurrentPage(1) }
+  const handleGpuModelChange = (v: string) => { setGpuModelFilter(v); setCurrentPage(1) }
   const handlePageSizeChange = (s: number) => { setPageSize(s); setCurrentPage(1) }
 
   // 统计边缘/云端节点数量
@@ -83,10 +89,18 @@ export default function NodesPage() {
     )
   }
 
-  // 截断节点名称：前16 + ... + 后12
+  // 截断节点名称：前8 + ... + 后6
   const truncateNodeName = (name: string) => {
-    if (name.length <= 30) return name
-    return `${name.slice(0, 16)}...${name.slice(-12)}`
+    if (name.length <= 16) return name
+    return `${name.slice(0, 8)}...${name.slice(-6)}`
+  }
+
+  // 从 GPU 全名中提取简短型号，如 NVIDIA-GeForce-RTX-4070-Laptop-GPU → RTX 4070
+  const shortGpuModel = (model?: string) => {
+    if (!model || model === 'N/A' || model === 'Unknown GPU') return 'N/A'
+    // 匹配核心型号：RTX xxxx / GTX xxxx / A100 / H100 / V100 等
+    const m = model.match(/(RTX[- ]?\d{4}\w*|GTX[- ]?\d{4}\w*|[AH]\d{2,3}\w*|V100\w*|T4\w*)/i)
+    return m ? m[1].replace(/-/g, ' ') : model.replace(/NVIDIA-/i, '').replace(/-/g, ' ')
   }
 
   return (
@@ -155,6 +169,19 @@ export default function NodesPage() {
             <SelectItem value="busy">满载</SelectItem>
           </SelectContent>
         </Select>
+        {gpuModels.length > 0 && (
+          <Select value={gpuModelFilter} onValueChange={handleGpuModelChange}>
+            <SelectTrigger className="w-56 bg-muted/50">
+              <SelectValue placeholder="GPU型号" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部GPU</SelectItem>
+              {gpuModels.map(m => (
+                <SelectItem key={m} value={m}>{m.replace(/NVIDIA-/i, '').replace(/-/g, ' ')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <Card className="overflow-hidden">
@@ -167,8 +194,7 @@ export default function NodesPage() {
                 <TableHead>所属集群</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>GPU</TableHead>
-                <TableHead>可用/总数</TableHead>
-                <TableHead>CPU/内存</TableHead>
+                <TableHead>规格</TableHead>
                 <TableHead>资源使用</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -176,13 +202,13 @@ export default function NodesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center">
+                  <TableCell colSpan={8} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredNodes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     暂无数据
                   </TableCell>
                 </TableRow>
@@ -190,17 +216,16 @@ export default function NodesPage() {
                 pagedNodes.map((node) => (
                 <TableRow key={node.id}>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                         {node.node_type === 'edge' ? (
-                          <HardDrive className="h-4 w-4 text-primary" />
+                          <HardDrive className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <Cloud className="h-4 w-4 text-primary" />
+                          <Cloud className="h-3.5 w-3.5 text-primary" />
                         )}
                       </div>
-                      <div>
-                        <div className="font-medium" title={node.name}>{truncateNodeName(node.name)}</div>
-                        <code className="text-xs text-muted-foreground font-mono">{node.id}</code>
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate max-w-[140px]" title={node.name}>{truncateNodeName(node.name)}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -218,19 +243,26 @@ export default function NodesPage() {
                   </TableCell>
                   <TableCell>{getStatusBadge(node.status)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Cpu className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{node.gpu_model}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-emerald-500 font-medium">{node.gpu_available}</span>
-                    <span className="text-muted-foreground"> / {node.gpu_count}</span>
+                    {(node.gpu_count > 0 || (node.gpu_model && node.gpu_model !== 'N/A' && node.gpu_model !== 'Unknown GPU')) ? (
+                      <div className="flex flex-col gap-0.5" title={node.gpu_model?.replace(/-/g, ' ') || ''}>
+                        <span className="font-medium text-sm text-primary">{shortGpuModel(node.gpu_model)}{(node.gpu_memory ?? 0) > 0 ? ` ${node.gpu_memory}G` : ''}</span>
+                        {node.gpu_count > 0 && node.status !== 'offline' && (
+                          <span className="text-xs text-muted-foreground">
+                            <span className="text-emerald-500 font-medium">{node.gpu_available}</span>/{node.gpu_count} 可用
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">--</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">{node.cpu_cores}核 / {node.memory}GB</span>
                   </TableCell>
                   <TableCell>
+                    {node.status === 'offline' ? (
+                      <span className="text-xs text-muted-foreground">离线</span>
+                    ) : (
                     <div className="space-y-1.5 min-w-[120px]">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground w-8">CPU</span>
@@ -265,6 +297,7 @@ export default function NodesPage() {
                         </div>
                       )}
                     </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
