@@ -1,6 +1,6 @@
-# LMAICloud Frontend
+# GPUCloud Frontend
 
-LMAICloud GPU算力云平台前端，基于 Next.js 16 + Tailwind CSS 4 构建，支持深浅色主题。
+GPUCloud GPU算力云平台前端，基于 Next.js 16 + Tailwind CSS 4 构建，支持深浅色主题。
 
 ## 技术栈
 
@@ -106,24 +106,24 @@ npm run build
 # npm start
 
 # 用 PM2 守护（进程崩溃自动重启）
-# pm2 start "node .next/standalone/server.js" --name lmai-frontend
+# pm2 start "node .next/standalone/server.js" --name gpucloud-frontend
 pm2 startup   # 开机自启
 pm2 save
 
 # 守护模式
 npm install -g pm2
-pm2 start "npx next start -p 3000" --name lmai-frontend
+pm2 start "npx next start -p 3000" --name gpucloud-frontend
 
 # 重启
-pm2 restart lmai-frontend
+pm2 restart gpucloud-frontend
 # 停止
-pm2 stop lmai-frontend
+pm2 stop gpucloud-frontend
 # 删除进程
-pm2 delete lmai-frontend
+pm2 delete gpucloud-frontend
 # 查看状态
 pm2 status
 # 查看日志
-pm2 logs lmai-frontend
+pm2 logs gpucloud-frontend
 
 # standlone模式
 cp -r public .next/standalone/public
