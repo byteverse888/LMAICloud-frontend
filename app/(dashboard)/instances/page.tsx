@@ -203,15 +203,17 @@ export default function InstancesPage() {
   }
 
   // 选中实例中各状态的数量（用于智能提示）
+  // 可关机状态含 starting/creating/error：Pod 准入失败等卡死场景需能手动停机止血
+  const stoppableStatuses = ['running', 'starting', 'creating', 'error']
   const selectedInstances = instances.filter(i => selectedIds.includes(i.id))
-  const selectedRunning = selectedInstances.filter(i => i.status === 'running').length
+  const selectedRunning = selectedInstances.filter(i => stoppableStatuses.includes(i.status)).length
   const selectedStopped = selectedInstances.filter(i => ['stopped', 'error'].includes(i.status)).length
   const selectedCanDelete = selectedInstances.filter(i => !['releasing', 'released'].includes(i.status)).length
 
   const batchActionConfig: Record<string, { title: string; desc: string; action: string; color: string }> = {
     stop: {
       title: '批量关机',
-      desc: `确定要关机选中的 ${selectedRunning} 个运行中的实例吗？非运行中的实例将被跳过。`,
+      desc: `确定要关机选中的 ${selectedRunning} 个活跃状态的实例吗？已停止等其他状态的实例将被跳过。`,
       action: '确认关机',
       color: 'bg-amber-600 hover:bg-amber-700 text-white',
     },
@@ -238,7 +240,7 @@ export default function InstancesPage() {
     try {
       for (const inst of selectedInstances) {
         try {
-          if (batchAction === 'stop' && inst.status === 'running') {
+          if (batchAction === 'stop' && stoppableStatuses.includes(inst.status)) {
             await stopInstance(inst.id)
             successCount++
           } else if (batchAction === 'start' && ['stopped', 'error'].includes(inst.status)) {
@@ -320,6 +322,7 @@ export default function InstancesPage() {
       stopping: { label: '停止中', variant: 'warning', dot: 'bg-amber-500' },
       releasing: { label: '删除中', variant: 'warning', dot: 'bg-amber-500' },
       released: { label: '已删除', variant: 'secondary', dot: 'bg-gray-400' },
+      node_offline: { label: '节点离线', variant: 'warning', dot: 'bg-orange-500' },
       error: { label: '异常', variant: 'destructive', dot: 'bg-red-500' },
     }
     const c = cfg[status] || { label: status, variant: 'secondary', dot: 'bg-gray-400' }
@@ -615,7 +618,7 @@ export default function InstancesPage() {
                         <DropdownMenuItem onClick={() => startInstance(inst.id)} disabled={!['stopped', 'error'].includes(inst.status)}>
                           <Power className="h-4 w-4 mr-2" />开机
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setStopTarget({ id: inst.id, name: inst.name })} disabled={inst.status !== 'running'}>
+                        <DropdownMenuItem onClick={() => setStopTarget({ id: inst.id, name: inst.name })} disabled={!stoppableStatuses.includes(inst.status)}>
                           <PowerOff className="h-4 w-4 mr-2" />关机
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

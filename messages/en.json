@@ -199,10 +199,18 @@
     "profile": "Profile",
     "nickname": "Nickname",
     "email": "Email",
+    "phone": "Phone Number",
+    "userId": "User ID",
+    "verified": "Real-name Verification",
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "sshKeys": "SSH Keys",
+    "apiKeys": "API Keys",
+    "twoFactor": "Two-Factor Authentication",
+    "loginHistory": "Login History",
+    "notifications": "Notification Settings"
   },
   "admin": {
     "title": "Admin Dashboard",

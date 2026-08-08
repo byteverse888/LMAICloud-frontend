@@ -1,7 +1,9 @@
+// @ts-nocheck
+// 龙虾实例功能暂时屏蔽（恢复时删除 @ts-nocheck 与组件顶部 redirect，见 TODO.md）
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, redirect } from 'next/navigation'
 import {
   ArrowLeft, Bot, Check, ChevronRight, Loader2, Search,
   Key, Radio, Puzzle, Plus, Trash2, Settings2, ExternalLink,
@@ -126,6 +128,8 @@ interface SkillItem { name: string; description: string; version: string }
 const emptySkill = (): SkillItem => ({ name: '', description: '', version: '' })
 
 export default function OpenClawCreatePage() {
+  // 龙虾实例功能暂时屏蔽：直接重定向回实例列表（恢复时删除本行，见 TODO.md）
+  redirect('/instances')
   const router = useRouter()
   const searchParams = useSearchParams()
   const presetImageId = searchParams.get('imageId') || ''

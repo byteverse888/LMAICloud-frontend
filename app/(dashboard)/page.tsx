@@ -16,7 +16,6 @@ import {
   ShoppingCart,
   Receipt,
   Store,
-  Bot,
   FolderOpen,
   ArrowRight,
   Wallet,
@@ -24,7 +23,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useInstances, useBalance, useStorageQuota, useSiteInfo, useCurrentUser, usePoints } from '@/hooks/use-api'
-import { useOpenClawInstances } from '@/hooks/use-openclaw'
+// 智能体（OpenClaw）功能随整体屏蔽暂时隐藏，恢复时还原 useOpenClawInstances 引入（见 TODO.md）
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard')
@@ -34,16 +33,12 @@ export default function DashboardPage() {
   const { siteInfo } = useSiteInfo()
   const { user: currentUser } = useCurrentUser()
   const { points } = usePoints()
-  const { instances: ocInstances } = useOpenClawInstances()
 
   // 计算统计数据（全部来自真实 API）
   // 有效实例 = 排除已释放/错误状态
   const activeInstances = instances.filter(i => !['released', 'error'].includes(i.status))
   const runningCount = instances.filter(i => i.status === 'running').length
   const stoppedCount = instances.filter(i => i.status === 'stopped').length
-  // 智能体实例统计
-  const activeOcInstances = ocInstances.filter(i => !['released', 'error'].includes(i.status))
-  const ocRunningCount = ocInstances.filter(i => i.status === 'running').length
   const totalDiskGB = storageQuota ? +(storageQuota.total / (1024 ** 3)).toFixed(1) : 0
   const usedDiskGB = storageQuota ? +(storageQuota.used / (1024 ** 3)).toFixed(2) : 0
   const nickname = currentUser?.nickname || currentUser?.email?.split('@')[0] || '--'
@@ -91,18 +86,14 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('containerInstances')}</div>
                   <div className="text-2xl font-bold text-primary">{activeInstances.length}</div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">智能体实例</div>
-                  <div className="text-2xl font-bold text-violet-500">{activeOcInstances.length}</div>
-                </div>
-                <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('running')}</div>
-                  <div className="text-2xl font-bold text-emerald-500">{runningCount + ocRunningCount}</div>
+                  <div className="text-2xl font-bold text-emerald-500">{runningCount}</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('stopped')}</div>
@@ -111,7 +102,7 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('instanceQuota')}</div>
                   <div className="text-2xl font-bold">
-                    {activeInstances.length + activeOcInstances.length}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
+                    {activeInstances.length}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
                   </div>
                 </div>
               </div>
@@ -162,7 +153,7 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <Link href="/instances" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <Server className="h-6 w-6 text-primary" />
                   <span className="text-xs text-muted-foreground">{t('myInstances')}</span>
@@ -170,10 +161,6 @@ export default function DashboardPage() {
                 <Link href="/storage" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <FolderOpen className="h-6 w-6 text-blue-500" />
                   <span className="text-xs text-muted-foreground">{t('myStorage')}</span>
-                </Link>
-                <Link href="/openclaw" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                  <Bot className="h-6 w-6 text-violet-500" />
-                  <span className="text-xs text-muted-foreground">{t('openClaw')}</span>
                 </Link>
                 <Link href="/market/list" className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <Store className="h-6 w-6 text-emerald-500" />

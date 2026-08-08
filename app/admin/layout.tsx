@@ -31,6 +31,7 @@ import {
   Database,
   Globe,
   CircleDollarSign,
+  Layers,
   ClipboardList,
   Store,
   Bell,
@@ -82,6 +83,7 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/nodes', label: '节点管理', icon: HardDrive },
       { href: '/admin/namespaces', label: '命名空间', icon: FolderTree },
       { href: '/admin/storage', label: '存储管理', icon: Database },
+      { href: '/admin/images', label: '镜像管理', icon: Image },
       { href: '/admin/services', label: '服务管理', icon: Network },
       { href: '/admin/workloads', label: '工作负载', icon: Box },
       { href: '/admin/configmaps', label: '配置管理', icon: FileCode },
@@ -96,7 +98,7 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/market', label: '算力市场', icon: Store },
       { href: '/admin/ai-apps', label: 'AI应用', icon: AppWindow },
       { href: '/admin/ai-servers', label: 'AI服务器', icon: MonitorCog },
-      { href: '/admin/images', label: '镜像管理', icon: Image },
+      { href: '/admin/spec-pricing', label: '规格定价', icon: Layers },
       { href: '/admin/public-data', label: '公开数据', icon: Globe },
     ],
   },
@@ -397,6 +399,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   修改密码
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/" className="cursor-pointer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    返回用户控制台
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500">
                   <LogOut className="h-4 w-4 mr-2" />
                   退出登录

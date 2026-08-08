@@ -139,6 +139,7 @@ export default function InstanceDetailPage() {
       stopping: { label: '停止中', variant: 'warning', dotClass: 'bg-amber-500' },
       releasing: { label: '删除中', variant: 'warning', dotClass: 'bg-amber-500' },
       released: { label: '已删除', variant: 'secondary', dotClass: 'bg-gray-400' },
+      node_offline: { label: '节点离线', variant: 'warning', dotClass: 'bg-orange-500' },
       error: { label: '异常', variant: 'destructive', dotClass: 'bg-red-500' },
     }
     const { label, variant, dotClass } = config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }

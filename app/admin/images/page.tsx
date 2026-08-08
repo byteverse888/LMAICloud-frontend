@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Search, MoreHorizontal, Edit, Trash2, Plus, Loader2, RefreshCw, Image as ImageIcon } from 'lucide-react'
+import { Search, MoreHorizontal, Edit, Trash2, Plus, Loader2, RefreshCw, Image as ImageIcon, Download } from 'lucide-react'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -24,6 +24,7 @@ interface AppImage {
   icon: string
   image_url: string
   size_gb: number
+  min_cuda_version?: string | null
   config: any
   status: string
   is_public: boolean
@@ -38,6 +39,21 @@ const CATEGORIES = [
   { value: 'openclaw', label: '智能体' },
 ]
 
+// CUDA 最小版本可选项（支持下拉选择，也支持手动输入任意版本，留空表示不限制）
+const CUDA_OPTIONS = [
+  { value: '11.8', label: 'CUDA ≥ 11.8' },
+  { value: '12.1', label: 'CUDA ≥ 12.1' },
+  { value: '12.2', label: 'CUDA ≥ 12.2' },
+  { value: '12.4', label: 'CUDA ≥ 12.4' },
+  { value: '12.6', label: 'CUDA ≥ 12.6' },
+  { value: '12.8', label: 'CUDA ≥ 12.8' },
+  { value: '13.0', label: 'CUDA ≥ 13.0' },
+  { value: '13.2.0', label: 'CUDA ≥ 13.2.0' },
+]
+
+// CUDA 版本号格式：major / major.minor / major.minor.patch
+const CUDA_VERSION_PATTERN = /^\d+(\.\d+){0,2}$/
+
 export default function ImagesPage() {
   const [images, setImages] = useState<AppImage[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +66,7 @@ export default function ImagesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingImage, setEditingImage] = useState<AppImage | null>(null)
   const [saving, setSaving] = useState(false)
+  const [fetchingSize, setFetchingSize] = useState(false)
   
   // 表单数据
   const [formData, setFormData] = useState({
@@ -60,6 +77,7 @@ export default function ImagesPage() {
     icon: '',
     image_url: '',
     size_gb: 0,
+    min_cuda_version: '',
     config: '',
     is_public: true,
     sort_order: 0,
@@ -97,6 +115,7 @@ export default function ImagesPage() {
       icon: '',
       image_url: '',
       size_gb: 0,
+      min_cuda_version: '',
       config: '{}',
       is_public: true,
       sort_order: 0,
@@ -114,6 +133,7 @@ export default function ImagesPage() {
       icon: image.icon || '',
       image_url: image.image_url || '',
       size_gb: image.size_gb || 0,
+      min_cuda_version: image.min_cuda_version || '',
       config: image.config ? JSON.stringify(image.config, null, 2) : '{}',
       is_public: image.is_public,
       sort_order: image.sort_order || 0,
@@ -121,9 +141,38 @@ export default function ImagesPage() {
     setDialogOpen(true)
   }
 
+  // 从 registry 自动获取镜像大小（同时后端会建议 CUDA 版本，仅在未选时自动填入）
+  const handleFetchSize = async () => {
+    const url = formData.image_url.trim()
+    if (!url) {
+      toast.error('请先填写 Docker 镜像地址')
+      return
+    }
+    try {
+      setFetchingSize(true)
+      const { data } = await api.get<{ size_gb: number; suggested_min_cuda_version?: string | null }>(
+        '/admin/images/inspect', { image_url: url }
+      )
+      setFormData(prev => ({
+        ...prev,
+        size_gb: data.size_gb,
+        min_cuda_version: prev.min_cuda_version || (data.suggested_min_cuda_version ?? ''),
+      }))
+      toast.success(`镜像大小（压缩体积）: ${data.size_gb} GB`)
+    } catch (err) {
+      toast.error('获取镜像大小失败，请检查镜像地址是否可匿名访问')
+    } finally {
+      setFetchingSize(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!formData.name || !formData.tag) {
       toast.error('请填写镜像名称和标签')
+      return
+    }
+    if (formData.min_cuda_version && !CUDA_VERSION_PATTERN.test(formData.min_cuda_version)) {
+      toast.error('CUDA版本格式错误，如 12.1 或 13.2.0')
       return
     }
 
@@ -140,6 +189,7 @@ export default function ImagesPage() {
       const payload = {
         ...formData,
         config: configObj,
+        min_cuda_version: formData.min_cuda_version || null,  // 空字符串转为 null（不限制）
       }
 
       if (editingImage) {
@@ -238,7 +288,8 @@ export default function ImagesPage() {
                 <TableHead>镜像名称</TableHead>
                 <TableHead>分类</TableHead>
                 <TableHead>标签</TableHead>
-                <TableHead>大小</TableHead>
+                <TableHead>大小(压缩)</TableHead>
+                <TableHead>CUDA要求</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>创建时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -247,13 +298,13 @@ export default function ImagesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center">
+                  <TableCell colSpan={8} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : images.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     暂无数据
                   </TableCell>
                 </TableRow>
@@ -282,6 +333,7 @@ export default function ImagesPage() {
                     </TableCell>
                     <TableCell>{image.tag}</TableCell>
                     <TableCell>{image.size_gb > 0 ? `${image.size_gb} GB` : '-'}</TableCell>
+                    <TableCell>{image.min_cuda_version ? <Badge variant="outline">≥ {image.min_cuda_version}</Badge> : <span className="text-muted-foreground">不限</span>}</TableCell>
                     <TableCell>{getStatusBadge(image.status)}</TableCell>
                     <TableCell>{image.created_at}</TableCell>
                     <TableCell className="text-right">
@@ -335,7 +387,7 @@ export default function ImagesPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>分类</Label>
                 <Select value={formData.category} onValueChange={(v) => setFormData(prev => ({ ...prev, category: v }))}>
@@ -348,21 +400,44 @@ export default function ImagesPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>镜像大小(GB)</Label>
+                <Label>镜像大小(GB·压缩体积)</Label>
                 <Input 
                   type="number" 
                   value={formData.size_gb} 
                   onChange={(e) => setFormData(prev => ({ ...prev, size_gb: Number(e.target.value) }))} 
+                  placeholder="留空则自动获取"
                 />
+                <p className="text-xs text-muted-foreground">探测值为压缩后下载体积，解压后磁盘占用更大（约 2 倍）</p>
+              </div>
+              <div className="space-y-2">
+                <Label>最小CUDA版本</Label>
+                <Input
+                  value={formData.min_cuda_version}
+                  onChange={(e) => setFormData(prev => ({ ...prev, min_cuda_version: e.target.value.trim() }))}
+                  placeholder="不限制，如 12.1"
+                  list="cuda-version-options"
+                />
+                <datalist id="cuda-version-options">
+                  {CUDA_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </datalist>
               </div>
             </div>
             <div className="space-y-2">
               <Label>Docker镜像地址</Label>
-              <Input 
-                value={formData.image_url} 
-                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))} 
-                placeholder="如 pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime"
-              />
+              <div className="flex gap-2">
+                <Input 
+                  value={formData.image_url} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))} 
+                  placeholder="如 pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime"
+                />
+                <Button type="button" variant="outline" onClick={handleFetchSize} disabled={fetchingSize} className="shrink-0">
+                  {fetchingSize ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+                  获取大小
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">大小留空时保存会自动从镜像仓库探测；“获取大小”同时会根据 tag 建议 CUDA 版本。探测值为压缩体积，小于仓库页面显示的解压后大小</p>
             </div>
             <div className="space-y-2">
               <Label>图标URL</Label>

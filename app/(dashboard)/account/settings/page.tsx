@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import toast from 'react-hot-toast'
 
-const SETTINGS_KEY = 'lmaicloud_user_settings'
+const SETTINGS_KEY = 'gpucloud_user_settings'
 
 interface UserSettings {
   emailNotify: boolean

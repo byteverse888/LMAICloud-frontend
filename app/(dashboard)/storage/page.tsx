@@ -441,9 +441,10 @@ export default function StoragePage() {
               </Button>
             </div>
             <div className="space-y-2 text-xs text-muted-foreground">
-              <p>在计算节点执行以下命令下载:</p>
+              <p>在计算节点执行以下命令下载（链接中的 $HOST_IP 由平台自动注入为节点 IP，无需替换）:</p>
+              {/* --timeout=0: 禁用超时限制，防止大文件下载中途被判超时中断 */}
               <code className="block bg-muted px-2 py-1.5 rounded font-mono break-all">
-                wget -O &quot;{linkDialog.filename}&quot; &quot;{linkDialog.url}&quot;
+                wget --timeout=0 -O &quot;{linkDialog.filename}&quot; &quot;{linkDialog.url}&quot;
               </code>
               <code className="block bg-muted px-2 py-1.5 rounded font-mono break-all">
                 curl -o &quot;{linkDialog.filename}&quot; &quot;{linkDialog.url}&quot;

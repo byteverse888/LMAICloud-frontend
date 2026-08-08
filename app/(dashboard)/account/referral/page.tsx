@@ -46,7 +46,10 @@ export default function ReferralPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">已邀请人数</p>
-                <p className="text-2xl font-bold mt-1">{info?.invited_count || 0}</p>
+                <p className="text-2xl font-bold mt-1">
+                  {info?.invited_count || 0}
+                  {info?.max_invites ? <span className="text-sm font-normal text-muted-foreground"> / {info.max_invites}</span> : null}
+                </p>
               </div>
               <Users className="h-8 w-8 text-green-500" />
             </div>
@@ -88,7 +91,10 @@ export default function ReferralPage() {
               复制链接
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">分享此链接给好友，好友注册并激活邮箱后您将获得 50 积分奖励</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            分享此链接给好友，好友注册并激活邮箱后您将获得 {info?.points_per_invite || 50} 积分奖励
+            {info?.max_invites ? `（每人最多邀请 ${info.max_invites} 人）` : ''}
+          </p>
         </CardContent>
       </Card>
 

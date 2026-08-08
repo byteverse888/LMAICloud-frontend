@@ -174,7 +174,9 @@ class ApiClient {
       return { data, code: 0 }
     } catch (error) {
       const message = error instanceof Error ? error.message : '网络错误'
-      toast.error(message)
+      // 固定 id：同一条错误消息在 api 层与页面 catch 重复 toast 时只更新同一条，
+      // 避免同一报错（如无可调度节点）弹出两次
+      toast.error(message, { id: `api-error:${message}` })
       throw error
     }
   }

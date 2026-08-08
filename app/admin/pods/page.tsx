@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Progress } from '@/components/ui/progress'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -18,7 +19,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { Search, RefreshCw, Trash2, Loader2, Container, Eye, FileText, Terminal as TerminalIcon, Cpu, MemoryStick } from 'lucide-react'
+import { Search, RefreshCw, Trash2, Loader2, Container, Eye, FileText, Terminal as TerminalIcon, Cpu, MemoryStick, Eraser } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -113,6 +114,38 @@ export default function PodsPage() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [batchDeleting, setBatchDeleting] = useState(false)
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false)
+
+  // 一键清除 Terminating Pod（前端逐个驱动：真实进度条 + 支持取消）
+  const [clearConfirm, setClearConfirm] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [clearProgress, setClearProgress] = useState({ done: 0, total: 0, failed: 0 })
+  const [cancelRequested, setCancelRequested] = useState(false)
+  const clearCancelRef = useRef(false)
+  const terminatingPods = pods.filter((p: any) => p.is_terminating || p.effective_status === 'Terminating')
+  const terminatingCount = terminatingPods.length
+  const handleClearTerminating = async () => {
+    if (terminatingCount === 0) { toast.success('没有需要清除的 Terminating Pod'); setClearConfirm(false); return }
+    setClearing(true)
+    clearCancelRef.current = false
+    setCancelRequested(false)
+    setClearProgress({ done: 0, total: terminatingCount, failed: 0 })
+    let done = 0, failed = 0, cancelled = false
+    for (const p of terminatingPods) {
+      if (clearCancelRef.current) { cancelled = true; break }
+      try {
+        // 单删接口自动识别 Terminating 并转强制删除（grace period=0）
+        await api.delete(`/admin/pods/${p.namespace}/${p.name}`)
+      } catch { failed++ }
+      done++
+      setClearProgress({ done, total: terminatingCount, failed })
+    }
+    setClearing(false)
+    setClearConfirm(false)
+    if (cancelled) toast(`已取消清除：已删除 ${done - failed} 个，剩余 ${terminatingCount - done} 个未处理`, { icon: '⚠️' })
+    else if (failed > 0) toast.error(`清除完成：${done - failed} 成功，${failed} 失败`)
+    else toast.success(`已清除 ${done} 个 Terminating Pod`)
+    refresh()
+  }
 
   // 仅当前页多选（不跨页，切换页面/筛选自动清空）
   const pageKeys = pagedPods.map((p: any) => `${p.namespace}/${p.name}`)
@@ -227,9 +260,16 @@ export default function PodsPage() {
           <h1 className="text-2xl font-bold">容器管理</h1>
           <p className="text-muted-foreground text-sm mt-1">管理 Kubernetes Pod 资源</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refresh}>
-          <RefreshCw className="h-4 w-4 mr-2" /> 刷新
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50"
+            onClick={() => setClearConfirm(true)} disabled={terminatingCount === 0}>
+            <Eraser className="h-4 w-4 mr-2" /> 清除 Terminating
+            {terminatingCount > 0 && <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">{terminatingCount}</Badge>}
+          </Button>
+          <Button variant="outline" size="sm" onClick={refresh}>
+            <RefreshCw className="h-4 w-4 mr-2" /> 刷新
+          </Button>
+        </div>
       </div>
 
       {/* 过滤栏 */}
@@ -597,6 +637,47 @@ export default function PodsPage() {
               {batchDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               确认批量删除
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 一键清除 Terminating 确认（清除期间对话框常驻、显示进度、支持取消） */}
+      <AlertDialog open={clearConfirm} onOpenChange={(open) => { if (!clearing) setClearConfirm(open) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>清除 Terminating Pod</AlertDialogTitle>
+            <AlertDialogDescription>
+              {clearing ? (
+                <>正在逐个强制删除 Terminating Pod，请勿关闭窗口。</>
+              ) : (
+                <>
+                  将强制删除全部命名空间中 <strong>{terminatingCount}</strong> 个处于 Terminating 状态的 Pod（grace period=0，不可恢复）。
+                  通常用于边缘节点掉线后 Pod 卡在删除中的场景。
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {clearing && (
+            <div className="space-y-2 py-1">
+              <Progress value={clearProgress.total ? (clearProgress.done / clearProgress.total) * 100 : 0} />
+              <p className="text-xs text-muted-foreground">
+                已完成 {clearProgress.done}/{clearProgress.total}
+                {clearProgress.failed > 0 && `，失败 ${clearProgress.failed}`}
+                {cancelRequested && '，正在取消...'}
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            {clearing ? (
+              <Button variant="outline" disabled={cancelRequested} onClick={() => { clearCancelRef.current = true; setCancelRequested(true) }}>
+                {cancelRequested ? '正在取消...' : '取消'}
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setClearConfirm(false)}>取消</Button>
+                <Button onClick={handleClearTerminating} className="bg-orange-600 hover:bg-orange-700">确认清除</Button>
+              </>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

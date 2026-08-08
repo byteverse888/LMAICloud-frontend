@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, LogOut, Copy, ChevronDown, CalendarCheck, Loader2 } from 'lucide-react'
+import { User, LogOut, Copy, ChevronDown, CalendarCheck, Loader2, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -156,6 +156,22 @@ export function UserNav() {
         </div>
 
         <DropdownMenuSeparator />
+
+        {/* 管理端入口：仅 admin 用户可见 */}
+        {user.role === 'admin' && (
+          <>
+            <div className="px-3 py-2">
+              <Link
+                href="/admin"
+                className="w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                进入管理控制台
+              </Link>
+            </div>
+            <DropdownMenuSeparator />
+          </>
+        )}
 
         {/* 退出登录 */}
         <DropdownMenuItem onClick={() => logout()} className="text-muted-foreground cursor-pointer justify-center">

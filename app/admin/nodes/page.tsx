@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, MoreHorizontal, Edit, Trash2, Power, RefreshCw, Loader2, Server, Cloud, HardDrive } from 'lucide-react'
-import { useAdminNodes, useDeleteAdminNode } from '@/hooks/use-api'
+import { useAdminNodes, useDeleteAdminNode, useToggleNodeMaintenance, type AdminNode } from '@/hooks/use-api'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import { toast } from 'react-hot-toast'
 
@@ -21,12 +22,15 @@ export default function NodesPage() {
   const [nodeTypeTab, setNodeTypeTab] = useState<'all' | 'edge' | 'cloud'>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false)
+  const [nodeToMaintain, setNodeToMaintain] = useState<AdminNode | null>(null)
   const [gpuModelFilter, setGpuModelFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   
   const { nodes, loading, total, refresh } = useAdminNodes()
   const { deleteNode, loading: deleteLoading } = useDeleteAdminNode()
+  const { toggle: toggleMaintenance } = useToggleNodeMaintenance()
   
   // 前端tab值 cloud 对应后端 node_type 值 center
   const nodeTypeMap: Record<string, string> = { all: 'all', edge: 'edge', cloud: 'center' }
@@ -59,6 +63,26 @@ export default function NodesPage() {
     setNodeToDelete(node)
     setDeleteDialogOpen(true)
   }
+
+  // 维护模式：先弹二次确认，确认后 cordon/uncordon（不再接受新调度，存量 Pod 不受影响）
+  const handleMaintenanceClick = (node: AdminNode) => {
+    setNodeToMaintain(node)
+    setMaintenanceDialogOpen(true)
+  }
+
+  const handleMaintenanceConfirm = async () => {
+    if (!nodeToMaintain) return
+    const enable = !nodeToMaintain.unschedulable
+    try {
+      await toggleMaintenance(nodeToMaintain.name, enable)
+      toast.success(enable ? `节点 ${nodeToMaintain.name} 已进入维护模式` : `节点 ${nodeToMaintain.name} 已恢复调度`)
+      setMaintenanceDialogOpen(false)
+      setNodeToMaintain(null)
+      refresh()
+    } catch {
+      toast.error('操作失败，请重试')
+    }
+  }
   
   const handleDeleteConfirm = async () => {
     if (!nodeToDelete) return
@@ -74,18 +98,41 @@ export default function NodesPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (node: AdminNode) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string }> = {
       online: { label: '在线', variant: 'success', dotClass: 'bg-emerald-500' },
       offline: { label: '离线', variant: 'secondary', dotClass: 'bg-gray-400' },
       busy: { label: '满载', variant: 'warning', dotClass: 'bg-amber-500' },
     }
-    const { label, variant, dotClass } = config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
+    const { label, variant, dotClass } = config[node.status] || { label: node.status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
+    // 在线时长数据由 incentive 采集写回节点标签（主要是边缘节点），无数据时悬停提示暂无
+    const contHours = node.continuous_online_hours ?? 0
+    const totalHours = node.total_online_hours ?? 0
+    const hasOnlineData = contHours > 0 || totalHours > 0
     return (
-      <Badge variant={variant} className="gap-1.5">
-        <span className={`h-1.5 w-1.5 rounded-full ${dotClass} ${status === 'online' ? 'animate-pulse' : ''}`} />
-        {label}
-      </Badge>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant={variant} className="gap-1.5 cursor-default">
+              <span className={`h-1.5 w-1.5 rounded-full ${dotClass} ${node.status === 'online' ? 'animate-pulse' : ''}`} />
+              {label}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {hasOnlineData ? (
+              <div className="space-y-0.5 text-xs">
+                <p>连续在线：{contHours.toFixed(1)} 小时</p>
+                <p>总在线：{totalHours.toFixed(1)} 小时</p>
+                {node.stability_tier === 'premium' && (
+                  <p className="text-emerald-500">优质节点（积分加成 + 优先调度）</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">暂无在线时长数据（等待 incentive 采集写回）</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     )
   }
 
@@ -230,18 +277,32 @@ export default function NodesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={node.node_type === 'edge' ? 'outline' : 'secondary'} className="gap-1">
-                      {node.node_type === 'edge' ? (
-                        <><HardDrive className="h-3 w-3" /> 边缘</>
-                      ) : (
-                        <><Cloud className="h-3 w-3" /> 云端</>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={node.node_type === 'edge' ? 'outline' : 'secondary'} className="gap-1">
+                        {node.node_type === 'edge' ? (
+                          <><HardDrive className="h-3 w-3" /> 边缘</>
+                        ) : (
+                          <><Cloud className="h-3 w-3" /> 云端</>
+                        )}
+                      </Badge>
+                      {node.unschedulable && (
+                        <Badge variant="warning" className="gap-1" title="维护中：不再接受新实例调度">
+                          <Power className="h-3 w-3" /> 维护中
+                        </Badge>
                       )}
-                    </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <span className="px-2 py-1 rounded-md bg-muted/50 text-sm">{node.cluster}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="px-2 py-1 rounded-md bg-muted/50 text-sm w-fit">{node.cluster}</span>
+                      {node.ip_address && (
+                        <span className="text-xs text-muted-foreground font-mono" title="节点内网 IP">
+                          {node.ip_address}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
-                  <TableCell>{getStatusBadge(node.status)}</TableCell>
+                  <TableCell>{getStatusBadge(node)}</TableCell>
                   <TableCell>
                     {(node.gpu_count > 0 || (node.gpu_model && node.gpu_model !== 'N/A' && node.gpu_model !== 'Unknown GPU')) ? (
                       <div className="flex flex-col gap-0.5" title={node.gpu_model?.replace(/-/g, ' ') || ''}>
@@ -249,6 +310,11 @@ export default function NodesPage() {
                         {node.gpu_count > 0 && node.status !== 'offline' && (
                           <span className="text-xs text-muted-foreground">
                             <span className="text-emerald-500 font-medium">{node.gpu_available}</span>/{node.gpu_count} 可用
+                          </span>
+                        )}
+                        {node.cuda_version && (
+                          <span className="text-xs text-muted-foreground">
+                            CUDA {node.cuda_version}{node.driver_version ? ` · 驱动 ${node.driver_version}` : ''}
                           </span>
                         )}
                       </div>
@@ -308,7 +374,10 @@ export default function NodesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />编辑</DropdownMenuItem>
-                        <DropdownMenuItem><Power className="h-4 w-4 mr-2" />维护模式</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleMaintenanceClick(node)}>
+                          <Power className="h-4 w-4 mr-2" />
+                          {node.unschedulable ? '退出维护模式' : '维护模式'}
+                        </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={() => handleDeleteClick({ id: node.id, name: node.name })}
@@ -350,6 +419,35 @@ export default function NodesPage() {
             >
               {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* 维护模式二次确认弹窗 */}
+      <AlertDialog open={maintenanceDialogOpen} onOpenChange={setMaintenanceDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {nodeToMaintain?.unschedulable ? '确认退出维护模式' : '确认进入维护模式'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {nodeToMaintain?.unschedulable ? (
+                <>
+                  节点 <span className="font-medium text-foreground">{nodeToMaintain?.name}</span> 将恢复接受新实例调度。
+                </>
+              ) : (
+                <>
+                  您确定要将节点 <span className="font-medium text-foreground">{nodeToMaintain?.name}</span> 设为维护模式吗？
+                  <br />
+                  该节点将不再接受新实例调度（存量实例不受影响），直到手动退出维护。
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMaintenanceConfirm}>
+              {nodeToMaintain?.unschedulable ? '确认退出维护' : '确认进入维护'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

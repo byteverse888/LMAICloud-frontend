@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
-import { Loader2, Mail, Lock, Shield, Cpu, Server, Zap } from 'lucide-react'
+import { Loader2, Mail, Lock, Shield, Cpu, Server, Zap, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [countdown, setCountdown] = useState(0)
-  const { login, checkAuth } = useAuthStore()
+  const { login, checkAuth, setToken, setRefreshToken } = useAuthStore()
   const [captchaId, setCaptchaId] = useState('')
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaImage, setCaptchaImage] = useState('')
@@ -38,19 +38,27 @@ export default function LoginPage() {
   const [icpNumber, setIcpNumber] = useState('')
   const [icpLink, setIcpLink] = useState('https://beian.miit.gov.cn/')
 
-  // 获取验证码
-  const fetchCaptcha = async () => {
+  // 获取验证码（失败自动重试一次，避免瞬时故障导致验证码槽位空白）
+  const fetchCaptcha = async (retry = 0) => {
     try {
       const { data } = await api.get<{ captcha_id: string; image_base64: string; enabled: boolean }>('/auth/captcha')
       if (data.enabled === false) {
         setCaptchaEnabled(false)
         return
       }
+      if (!data.captcha_id || !data.image_base64) {
+        throw new Error('验证码响应异常')
+      }
       setCaptchaId(data.captcha_id)
       setCaptchaImage(data.image_base64)
       setCaptchaCode('')
-    } catch {
-      // 验证码不可用，忽略
+    } catch (error) {
+      console.error('验证码加载失败:', error)
+      if (retry < 1) {
+        setTimeout(() => fetchCaptcha(retry + 1), 1500)
+      } else {
+        toast.error('验证码加载失败，请点击上方按钮刷新')
+      }
     }
   }
 
@@ -139,14 +147,23 @@ export default function LoginPage() {
           throw new Error(data.detail || '登录失败')
         }
         const data = await response.json()
-        // 保存token
+        // 保存 token 到 store（含 api client），而非裸 localStorage：
+        // 否则 checkAuth 拿不到 token，会话处于未登录态，角色跳转也失效
         if (data.token) {
-          localStorage.setItem('token', data.token)
+          setToken(data.token)
+          if (data.refresh_token) setRefreshToken(data.refresh_token)
         }
+        // 验证码登录同样需要拉取用户信息，否则无法按角色决定跳转目标
+        await checkAuth()
       }
       toast.success('登录成功')
-      // 跳转到redirect参数指定的页面，默认首页
-      router.push(redirectUrl)
+      // 管理员一律进入管理控制台（redirect 指向 admin 子页时跟随参数）；普通用户跳 redirect 指定页面，默认首页
+      const loggedInUser = useAuthStore.getState().user
+      const isAdmin = loggedInUser?.role === 'admin'
+      const target = isAdmin
+        ? (redirectUrl.startsWith('/admin') ? redirectUrl : '/admin')
+        : redirectUrl
+      router.push(target)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '登录失败，请检查账号信息')
       if (captchaEnabled) fetchCaptcha()
@@ -177,7 +194,7 @@ export default function LoginPage() {
         <div className="relative z-10 space-y-8">
           <div>
             <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-md">开启您的 AI 算力之旅</h1>
-            <p className="text-white/90 text-lg drop-shadow-sm">专业的 GPU 云计算平台，让 AI 训练更简单</p>
+            <p className="text-white/90 text-lg drop-shadow-sm">分布式闲置算力，价格优惠，让 AI 算力人人可得</p>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -189,17 +206,17 @@ export default function LoginPage() {
             <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
               <Zap className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
               <div className="text-white font-semibold text-sm">弹性伸缩</div>
-              <div className="text-white/80 text-xs mt-1">按需付费，秒级计费</div>
+              <div className="text-white/80 text-xs mt-1">按需付费，小时级计费</div>
             </div>
             <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
               <Server className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
               <div className="text-white font-semibold text-sm">稳定可靠</div>
-              <div className="text-white/80 text-xs mt-1">99.9% 服务可用性</div>
+              <div className="text-white/80 text-xs mt-1">99% 服务可用性</div>
             </div>
             <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-sm">
-              <Shield className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
-              <div className="text-white font-semibold text-sm">安全可信</div>
-              <div className="text-white/80 text-xs mt-1">数据加密，隔离保护</div>
+              <Users className="h-7 w-7 text-white mb-3 drop-shadow-sm" />
+              <div className="text-white font-semibold text-sm">算力共享</div>
+              <div className="text-white/80 text-xs mt-1">汇聚全网闲置 GPU，低价共享</div>
             </div>
           </div>
         </div>
@@ -325,11 +342,11 @@ export default function LoginPage() {
                           src={captchaImage}
                           alt="验证码"
                           className="h-11 w-28 rounded-md border cursor-pointer bg-white object-contain"
-                          onClick={fetchCaptcha}
+                          onClick={() => fetchCaptcha()}
                           title="点击刷新验证码"
                         />
                       ) : (
-                        <Button type="button" variant="outline" className="h-11 w-28" onClick={fetchCaptcha}>
+                        <Button type="button" variant="outline" className="h-11 w-28" onClick={() => fetchCaptcha()}>
                           获取验证码
                         </Button>
                       )}

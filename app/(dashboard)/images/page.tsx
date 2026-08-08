@@ -24,7 +24,7 @@ const categoryOptions = [
   { value: 'base', label: '基础镜像' },
   { value: 'framework', label: 'AI框架' },
   { value: 'app', label: '应用镜像' },
-  { value: 'openclaw', label: '智能体' },
+  // 智能体（openclaw）分类随功能屏蔽暂时隐藏，恢复时还原（见 TODO.md）
 ]
 
 const categoryLabelMap: Record<string, string> = {
@@ -41,8 +41,10 @@ export default function ImagesPage() {
   const [categoryFilter, setCategoryFilter] = useState('__all__')
   const { images, loading, refresh } = useImages(categoryFilter === '__all__' ? undefined : categoryFilter)
 
-  // 扩展镜像数据
-  const displayImages = images.map(img => ({
+  // 扩展镜像数据（openclaw 分类镜像随功能屏蔽一并隐藏，避免点部署跳到已重定向的创建页）
+  const displayImages = images
+    .filter(img => (img.category || img.type) !== 'openclaw')
+    .map(img => ({
     ...img,
     displayName: img.name,
     version: img.tag,

@@ -1,5 +1,5 @@
 {
-  "name": "lmaicloud-frontend",
+  "name": "gpucloud-frontend",
   "version": "1.0.0",
   "description": "大模型AI云平台",
   "main": "index.js",
@@ -11,15 +11,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/byteverse888/LMAICloud-frontend.git"
+    "url": "git+https://github.com/byteverse888/GPUCloud-frontend.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/byteverse888/LMAICloud-frontend/issues"
+    "url": "https://github.com/byteverse888/GPUCloud-frontend/issues"
   },
-  "homepage": "https://github.com/byteverse888/LMAICloud-frontend#readme",
+  "homepage": "https://github.com/byteverse888/GPUCloud-frontend#readme",
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",

@@ -1,8 +1,10 @@
+// @ts-nocheck
+// 龙虾实例功能暂时屏蔽（恢复时删除 @ts-nocheck 与组件顶部 redirect，见 TODO.md）
 'use client'
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import {
   RefreshCw, Plus, Search, MoreHorizontal,
@@ -85,6 +87,8 @@ const getBillingBadge = (billingType?: string) => {
 }
 
 export default function OpenClawPage() {
+  // 龙虾实例功能暂时屏蔽：直接重定向回实例列表（恢复时删除本行，见 TODO.md）
+  redirect('/instances')
   const router = useRouter()
   const { instances, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance, forceDeleteInstance } = useOpenClawInstances()
   const { token } = useAuthStore()

@@ -92,6 +92,7 @@ export interface Image {
   category?: string
   description?: string
   image_url?: string
+  min_cuda_version?: string
   created_at: string
 }
 
@@ -406,8 +407,12 @@ export function useCurrentUser() {
 export interface AdminNode {
   id: string; name: string; cluster: string; status: 'online' | 'offline' | 'busy'
   node_type: 'edge' | 'center'; gpu_model: string; gpu_count: number; gpu_available: number; gpu_memory?: number
+  cuda_version?: string; driver_version?: string
+  continuous_online_hours?: number; total_online_hours?: number; stability_tier?: string
   cpu_cores: number; memory: number; hourly_price: number; created_at: string
   cpu_usage_percent?: number; memory_usage_percent?: number; gpu_usage_percent?: number
+  unschedulable?: boolean
+  ip_address?: string
 }
 
 export function useAdminNodes() {
@@ -426,6 +431,15 @@ export function useDeleteAdminNode() {
   const [loading, setLoading] = useState(false)
   const deleteNode = async (nodeName: string) => { try { setLoading(true); await api.delete(`/admin/nodes/${nodeName}`) } finally { setLoading(false) } }
   return { deleteNode, loading }
+}
+
+export function useToggleNodeMaintenance() {
+  const [loading, setLoading] = useState(false)
+  const toggle = async (nodeName: string, enable: boolean) => {
+    try { setLoading(true); await api.put(`/admin/nodes/${nodeName}/${enable ? 'cordon' : 'uncordon'}`) }
+    finally { setLoading(false) }
+  }
+  return { toggle, loading }
 }
 
 export interface AdminUser {

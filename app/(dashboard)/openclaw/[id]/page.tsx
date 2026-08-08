@@ -1,7 +1,9 @@
+// @ts-nocheck
+// 龙虾实例功能暂时屏蔽（恢复时删除 @ts-nocheck 与组件顶部 redirect，见 TODO.md）
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -73,6 +75,8 @@ const getStatusBadge = (status: string) => {
 }
 
 export default function OpenClawDetailPage() {
+  // 龙虾实例功能暂时屏蔽：直接重定向回实例列表（恢复时删除本行，见 TODO.md）
+  redirect('/instances')
   const params = useParams()
   const router = useRouter()
   const instanceId = params.id as string
