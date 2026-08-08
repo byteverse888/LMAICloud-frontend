@@ -383,7 +383,7 @@ export default function InstancesPage() {
       {/* 欠费警告 */}
       <div className="flex items-center gap-2.5 text-sm py-2.5 px-4 rounded-lg border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400">
         <AlertTriangle className="h-4 w-4 shrink-0" />
-        <span>欠费的实例会关机并释放系统盘，10天后删除实例。请及时充值以避免数据丢失。</span>
+        <span>欠费超过 10 元的实例将被强制关机，关机后 10 天内未充值将自动释放实例（数据不再保留）。请及时充值以免影响使用。</span>
       </div>
 
       {/* 工具栏 */}

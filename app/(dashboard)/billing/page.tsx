@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { CreditCard, Wallet, Loader2, Sparkles, RefreshCw, QrCode, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import { CreditCard, Wallet, Loader2, Sparkles, RefreshCw, QrCode, CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { QRCodeSVG } from 'qrcode.react'
 
@@ -256,7 +256,7 @@ export default function BillingPage() {
         </div>
 
         {/* 右侧订单确认 */}
-        <div>
+        <div className="space-y-6">
           <Card className="sticky top-20 card-clean overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium">订单确认</CardTitle>
@@ -293,6 +293,24 @@ export default function BillingPage() {
               <p className="text-xs text-center text-muted-foreground">
                 充值即表示同意<a href="/agreements/recharge" target="_blank" className="text-primary hover:underline">《用户充值协议》</a>
               </p>
+            </CardContent>
+          </Card>
+
+          {/* 计费规则速览 */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Info className="h-4 w-4 text-primary" />
+                计费规则速览
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-xs text-muted-foreground">
+                <li>• 按量实例按实际运行时长计费（秒级线性），每 15 分钟结算一次</li>
+                <li>• 仅运行中计费；停机、节点离线挂起期间不计费</li>
+                <li>• 允许欠费运行，欠费累计 ≥10 元实例将被强制关机，充值后可手动开机；关机后 10 天内未充值将自动释放实例（数据不再保留）</li>
+                <li>• 账单明细见「消费明细」页</li>
+              </ul>
             </CardContent>
           </Card>
         </div>

@@ -49,6 +49,8 @@ export default async function RootLayout({
                 error: {
                   duration: 6000,
                   className: 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 border-2 border-red-500 shadow-xl font-medium',
+                  // 长错误文案自动换行不截断（默认 maxWidth 350px 会把长文本裁掉）
+                  style: { maxWidth: 480, wordBreak: 'break-word', whiteSpace: 'pre-line' },
                   iconTheme: {
                     primary: '#ef4444',
                     secondary: '#fff',

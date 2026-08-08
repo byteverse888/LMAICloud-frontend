@@ -174,9 +174,16 @@ class ApiClient {
       return { data, code: 0 }
     } catch (error) {
       const message = error instanceof Error ? error.message : '网络错误'
+      // 完整错误只进控制台，toast 面向用户只显示可读摘要
+      console.error(`[API] ${endpoint} 请求失败:`, message)
+      // 技术性错误（SQL/堆栈/DB 异常等）对用户无可读性，替换为友好文案
+      const isTechnical = /sqlalchemy|asyncpg|traceback|\[SQL:|ProgrammingError|UndefinedColumn|Internal Server Error/i.test(message)
+      const toastMessage = isTechnical
+        ? '服务器内部错误，请稍后重试'
+        : message.length > 120 ? `${message.slice(0, 120)}…` : message
       // 固定 id：同一条错误消息在 api 层与页面 catch 重复 toast 时只更新同一条，
       // 避免同一报错（如无可调度节点）弹出两次
-      toast.error(message, { id: `api-error:${message}` })
+      toast.error(toastMessage, { id: `api-error:${toastMessage}` })
       throw error
     }
   }

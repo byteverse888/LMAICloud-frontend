@@ -303,6 +303,7 @@ export default function SettingsPage() {
                     value={settings.instance_auto_stop_hours} 
                     onChange={(e) => updateSetting('instance_auto_stop_hours', Number(e.target.value))} 
                   />
+                  <p className="text-xs text-muted-foreground">⚠️ 当前不生效：实际策略为欠费累计 ≥10 元立即强制停机，待后端接入此配置</p>
                 </div>
                 <div className="space-y-2">
                   <Label>计费间隔(分钟)</Label>
@@ -313,7 +314,7 @@ export default function SettingsPage() {
                     value={settings.billing_interval_minutes} 
                     onChange={(e) => updateSetting('billing_interval_minutes', Number(e.target.value))} 
                   />
-                  <p className="text-xs text-muted-foreground">按量计费的扣费间隔，最小5分钟，默认15分钟。扣费金额 = 时价 × (间隔/60)</p>
+                  <p className="text-xs text-muted-foreground">⚠️ 当前不生效：实际结算周期固定为每 15 分钟一次，按实际运行时长秒级线性计费，待后端接入此配置</p>
                 </div>
               </div>
               <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">

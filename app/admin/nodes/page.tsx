@@ -102,13 +102,15 @@ export default function NodesPage() {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string }> = {
       online: { label: '在线', variant: 'success', dotClass: 'bg-emerald-500' },
       offline: { label: '离线', variant: 'secondary', dotClass: 'bg-gray-400' },
-      busy: { label: '满载', variant: 'warning', dotClass: 'bg-amber-500' },
+      maintenance: { label: '维护中', variant: 'warning', dotClass: 'bg-amber-500' },
+      busy: { label: '满载', variant: 'destructive', dotClass: 'bg-red-500' },
     }
     const { label, variant, dotClass } = config[node.status] || { label: node.status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
-    // 在线时长数据由 incentive 采集写回节点标签（主要是边缘节点），无数据时悬停提示暂无
+    // 在线时长数据由 incentive 采集写回节点标签（仅 Ready 边缘节点），无标签时悬停提示暂无；
+    // 标签时长为取整值，在线不足 1 小时为 0，用 stability_tier 判断是否已采集（0 小时也会写 normal）
     const contHours = node.continuous_online_hours ?? 0
     const totalHours = node.total_online_hours ?? 0
-    const hasOnlineData = contHours > 0 || totalHours > 0
+    const hasOnlineData = contHours > 0 || totalHours > 0 || !!node.stability_tier
     return (
       <TooltipProvider delayDuration={200}>
         <Tooltip>
@@ -213,6 +215,7 @@ export default function NodesPage() {
             <SelectItem value="all">全部状态</SelectItem>
             <SelectItem value="online">在线</SelectItem>
             <SelectItem value="offline">离线</SelectItem>
+            <SelectItem value="maintenance">维护中</SelectItem>
             <SelectItem value="busy">满载</SelectItem>
           </SelectContent>
         </Select>
@@ -294,7 +297,7 @@ export default function NodesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      <span className="px-2 py-1 rounded-md bg-muted/50 text-sm w-fit">{node.cluster}</span>
+                      <span className="text-sm">{node.cluster}</span>
                       {node.ip_address && (
                         <span className="text-xs text-muted-foreground font-mono" title="节点内网 IP">
                           {node.ip_address}

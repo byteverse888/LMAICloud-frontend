@@ -10,7 +10,6 @@ import {
   DollarSign,
   TrendingUp,
   Loader2,
-  Bot,
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -32,8 +31,9 @@ export default function AdminDashboard() {
   const statCards = [
     { title: '集群 / 节点', value: `${s.clusters || 0} / ${s.nodes || 0}`, icon: Server, color: 'text-blue-500' },
     { title: '注册用户', value: (s.users || 0).toLocaleString(), icon: Users, color: 'text-purple-500' },
-    { title: 'GPU 实例', value: `${s.running_instances || 0} / ${s.instances || 0}`, subtitle: '运行/总数', icon: Cpu, color: 'text-amber-500' },
-    { title: '智能体实例', value: `${s.oc_running || 0} / ${s.oc_total || 0}`, subtitle: '运行/总数', icon: Bot, color: 'text-violet-500' },
+    { title: 'GPU 实例', value: `${s.running_gpu_instances || 0} / ${s.total_gpu_instances || 0}`, subtitle: '运行/现存(含停机)', icon: Cpu, color: 'text-amber-500' },
+    { title: '普通实例', value: `${s.running_cpu_instances || 0} / ${s.total_cpu_instances || 0}`, subtitle: '运行/现存(含停机)', icon: Cpu, color: 'text-slate-500' },
+    // 智能体实例卡片随功能屏蔽暂时隐藏，恢复时还原（oc_running/oc_total，见 TODO.md）
     { title: '今日新用户', value: (s.today_new_users || 0).toLocaleString(), icon: TrendingUp, color: 'text-green-500' },
   ]
 
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-bold">仪表盘</h1>
 
       {/* 统计卡片 */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {statCards.map((item) => {
           const Icon = item.icon
           return (

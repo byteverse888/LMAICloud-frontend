@@ -34,7 +34,7 @@ export interface Node {
   clusterId: string
   name: string
   type: 'center' | 'edge'
-  status: 'online' | 'offline' | 'busy'
+  status: 'online' | 'offline' | 'maintenance' | 'busy'
   gpuModel: string
   gpuCount: number
   gpuAvailable: number
