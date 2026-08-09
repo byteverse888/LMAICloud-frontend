@@ -41,6 +41,7 @@ import {
   AppWindow,
   FolderTree,
   FileCode,
+  ListTodo,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -87,6 +88,7 @@ const adminNavItems: NavItem[] = [
       { href: '/admin/services', label: '服务管理', icon: Network },
       { href: '/admin/workloads', label: '工作负载', icon: Box },
       { href: '/admin/configmaps', label: '配置管理', icon: FileCode },
+      { href: '/admin/jobs', label: '任务管理', icon: ListTodo },
       { href: '/admin/pods', label: '容器管理', icon: Container },
     ],
   },

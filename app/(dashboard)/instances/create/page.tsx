@@ -14,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -118,6 +119,8 @@ export default function InstanceCreatePage() {
   const [nodeTypeFilter, setNodeTypeFilter] = useState('all')
   const [selectedGpu, setSelectedGpu] = useState<GpuModelOption | null>(null)
   const [instanceCount, setInstanceCount] = useState(1)
+  const [dataDiskEnabled, setDataDiskEnabled] = useState(true)
+  const [dataDiskMountPath, setDataDiskMountPath] = useState('/root/data')
   const [storageMounts, setStorageMounts] = useState<{ name: string; mount_path: string; size_gb: number }[]>([])
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([])
   const [imageCategory, setImageCategory] = useState('app')
@@ -253,7 +256,9 @@ export default function InstanceCreatePage() {
         }
       }
       if (envVars.length > 0) payload.env_vars = envVars.filter(e => e.key)
-      if (storageMounts.length > 0) payload.storage_mounts = storageMounts.filter(s => s.name)
+      if (storageMounts.length > 0) payload.storage_mounts = storageMounts.filter(s => s.name).map(s => ({ ...s, persistent: true }))
+      payload.data_disk_enabled = dataDiskEnabled
+      payload.data_disk_mount_path = dataDiskMountPath.trim() || '/root/data'
       await api.post<{ id: string }>('/instances', payload)
       toast.success('实例创建中，请稍候...')
       router.push('/instances')
@@ -474,8 +479,9 @@ export default function InstanceCreatePage() {
                     边缘节点来自贡献者的闲置算力，稳定性低于中心节点
                   </div>
                   <ul className="list-disc pl-5 space-y-0.5">
-                    <li>节点可能随时休眠/掉线且无法预知；离线后实例自动挂起（离线期间不计费），节点恢复后自动拉起</li>
-                    <li>离线超过 5 分钟，实例内数据将被清空不保留</li>
+                    <li>节点可能随时休眠/掉线且无法预知；边缘节点如果离线超过 5 分钟，容器实例会被自动关机（离线期间不计费）</li>
+                    <li>自动关机后，系统盘会被回滚，系统盘临时保存的数据将丢失，数据盘数据会被保存直到容器实例被删除</li>
+                    <li>边缘节点没有公网 IP，不能提供持久的对外 API，请勿部署需要长期对外提供服务的应用</li>
                     <li>不适合长时间训练/推理等不可中断的超长任务，适合可重跑、容忍中断的短任务</li>
                   </ul>
                 </div>
@@ -575,6 +581,57 @@ export default function InstanceCreatePage() {
           </CardContent>
         </Card>
 
+        {/* ===== 存储配置（默认区块） ===== */}
+        <Card className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
+          <CardHeader className="pb-4">
+            <SectionHeader icon={HardDrive} title="存储配置" desc="持久数据盘" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormRow label="持久数据盘">
+              <div className="flex items-center gap-2.5">
+                <Switch checked={dataDiskEnabled} onCheckedChange={setDataDiskEnabled} />
+                <span className="text-sm">{dataDiskEnabled ? '已开启' : '已关闭'}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {dataDiskEnabled
+                  ? '数据保存在节点磁盘的实例专属目录中，实例关机/重启、Pod 重建后数据不丢失（推荐开启）。'
+                  : '关闭后仅使用临时存储，实例重启后数据将丢失。'}
+              </p>
+            </FormRow>
+            {dataDiskEnabled && (
+              <FormRow label="挂载路径">
+                <Input className="max-w-xs font-mono" value={dataDiskMountPath} onChange={e => setDataDiskMountPath(e.target.value)} placeholder="/root/data" />
+                <p className="text-xs text-muted-foreground mt-1.5">持久数据盘在容器内的挂载路径，默认 /root/data。</p>
+              </FormRow>
+            )}
+
+            {/* 额外存储挂载暂时隐藏，保留代码便于后续恢复 */}
+            {false && (
+              <>
+                <Separator />
+
+                <FormRow label="额外存储挂载">
+                  <div className="space-y-2">
+                    {storageMounts.map((s, i) => (
+                      <div key={i} className="flex gap-2 items-center p-2 rounded-lg bg-muted/30 border border-dashed">
+                        <Input className="w-28 h-8 text-sm bg-background" placeholder="名称" value={s.name} onChange={e => { const arr = [...storageMounts]; arr[i].name = e.target.value; setStorageMounts(arr) }} />
+                        <Input className="w-44 h-8 text-sm bg-background font-mono" placeholder="挂载路径" value={s.mount_path} onChange={e => { const arr = [...storageMounts]; arr[i].mount_path = e.target.value; setStorageMounts(arr) }} />
+                        <Input className="w-20 h-8 text-sm bg-background text-center" type="number" placeholder="GB" value={s.size_gb} onChange={e => { const arr = [...storageMounts]; arr[i].size_gb = parseInt(e.target.value) || 0; setStorageMounts(arr) }} />
+                        <span className="text-xs text-muted-foreground">GB</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" onClick={() => setStorageMounts(storageMounts.filter((_, j) => j !== i))}><X className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" className="text-xs border-dashed" onClick={() => setStorageMounts([...storageMounts, { name: '', mount_path: '/mnt/data', size_gb: 50 }])}>
+                      <Plus className="h-3 w-3 mr-1" />添加存储挂载
+                    </Button>
+                    <p className="text-xs text-muted-foreground">额外挂载卷同样持久化保存，实例重启后数据不丢失。</p>
+                  </div>
+                </FormRow>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         {/* ===== 高级选项 ===== */}
         <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <button
@@ -583,7 +640,7 @@ export default function InstanceCreatePage() {
           >
             <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${showAdvanced ? 'rotate-90' : ''}`} />
             <span className="font-medium">高级选项</span>
-            <span className="text-xs">(安装源、启动命令、存储挂载、环境变量)</span>
+            <span className="text-xs">(安装源、启动命令、环境变量)</span>
           </button>
         </div>
         {showAdvanced && <>
@@ -621,31 +678,12 @@ export default function InstanceCreatePage() {
             </FormRow>
           </CardContent>
         </Card>
-        {/* ===== 存储与环境 ===== */}
+        {/* ===== 环境变量 ===== */}
         <Card className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <CardHeader className="pb-4">
-            <SectionHeader icon={HardDrive} title="存储与环境" desc="挂载数据卷和配置环境变量" />
+            <SectionHeader icon={Terminal} title="环境变量" desc="配置注入容器的环境变量" />
           </CardHeader>
           <CardContent className="space-y-4">
-            <FormRow label="存储与数据">
-              <div className="space-y-2">
-                {storageMounts.map((s, i) => (
-                  <div key={i} className="flex gap-2 items-center p-2 rounded-lg bg-muted/30 border border-dashed">
-                    <Input className="w-28 h-8 text-sm bg-background" placeholder="名称" value={s.name} onChange={e => { const arr = [...storageMounts]; arr[i].name = e.target.value; setStorageMounts(arr) }} />
-                    <Input className="w-44 h-8 text-sm bg-background font-mono" placeholder="挂载路径" value={s.mount_path} onChange={e => { const arr = [...storageMounts]; arr[i].mount_path = e.target.value; setStorageMounts(arr) }} />
-                    <Input className="w-20 h-8 text-sm bg-background text-center" type="number" placeholder="GB" value={s.size_gb} onChange={e => { const arr = [...storageMounts]; arr[i].size_gb = parseInt(e.target.value) || 0; setStorageMounts(arr) }} />
-                    <span className="text-xs text-muted-foreground">GB</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" onClick={() => setStorageMounts(storageMounts.filter((_, j) => j !== i))}><X className="h-3.5 w-3.5" /></Button>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="text-xs border-dashed" onClick={() => setStorageMounts([...storageMounts, { name: '', mount_path: '/mnt/data', size_gb: 50 }])}>
-                  <Plus className="h-3 w-3 mr-1" />添加存储挂载
-                </Button>
-              </div>
-            </FormRow>
-
-            <Separator />
-
             <FormRow label="环境变量">
               <div className="space-y-2">
                 {envVars.map((ev, i) => (
@@ -722,7 +760,7 @@ export default function InstanceCreatePage() {
               </ul>
             </div>
             <p className="text-xs text-muted-foreground border-t pt-3">
-              边缘节点提示：节点离线时实例自动挂起，离线期间不计费；节点恢复后实例自动拉起并恢复计费。
+              边缘节点提示：节点离线超过 5 分钟实例将被自动关机，离线期间不计费；系统盘会被回滚导致临时数据丢失，数据盘数据保留至实例删除。
             </p>
           </div>
         </DialogContent>

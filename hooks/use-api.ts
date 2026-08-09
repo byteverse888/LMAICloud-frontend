@@ -1026,6 +1026,25 @@ export function useAdminSecrets(namespace?: string, search?: string) {
   return { secrets, loading, total, refresh: fetchSecrets }
 }
 
+// ====== 管理后台 - Job 任务管理 ======
+export function useAdminJobs(namespace?: string, search?: string) {
+  const [jobs, setJobs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const fetchJobs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Record<string, string> = {}
+      if (namespace) params.namespace = namespace
+      if (search) params.search = search
+      const { data } = await api.get<{ list: any[]; total: number }>('/admin/jobs', params)
+      setJobs(data.list || []); setTotal(data.total || 0)
+    } catch { setJobs([]); setTotal(0) } finally { setLoading(false) }
+  }, [namespace, search])
+  useEffect(() => { fetchJobs() }, [fetchJobs])
+  return { jobs, loading, total, refresh: fetchJobs }
+}
+
 // ====== 计费相关 hooks ======
 
 export function useTransactions(page: number = 1, size: number = 20, type?: string) {

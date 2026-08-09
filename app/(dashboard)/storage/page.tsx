@@ -30,6 +30,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { formatTime, formatFileSize, cn  } from '@/lib/utils'
 import { useStorageFiles, useStorageQuota } from '@/hooks/use-api'
+import api from '@/lib/api'
 
 export default function StoragePage() {
   const t = useTranslations('storage')
@@ -37,6 +38,8 @@ export default function StoragePage() {
   const [newFolderName, setNewFolderName] = useState('')
   const [uploading, setUploading] = useState(false)
   const [linkDialog, setLinkDialog] = useState<{ open: boolean; url: string; filename: string }>({ open: false, url: '', filename: '' })
+  const [showCleanDialog, setShowCleanDialog] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const { 
@@ -141,6 +144,20 @@ export default function StoragePage() {
     }
   }
 
+  // 一键清理：删除已释放实例在节点上残留的持久数据盘目录
+  const handleCleanDataDisks = async () => {
+    try {
+      setCleaning(true)
+      const { data } = await api.post<{ jobs_created: number; dirs_cleaned: number; message: string }>('/instances/data-disk/cleanup')
+      toast.success(data.message || '清理任务已下发')
+      setShowCleanDialog(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '清理失败')
+    } finally {
+      setCleaning(false)
+    }
+  }
+
   const pathParts = currentPath.split('/').filter(Boolean)
 
   return (
@@ -156,9 +173,15 @@ export default function StoragePage() {
             管理您的临时小文件，支持通过下载链接在计算节点直接获取
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => { refresh(); refreshQuota() }} disabled={filesLoading} className="hover:bg-muted/80">
-          <RefreshCw className={`h-4 w-4 ${filesLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowCleanDialog(true)}>
+            <Trash2 className="h-4 w-4" />
+            清理无用 Pod 存储
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => { refresh(); refreshQuota() }} disabled={filesLoading} className="hover:bg-muted/80">
+            <RefreshCw className={`h-4 w-4 ${filesLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* 用途说明：文件存储仅为临时小文件同步设计，大文件引导走对象存储 */}
@@ -421,6 +444,28 @@ export default function StoragePage() {
             <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>取消</Button>
             <Button variant="gradient" onClick={handleCreateFolder}>
               创建
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 清理无用 Pod 存储确认对话框 */}
+      <Dialog open={showCleanDialog} onOpenChange={setShowCleanDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              清理无用 Pod 存储
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2 text-sm text-muted-foreground">
+            <p>将删除您已释放实例在节点上残留的持久数据盘目录，释放节点磁盘空间。</p>
+            <p className="text-xs">仅清理已释放实例的数据；运行中/已停止实例的数据不受影响。清理任务下发到节点后在后台执行。</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCleanDialog(false)} disabled={cleaning}>取消</Button>
+            <Button variant="destructive" onClick={handleCleanDataDisks} disabled={cleaning}>
+              {cleaning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />清理中...</> : '确认清理'}
             </Button>
           </DialogFooter>
         </DialogContent>
