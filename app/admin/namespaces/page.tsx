@@ -18,6 +18,7 @@ import {
 import { Search, RefreshCw, Trash2, Loader2, FolderTree, Plus, Eye, ShieldAlert } from 'lucide-react'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 const PROTECTED = new Set(['default', 'kube-system', 'kube-public', 'kube-node-lease'])
 
@@ -149,7 +150,7 @@ export default function NamespacesPage() {
                       : <Badge variant="outline">自定义</Badge>}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {ns.created_at ? new Date(ns.created_at).toLocaleString('zh-CN') : '-'}
+                    {ns.created_at ? formatTime(ns.created_at) : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -228,7 +229,7 @@ export default function NamespacesPage() {
                 <div><span className="text-muted-foreground">名称：</span>{detailNS.name}</div>
                 <div><span className="text-muted-foreground">状态：</span>{detailNS.status}</div>
                 <div><span className="text-muted-foreground">类型：</span>{detailNS.protected ? '系统' : '自定义'}</div>
-                <div><span className="text-muted-foreground">创建时间：</span>{detailNS.created_at ? new Date(detailNS.created_at).toLocaleString('zh-CN') : '-'}</div>
+                <div><span className="text-muted-foreground">创建时间：</span>{detailNS.created_at ? formatTime(detailNS.created_at) : '-'}</div>
               </div>
 
               {/* 资源用量 */}

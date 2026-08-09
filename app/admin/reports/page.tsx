@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, Users, DollarSign, Cpu, Loader2, RefreshCw, BarChart3 } from 'lucide-react'
+import { TrendingUp, Users, DollarSign, Cpu, Loader2, RefreshCw, BarChart3, CalendarDays, Activity } from 'lucide-react'
 import { useAdminReports, useRevenueTrend, useUserTrend, useGpuUsage, useTopUsers } from '@/hooks/use-api'
 import {
   Chart as ChartJS,
@@ -33,10 +33,12 @@ export default function ReportsPage() {
   const { data: topUsers, loading: topLoading } = useTopUsers(30, 10)
 
   const stats = [
-    { title: '总收入', value: `¥${reportData?.totalRevenue?.toLocaleString() || 0}`, change: `今日新增 ${reportData?.todayOrders || 0} 单`, icon: DollarSign, bgClass: 'from-emerald-50 to-emerald-100/50 dark:from-emerald-950/50 dark:to-emerald-900/30', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
+    { title: '总收入', value: `¥${reportData?.totalRevenue?.toLocaleString() || 0}`, change: `今日 +¥${reportData?.todayRevenue?.toLocaleString() || 0}`, icon: DollarSign, bgClass: 'from-emerald-50 to-emerald-100/50 dark:from-emerald-950/50 dark:to-emerald-900/30', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
+    { title: '本月收入', value: `¥${reportData?.monthRevenue?.toLocaleString() || 0}`, change: '成功充值金额', icon: CalendarDays, bgClass: 'from-teal-50 to-teal-100/50 dark:from-teal-950/50 dark:to-teal-900/30', iconBg: 'bg-teal-500/10', iconColor: 'text-teal-500' },
+    { title: '总订单', value: reportData?.totalOrders?.toLocaleString() || '0', change: `今日新增 ${reportData?.todayOrders || 0} 单`, icon: TrendingUp, bgClass: 'from-amber-50 to-amber-100/50 dark:from-amber-950/50 dark:to-amber-900/30', iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
     { title: '总用户', value: reportData?.totalUsers?.toLocaleString() || '0', change: `今日 +${reportData?.todayNewUsers || 0}`, icon: Users, bgClass: 'from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500' },
     { title: 'GPU 使用率', value: `${reportData?.gpuUtilization || 0}%`, change: '实时数据', icon: Cpu, bgClass: 'from-purple-50 to-purple-100/50 dark:from-purple-950/50 dark:to-purple-900/30', iconBg: 'bg-purple-500/10', iconColor: 'text-purple-500' },
-    { title: '活跃实例', value: reportData?.activeInstances?.toLocaleString() || '0', change: '运行中', icon: TrendingUp, bgClass: 'from-amber-50 to-amber-100/50 dark:from-amber-950/50 dark:to-amber-900/30', iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
+    { title: '活跃实例', value: reportData?.activeInstances?.toLocaleString() || '0', change: '运行中', icon: Activity, bgClass: 'from-rose-50 to-rose-100/50 dark:from-rose-950/50 dark:to-rose-900/30', iconBg: 'bg-rose-500/10', iconColor: 'text-rose-500' },
   ]
 
   // 收入趋势折线图数据
@@ -85,14 +87,14 @@ export default function ReportsPage() {
     }
   }, [gpuData])
 
-  // Top 消费用户横向柱状图
+  // Top 充值用户横向柱状图（管理端收入视角）
   const topUsersChartData = useMemo(() => ({
     labels: topUsers.slice(0, 8).map((u: any) => u.email?.split('@')[0] || u.nickname || 'User'),
     datasets: [{
-      label: '消费金额 (¥)',
-      data: topUsers.slice(0, 8).map((u: any) => u.total_consumption || 0),
-      backgroundColor: 'rgba(245, 158, 11, 0.6)',
-      borderColor: 'rgb(245, 158, 11)',
+      label: '充值金额 (¥)',
+      data: topUsers.slice(0, 8).map((u: any) => u.total_recharge || 0),
+      backgroundColor: 'rgba(16, 185, 129, 0.6)',
+      borderColor: 'rgb(16, 185, 129)',
       borderWidth: 1,
       borderRadius: 4,
     }],
@@ -141,7 +143,7 @@ export default function ReportsPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stats.map((item) => {
           const Icon = item.icon
           return (
@@ -231,8 +233,8 @@ export default function ReportsPage() {
         <Card className="overflow-hidden">
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-amber-500" />
-              消费 Top 用户（近30天）
+              <DollarSign className="h-4 w-4 text-emerald-500" />
+              充值 Top 用户（近30天）
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">

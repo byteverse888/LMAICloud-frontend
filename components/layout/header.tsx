@@ -8,6 +8,7 @@ import { UserNav } from '@/components/layout/user-nav'
 import { Button } from '@/components/ui/button'
 import { Bell, Crown, MessageSquare, Check } from 'lucide-react'
 import { useUnreadCount, useNotifications, markAsRead, markAllRead } from '@/hooks/use-api'
+import { formatTime } from '@/lib/utils'
 
 export function Header() {
   const t = useTranslations('header')
@@ -130,7 +131,7 @@ export function Header() {
                           <div className="text-sm font-medium truncate">{n.title}</div>
                           <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.content}</div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {new Date(n.created_at).toLocaleString('zh-CN')}
+                            {formatTime(n.created_at)}
                           </div>
                         </div>
                       </div>

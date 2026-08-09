@@ -18,6 +18,7 @@ import {
 import { toast } from 'react-hot-toast'
 import { useInstance, useInstanceLogs, useInstanceStatus, useInstanceWebSocket, useInstanceRenew, useInstanceMetrics } from '@/hooks/use-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatTime } from '@/lib/utils'
 
 const WebTerminal = dynamic(
   () => import('@/components/terminal/web-terminal'),
@@ -279,7 +280,7 @@ export default function AdminInstanceDetailPage() {
                 <Separator />
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" /> 创建时间</span>
-                  <span className="text-sm">{instance.created_at ? new Date(instance.created_at).toLocaleString() : '-'}</span>
+                  <span className="text-sm">{instance.created_at ? formatTime(instance.created_at) : '-'}</span>
                 </div>
               </CardContent>
             </Card>

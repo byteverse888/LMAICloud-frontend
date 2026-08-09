@@ -9,16 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useTransactions, useBalance } from '@/hooks/use-api'
+import { formatTime, renderBillingDescription } from '@/lib/utils'
 
 export default function BillingDetailsPage() {
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const pageSize = 20
+  const [pageSize, setPageSize] = useState(20)
+  const [goToPage, setGoToPage] = useState('')
 
   const { transactions, loading, total, monthConsumption, totalConsumption } = useTransactions(page, pageSize, typeFilter === 'all' ? undefined : typeFilter)
   const { balance } = useBalance()
 
   const totalPages = Math.ceil(total / pageSize)
+
+  const handleGoToPage = () => {
+    const p = parseInt(goToPage)
+    if (p >= 1 && p <= totalPages) {
+      setPage(p)
+    }
+    setGoToPage('')
+  }
 
   return (
     <div className="space-y-6">
@@ -130,7 +140,7 @@ export default function BillingDetailsPage() {
               <TableBody>
                 {transactions.map((item: any) => (
                   <TableRow key={item.id} className="hover:bg-muted/30">
-                    <TableCell className="text-muted-foreground">{new Date(item.created_at).toLocaleString('zh-CN')}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatTime(item.created_at)}</TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
@@ -160,7 +170,7 @@ export default function BillingDetailsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{item.description || '-'}</div>
+                      <div className="text-sm">{renderBillingDescription(item.description, item.period_start, item.period_end)}</div>
                     </TableCell>
                     <TableCell className={`text-right font-semibold ${item.amount > 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                       {item.amount > 0 ? '+' : ''}¥{Math.abs(item.amount).toFixed(2)}
@@ -176,18 +186,39 @@ export default function BillingDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* 分页 */}
+      {/* 分页（与我的订单页一致：页大小切换 + 页码跳转） */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">共 {total} 条记录</span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="flex items-center text-sm px-2">{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+            <span className="text-sm text-primary font-medium px-2">{page} / {totalPages}</span>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
               <ChevronRight className="h-4 w-4" />
             </Button>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1) }}>
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10条/页</SelectItem>
+                <SelectItem value="20">20条/页</SelectItem>
+                <SelectItem value="50">50条/页</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">前往</span>
+            <Input
+              type="number"
+              className="w-16 h-8"
+              min={1}
+              max={totalPages}
+              value={goToPage}
+              onChange={(e) => setGoToPage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleGoToPage()}
+            />
+            <span className="text-sm text-muted-foreground">页</span>
           </div>
         </div>
       )}

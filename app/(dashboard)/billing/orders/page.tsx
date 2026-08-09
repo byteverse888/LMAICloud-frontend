@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
+import { cn, formatTime } from '@/lib/utils'
 import { useOrders } from '@/hooks/use-api'
 
 const productOptions = [
@@ -197,7 +197,7 @@ export default function OrdersPage() {
                 <TableRow key={order.id}>
                   <TableCell className="font-mono text-xs">{order.id}</TableCell>
                   <TableCell className="text-sm">
-                    {order.created_at ? new Date(order.created_at).toLocaleString('zh-CN') : '-'}
+                    {formatTime(order.created_at)}
                   </TableCell>
                   <TableCell className="text-sm">{order.product_name || order.description || '-'}</TableCell>
                   <TableCell className="text-sm">

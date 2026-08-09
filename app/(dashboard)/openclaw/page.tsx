@@ -44,6 +44,7 @@ import { useOpenClawInstances } from '@/hooks/use-openclaw'
 import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 const WebTerminal = dynamic(
   () => import('@/components/terminal/web-terminal'),
@@ -300,7 +301,7 @@ export default function OpenClawPage() {
                           {inst.name}
                         </Link>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {inst.created_at ? new Date(inst.created_at).toLocaleString() : '-'}
+                          {inst.created_at ? formatTime(inst.created_at) : '-'}
                         </div>
                       </div>
                     </TableCell>
@@ -347,7 +348,7 @@ export default function OpenClawPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {(inst as any).expired_at
-                        ? new Date((inst as any).expired_at).toLocaleDateString()
+                        ? formatTime((inst as any).expired_at, true)
                         : <span className="text-xs">-</span>}
                     </TableCell>
                     <TableCell className="text-right">

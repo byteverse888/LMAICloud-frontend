@@ -39,6 +39,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 // 动态加载终端和日志组件（避免SSR问题）
 const WebTerminal = dynamic(
@@ -386,6 +387,19 @@ export default function InstancesPage() {
         <span>欠费超过 10 元的实例将被强制关机，关机后 10 天内未充值将自动释放实例（数据不再保留）。请及时充值以免影响使用。</span>
       </div>
 
+      {/* 节点离线提示：实例因节点离线被系统自动挂起，非用户操作，避免用户困惑 */}
+      {instances.some(i => i.status === 'node_offline') && (
+        <div className="flex items-start gap-2.5 text-sm py-2.5 px-4 rounded-lg border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div>
+            <span>部分实例所在的宿主机节点已离线，系统已自动挂起这些实例（状态显示为“节点离线”）。这并非您的操作所致，节点恢复后实例将自动拉起，无需手动处理。</span>
+            <span className="block mt-0.5">挂起期间不会产生费用：按量计费实例停止计费，包年包月实例有效期不受影响，可前往
+              <Link href="/billing/details" className="underline underline-offset-2 mx-0.5 font-medium hover:opacity-80">计费详情</Link>
+              查看。</span>
+          </div>
+        </div>
+      )}
+
       {/* 工具栏 */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
@@ -546,7 +560,7 @@ export default function InstancesPage() {
                         {inst.name}
                       </Link>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        {inst.created_at ? new Date(inst.created_at).toLocaleString() : '-'}
+                        {inst.created_at ? formatTime(inst.created_at) : '-'}
                       </div>
                     </div>
                   </TableCell>
@@ -604,7 +618,7 @@ export default function InstancesPage() {
                     <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">{inst.internal_ip || '-'}</code>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {inst.expired_at ? new Date(inst.expired_at).toLocaleDateString() : <span className="text-xs">-</span>}
+                    {inst.expired_at ? formatTime(inst.expired_at, true) : <span className="text-xs">-</span>}
                   </TableCell>
 
                   <TableCell className={`text-right sticky right-0 z-10 transition-colors ${selectedIds.includes(inst.id) ? 'bg-primary/12 dark:bg-primary/25' : 'bg-card group-hover:bg-primary/3'}`}>

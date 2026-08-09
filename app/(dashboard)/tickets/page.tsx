@@ -46,6 +46,7 @@ import {
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 interface Ticket {
   id: string
@@ -263,7 +264,7 @@ export default function TicketsPage() {
                     <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
                     <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {new Date(ticket.created_at).toLocaleString()}
+                      {formatTime(ticket.created_at)}
                     </TableCell>
                     <TableCell>
                       <Button
@@ -402,7 +403,7 @@ export default function TicketsPage() {
                 <span className="text-border">|</span>
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" />
-                  {new Date(selectedTicket.created_at).toLocaleString()}
+                  {formatTime(selectedTicket.created_at)}
                 </span>
               </div>
               <div className="p-4 bg-muted/50 dark:bg-muted/20 rounded-lg border border-border/30">
@@ -415,7 +416,7 @@ export default function TicketsPage() {
                     {t('reply')}
                     {selectedTicket.replied_at && (
                       <span className="text-muted-foreground font-normal">
-                        ({new Date(selectedTicket.replied_at).toLocaleString()})
+                        ({formatTime(selectedTicket.replied_at)})
                       </span>
                     )}
                   </div>

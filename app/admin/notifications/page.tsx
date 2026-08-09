@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Bell, Plus, Trash2, Loader2, RefreshCw, Search, Send } from 'lucide-react'
 import { useAdminNotifications, sendAdminNotification, deleteAdminNotification } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 export default function AdminNotificationsPage() {
   const [page, setPage] = useState(1)
@@ -119,7 +120,7 @@ export default function AdminNotificationsPage() {
                 notifications.map((n: any) => (
                   <TableRow key={n.id}>
                     <TableCell className="text-sm whitespace-nowrap">
-                      {n.created_at ? new Date(n.created_at).toLocaleString('zh-CN') : '--'}
+                      {n.created_at ? formatTime(n.created_at) : '--'}
                     </TableCell>
                     <TableCell className="text-sm">{n.user_email || '--'}</TableCell>
                     <TableCell>

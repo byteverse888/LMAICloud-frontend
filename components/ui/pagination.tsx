@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
@@ -32,6 +34,17 @@ export function Pagination({
 }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const minThreshold = threshold ?? pageSize
+  const [jumpInput, setJumpInput] = useState('')
+
+  // 页号跳转：回车触发，越界时钳制到有效范围
+  const handleJump = () => {
+    const n = parseInt(jumpInput, 10)
+    if (!isNaN(n)) {
+      const target = Math.min(Math.max(1, n), totalPages)
+      if (target !== page) onPageChange(target)
+    }
+    setJumpInput('')
+  }
 
   // 数据量不超过阈值时不显示分页
   if (total <= minThreshold && page === 1) return null
@@ -127,6 +140,21 @@ export function Pagination({
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>
+        {/* 页号跳转输入框 */}
+        <div className="flex items-center gap-1.5 ml-2">
+          <span className="text-sm text-muted-foreground">跳至</span>
+          <Input
+            type="number"
+            min={1}
+            max={totalPages}
+            className="h-8 w-14 px-2 text-center"
+            value={jumpInput}
+            onChange={(e) => setJumpInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleJump() }}
+            onBlur={() => { if (jumpInput) handleJump() }}
+          />
+          <span className="text-sm text-muted-foreground">页</span>
+        </div>
       </div>
     </div>
   )

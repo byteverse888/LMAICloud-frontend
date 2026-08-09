@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,10 +29,12 @@ import {
   RefreshCw,
   Save,
   Pencil,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useInstance, useInstanceLogs, useInstanceStatus, useInstanceWebSocket, useInstanceRenew, useInstanceMetrics } from '@/hooks/use-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatTime } from '@/lib/utils'
 
 // 动态加载终端组件（避免SSR问题）
 const WebTerminal = dynamic(
@@ -223,6 +226,19 @@ export default function InstanceDetailPage() {
         </div>
       </div>
 
+      {/* 节点离线提示：实例被系统自动挂起，非用户操作，避免用户困惑 */}
+      {instance.status === 'node_offline' && (
+        <div className="flex items-start gap-2.5 text-sm py-3 px-4 rounded-lg border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div>
+            <span>该实例所在的宿主机节点已离线，系统已自动挂起实例。这并非您的操作所致，节点恢复后实例将自动拉起，无需手动处理。</span>
+            <span className="block mt-0.5">挂起期间不会产生费用：按量计费实例停止计费，包年包月实例有效期不受影响，可前往
+              <Link href="/billing/details" className="underline underline-offset-2 mx-0.5 font-medium hover:opacity-80">计费详情</Link>
+              查看。</span>
+          </div>
+        </div>
+      )}
+
       {/* 详细信息 */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="bg-muted/50 p-1 rounded-full">
@@ -345,12 +361,12 @@ export default function InstanceDetailPage() {
                   <span className="text-muted-foreground flex items-center gap-2">
                     <Clock className="h-4 w-4" /> 创建时间
                   </span>
-                  <span className="text-sm">{instance.created_at ? new Date(instance.created_at).toLocaleString() : '-'}</span>
+                  <span className="text-sm">{instance.created_at ? formatTime(instance.created_at) : '-'}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">启动时间</span>
-                  <span className="text-sm">{instance.started_at ? new Date(instance.started_at).toLocaleString() : '-'}</span>
+                  <span className="text-sm">{instance.started_at ? formatTime(instance.started_at) : '-'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -461,7 +477,7 @@ export default function InstanceDetailPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm text-muted-foreground">
-                  最后更新: {metrics?.timestamp ? new Date(metrics.timestamp).toLocaleString() : '-'}
+                  最后更新: {metrics?.timestamp ? formatTime(metrics.timestamp) : '-'}
                 </span>
                 <Badge variant={instance?.status === 'running' ? 'success' : 'secondary'}>
                   {instance?.status === 'running' ? '实时监控中' : '实例未运行'}

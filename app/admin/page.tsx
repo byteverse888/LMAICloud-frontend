@@ -124,18 +124,6 @@ export default function AdminDashboard() {
                   ¥{(s.month_revenue || 0).toLocaleString()}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">今日消费</span>
-                <span className="font-medium text-orange-500">
-                  ¥{(s.today_expense || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">本月消费</span>
-                <span className="font-medium text-orange-500">
-                  ¥{(s.month_expense || 0).toLocaleString()}
-                </span>
-              </div>
             </div>
           </CardContent>
         </Card>

@@ -8,6 +8,7 @@ import { useReferralInfo, useReferralRecords } from '@/hooks/use-api'
 import { Copy, Users, Loader2, Gift, CheckCircle, Clock, Trophy } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 export default function ReferralPage() {
   const { info, loading: infoLoading } = useReferralInfo()
@@ -115,7 +116,7 @@ export default function ReferralPage() {
               {records.map((r: any, i: number) => (
                 <div key={i} className="grid grid-cols-4 text-sm py-2 border-b border-border/50 items-center">
                   <span>{r.user_email}</span>
-                  <span className="text-muted-foreground">{r.registered_at ? new Date(r.registered_at).toLocaleString('zh-CN') : ''}</span>
+                  <span className="text-muted-foreground">{r.registered_at ? formatTime(r.registered_at) : ''}</span>
                   <span>
                     {r.verified ? (
                       <Badge variant="default" className="gap-1"><CheckCircle className="h-3 w-3" />已激活</Badge>

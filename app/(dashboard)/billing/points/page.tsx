@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { usePoints, usePointRecords, useDailyCheckin } from '@/hooks/use-api'
 import { Star, Gift, Loader2, CalendarCheck, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 export default function PointsPage() {
   const { points, loading: pointsLoading, refresh: refreshPoints } = usePoints()
@@ -96,7 +97,7 @@ export default function PointsPage() {
               </div>
               {records.map((r: any) => (
                 <div key={r.id} className="grid grid-cols-4 text-sm py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">{r.created_at ? new Date(r.created_at).toLocaleString('zh-CN') : ''}</span>
+                  <span className="text-muted-foreground">{r.created_at ? formatTime(r.created_at) : ''}</span>
                   <span>{typeLabels[r.type] || r.type}</span>
                   <span className="truncate">{r.description}</span>
                   <span className={`text-right font-medium ${r.points > 0 ? 'text-green-500' : 'text-red-500'}`}>

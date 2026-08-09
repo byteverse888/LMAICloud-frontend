@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, Search, ClipboardList, RefreshCw } from 'lucide-react'
 import { useAdminAuditLog } from '@/hooks/use-api'
 import { Pagination } from '@/components/ui/pagination'
+import { formatTime } from '@/lib/utils'
 
 const actionLabels: Record<string, string> = {
   create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', login_failed: '登录失败', logout: '登出', register: '注册', recharge: '充值',
@@ -108,7 +109,7 @@ export default function AdminAuditLogPage() {
                 logs.map((log: any) => (
                   <TableRow key={log.id}>
                     <TableCell className="text-sm whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString('zh-CN')}
+                      {formatTime(log.created_at)}
                     </TableCell>
                     <TableCell className="text-sm">{log.user_email || '-'}</TableCell>
                     <TableCell>

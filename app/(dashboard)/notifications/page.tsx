@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useNotifications, useUnreadCount, markAsRead, markAllRead } from '@/hooks/use-api'
 import { Bell, Check, CheckCheck, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 export default function NotificationsPage() {
   const [page, setPage] = useState(1)
@@ -68,7 +69,7 @@ export default function NotificationsPage() {
                       </div>
                       <h3 className="font-medium text-sm">{n.title}</h3>
                       {n.content && <p className="text-sm text-muted-foreground mt-1">{n.content}</p>}
-                      <p className="text-xs text-muted-foreground mt-2">{n.created_at ? new Date(n.created_at).toLocaleString('zh-CN') : ''}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{n.created_at ? formatTime(n.created_at) : ''}</p>
                     </div>
                     {!n.is_read && (
                       <Button variant="ghost" size="sm" onClick={() => handleMarkRead(n.id)} className="shrink-0">

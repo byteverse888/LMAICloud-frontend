@@ -24,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 import '@xterm/xterm/css/xterm.css'
 
 function statusBadge(pod: any) {
@@ -447,7 +448,7 @@ export default function PodsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {pod.created_at ? new Date(pod.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      {formatTime(pod.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">

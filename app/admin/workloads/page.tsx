@@ -23,6 +23,7 @@ import { Search, RefreshCw, Trash2, Repeat2, Scale, Loader2, Box, Layers, Databa
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 export default function WorkloadsPage() {
   const [activeTab, setActiveTab] = useState('deployments')
@@ -192,7 +193,7 @@ function DeploymentsTab() {
                       <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(dep.images || []).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(dep.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{dep.strategy || 'RollingUpdate'}</Badge></TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{dep.created_at ? new Date(dep.created_at).toLocaleString() : '-'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{dep.created_at ? formatTime(dep.created_at) : '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => { setScaleTarget({ ns: dep.namespace, name: dep.name, replicas: dep.replicas }); setScaleReplicas(dep.replicas); setScaleOpen(true) }} title="扩缩容"><Scale className="h-4 w-4" /></Button>
@@ -357,7 +358,7 @@ function DaemonSetsTab() {
                     <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                       <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(ds.images || []).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(ds.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{ds.created_at ? new Date(ds.created_at).toLocaleString() : '-'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{ds.created_at ? formatTime(ds.created_at) : '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => setRestartTarget({ ns: ds.namespace, name: ds.name })} title="滚动重启"><Repeat2 className="h-4 w-4" /></Button>
@@ -521,7 +522,7 @@ function StatefulSetsTab() {
                     <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                       <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(ss.images || []).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(ss.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{ss.created_at ? new Date(ss.created_at).toLocaleString() : '-'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{ss.created_at ? formatTime(ss.created_at) : '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => { setScaleTarget({ ns: ss.namespace, name: ss.name, replicas: ss.replicas }); setScaleReplicas(ss.replicas); setScaleOpen(true) }} title="扩缩容"><Scale className="h-4 w-4" /></Button>

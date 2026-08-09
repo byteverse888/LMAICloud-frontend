@@ -22,6 +22,7 @@ import { Search, RefreshCw, Trash2, Repeat2, Scale, Loader2, Box, Square, XCircl
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 export default function DeploymentsPage() {
   const [nsFilter, setNsFilter] = useState<string>('__all__')
@@ -312,7 +313,7 @@ export default function DeploymentsPage() {
                     </TableCell>
                     <TableCell><Badge variant="secondary">{dep.strategy || 'RollingUpdate'}</Badge></TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {dep.created_at ? new Date(dep.created_at).toLocaleString() : '-'}
+                      {dep.created_at ? formatTime(dep.created_at) : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">

@@ -18,7 +18,7 @@ function getPersistedToken(): string | null {
 export interface Instance {
   id: string
   name: string
-  status: 'running' | 'stopped' | 'creating' | 'starting' | 'stopping' | 'error' | 'releasing' | 'released'
+  status: 'running' | 'stopped' | 'creating' | 'starting' | 'stopping' | 'error' | 'releasing' | 'released' | 'node_offline'
   gpu_model: string
   gpu_count: number
   cpu_cores: number
@@ -465,7 +465,7 @@ export interface AdminOrder {
   id: string; user_id: string; user_email: string; type: string; status: string; amount: number; created_at: string
 }
 
-export function useAdminOrders(page: number = 1, size: number = 20, userId?: string) {
+export function useAdminOrders(page: number = 1, size: number = 20, userId?: string, filters?: { email?: string; status?: string; type?: string }) {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -474,12 +474,15 @@ export function useAdminOrders(page: number = 1, size: number = 20, userId?: str
       setLoading(true)
       const params: Record<string, string | number> = { page, size }
       if (userId) params.user_id = userId
+      if (filters?.email) params.user_email = filters.email
+      if (filters?.status) params.status = filters.status
+      if (filters?.type) params.type = filters.type
       const { data } = await api.get<{ list: AdminOrder[]; total: number }>('/admin/orders', params)
       setOrders(data.list || []); setTotal(data.total || 0)
     } catch {
       setOrders([]); setTotal(0)
     } finally { setLoading(false) }
-  }, [page, size, userId])
+  }, [page, size, userId, filters?.email, filters?.status, filters?.type])
   useEffect(() => { fetchOrders() }, [fetchOrders])
   return { orders, loading, total, refresh: fetchOrders }
 }
@@ -1074,7 +1077,7 @@ export function useResourcePlans() {
   return { plans, loading, refresh: fetchPlans }
 }
 
-export function useAdminTransactions(page: number = 1, size: number = 20, userId?: string, type?: string) {
+export function useAdminTransactions(page: number = 1, size: number = 20, userId?: string, type?: string, userEmail?: string) {
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -1084,10 +1087,11 @@ export function useAdminTransactions(page: number = 1, size: number = 20, userId
       const params: Record<string, string | number> = { page, size }
       if (userId) params.user_id = userId
       if (type) params.type = type
+      if (userEmail) params.user_email = userEmail
       const { data } = await api.get<{ list: any[]; total: number }>('/admin/orders/transactions', params)
       setTransactions(data.list || []); setTotal(data.total || 0)
     } catch { setTransactions([]); setTotal(0) } finally { setLoading(false) }
-  }, [page, size, userId, type])
+  }, [page, size, userId, type, userEmail])
   useEffect(() => { fetchTransactions() }, [fetchTransactions])
   return { transactions, loading, total, refresh: fetchTransactions }
 }
@@ -1109,18 +1113,18 @@ export function useAdminStatements(year?: number, userId?: string) {
   return { statements, loading, refresh: fetchStatements }
 }
 
-export function useAdminOrderStats(userId?: string, days: number = 30) {
+export function useAdminOrderStats(userId?: string) {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true)
-      const params: Record<string, string | number> = { days }
+      const params: Record<string, string | number> = {}
       if (userId) params.user_id = userId
       const { data } = await api.get<any>('/admin/orders/stats', params)
       setStats(data)
-    } catch { setStats({ total_consumption: 0, total_recharge: 0, consumption_orders: 0, recharge_orders: 0 }) } finally { setLoading(false) }
-  }, [userId, days])
+    } catch { setStats({ total_revenue: 0, today_revenue: 0, month_revenue: 0, total_orders: 0, today_orders: 0, recharge_orders: 0, today_consumption: 0 }) } finally { setLoading(false) }
+  }, [userId])
   useEffect(() => { fetchStats() }, [fetchStats])
   return { stats, loading, refresh: fetchStats }
 }

@@ -34,6 +34,7 @@ import { useAdminOpenClawInstances } from '@/hooks/use-openclaw'
 import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 const WebTerminal = dynamic(
   () => import('@/components/terminal/web-terminal'),
@@ -310,7 +311,7 @@ export default function AdminOpenClawPage() {
                       <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" />{inst.disk_gb}GB</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{inst.created_at ? new Date(inst.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatTime(inst.created_at)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => showDetail(inst.id)} title="详情">
@@ -376,7 +377,7 @@ export default function AdminOpenClawPage() {
                 <div><span className="text-muted-foreground">重启次数:</span> {detailData.restart_count ?? 0}</div>
                 <div><span className="text-muted-foreground">配置:</span> {detailData.cpu_cores}核 / {detailData.memory_gb}GB / {detailData.disk_gb}GB</div>
                 <div><span className="text-muted-foreground">镜像:</span> <code className="text-xs break-all">{detailData.image_url || '-'}</code></div>
-                <div><span className="text-muted-foreground">创建时间:</span> {detailData.created_at ? new Date(detailData.created_at).toLocaleString() : '-'}</div>
+                <div><span className="text-muted-foreground">创建时间:</span> {detailData.created_at ? formatTime(detailData.created_at) : '-'}</div>
               </div>
 
               {/* 容器状态 */}

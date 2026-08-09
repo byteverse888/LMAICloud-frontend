@@ -19,6 +19,7 @@ import {
 import { Search, RefreshCw, Trash2, Loader2, Eye, FileCode, KeyRound } from 'lucide-react'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 type TabKey = 'configmap' | 'secret'
 
@@ -113,7 +114,7 @@ function ConfigMapTab() {
                     {(cm.keys || []).join(', ') || '-'}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {cm.created_at ? new Date(cm.created_at).toLocaleString('zh-CN') : '-'}
+                    {cm.created_at ? formatTime(cm.created_at) : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -166,7 +167,7 @@ function ConfigMapTab() {
                 <div><span className="text-muted-foreground">名称：</span>{detail.name}</div>
                 <div><span className="text-muted-foreground">命名空间：</span>{detail.namespace}</div>
                 <div><span className="text-muted-foreground">Key 数量：</span>{detail.key_count}</div>
-                <div><span className="text-muted-foreground">创建时间：</span>{detail.created_at ? new Date(detail.created_at).toLocaleString('zh-CN') : '-'}</div>
+                <div><span className="text-muted-foreground">创建时间：</span>{detail.created_at ? formatTime(detail.created_at) : '-'}</div>
               </div>
 
               {/* Data 内容 */}
@@ -316,7 +317,7 @@ function SecretTab() {
                   <TableCell>{typeBadge(s.type || 'Opaque')}</TableCell>
                   <TableCell>{s.key_count ?? 0}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {s.created_at ? new Date(s.created_at).toLocaleString('zh-CN') : '-'}
+                    {s.created_at ? formatTime(s.created_at) : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -370,7 +371,7 @@ function SecretTab() {
                 <div><span className="text-muted-foreground">命名空间：</span>{detail.namespace}</div>
                 <div><span className="text-muted-foreground">类型：</span>{detail.type}</div>
                 <div><span className="text-muted-foreground">Key 数量：</span>{detail.key_count}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">创建时间：</span>{detail.created_at ? new Date(detail.created_at).toLocaleString('zh-CN') : '-'}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">创建时间：</span>{detail.created_at ? formatTime(detail.created_at) : '-'}</div>
               </div>
 
               {/* Data Info (脱敏) */}

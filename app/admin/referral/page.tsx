@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Share2, Users, Coins, Loader2, RefreshCw, Search, CheckCircle, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useAdminReferralStats, useAdminReferralRecords } from '@/hooks/use-api'
+import { formatTime } from '@/lib/utils'
 
 export default function AdminReferralPage() {
   const { stats, loading: statsLoading, refresh: refreshStats } = useAdminReferralStats()
@@ -128,7 +129,7 @@ export default function AdminReferralPage() {
                     <TableCell className="text-sm">{r.referrer_email || '--'}</TableCell>
                     <TableCell className="text-sm">{r.invited_user_email || '--'}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
-                      {r.invited_at ? new Date(r.invited_at).toLocaleString('zh-CN') : '--'}
+                      {r.invited_at ? formatTime(r.invited_at) : '--'}
                     </TableCell>
                     <TableCell>
                       {r.verified ? (

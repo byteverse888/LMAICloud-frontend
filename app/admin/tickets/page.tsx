@@ -27,6 +27,7 @@ import {
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatTime } from '@/lib/utils'
 
 interface Ticket {
   id: string
@@ -380,7 +381,7 @@ export default function AdminTicketsPage() {
                       {ticket.handler_nickname || '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(ticket.created_at).toLocaleString()}
+                      {formatTime(ticket.created_at)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -468,7 +469,7 @@ export default function AdminTicketsPage() {
                 <span>优先级: {getPriorityBadge(selectedTicket.priority)}</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                创建时间: {new Date(selectedTicket.created_at).toLocaleString()}
+                创建时间: {formatTime(selectedTicket.created_at)}
               </div>
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="whitespace-pre-wrap">{selectedTicket.content}</p>

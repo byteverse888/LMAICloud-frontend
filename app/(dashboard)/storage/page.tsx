@@ -28,7 +28,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
-import { formatFileSize, cn } from '@/lib/utils'
+import { formatTime, formatFileSize, cn  } from '@/lib/utils'
 import { useStorageFiles, useStorageQuota } from '@/hooks/use-api'
 
 export default function StoragePage() {
@@ -47,8 +47,8 @@ export default function StoragePage() {
   
   const storageInfo = quota || {
     used: 0,
-    total: 10 * 1024 * 1024 * 1024,
-    remaining: 10 * 1024 * 1024 * 1024,
+    total: 100 * 1024 * 1024,
+    remaining: 100 * 1024 * 1024,
     used_percent: 0,
     file_count: 0,
     max_file_count: 100,
@@ -153,12 +153,21 @@ export default function StoragePage() {
             {t('title')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            管理您的文件和目录，支持通过下载链接在计算节点直接获取
+            管理您的临时小文件，支持通过下载链接在计算节点直接获取
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={() => { refresh(); refreshQuota() }} disabled={filesLoading} className="hover:bg-muted/80">
           <RefreshCw className={`h-4 w-4 ${filesLoading ? 'animate-spin' : ''}`} />
         </Button>
+      </div>
+
+      {/* 用途说明：文件存储仅为临时小文件同步设计，大文件引导走对象存储 */}
+      <div className="flex items-start gap-2.5 text-sm py-2.5 px-4 rounded-lg border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400">
+        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+        <div>
+          <span>文件存储仅为临时小文件同步到边缘节点使用（每用户上限 100MB），不适合作为长期大容量存储。</span>
+          <span className="block mt-0.5">如需下载大文件到计算节点，建议先将文件上传到阿里云 OSS、腾讯云 COS、七牛云等对象存储，再通过下载链接下载到边缘节点上。</span>
+        </div>
       </div>
 
       {/* 存储配额信息 */}
@@ -329,7 +338,7 @@ export default function StoragePage() {
                     </TableCell>
                     <TableCell>
                       <span className="text-muted-foreground">
-                        {file.updated_at ? new Date(file.updated_at).toLocaleString('zh-CN') : '-'}
+                        {file.updated_at ? formatTime(file.updated_at) : '-'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

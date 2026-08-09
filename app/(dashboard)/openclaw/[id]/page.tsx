@@ -47,6 +47,7 @@ import {
   useOpenClawInstance, useOpenClawModelKeys, useOpenClawChannels,
   useOpenClawSkills, useOpenClawMonitor, useOpenClawLogs,
 } from '@/hooks/use-openclaw'
+import { formatTime } from '@/lib/utils'
 
 const getStatusBadge = (status: string) => {
   const cfg: Record<string, { label: string; variant: any; dot: string }> = {
@@ -347,7 +348,7 @@ export default function OpenClawDetailPage() {
                   </>
                 )}
                 <Separator />
-                <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> 创建时间</span><span>{instance.created_at ? new Date(instance.created_at).toLocaleString() : '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> 创建时间</span><span>{instance.created_at ? formatTime(instance.created_at) : '-'}</span></div>
               </CardContent>
             </Card>
 
@@ -387,7 +388,7 @@ export default function OpenClawDetailPage() {
                   </div>
                   <div className="rounded-lg border p-4 text-center">
                     <p className="text-xs text-muted-foreground mb-1">到期时间</p>
-                    <p className="text-sm font-medium">{instance.expired_at ? new Date(instance.expired_at).toLocaleString() : '无（按量）'}</p>
+                    <p className="text-sm font-medium">{instance.expired_at ? formatTime(instance.expired_at) : '无（按量）'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -617,7 +618,7 @@ export default function OpenClawDetailPage() {
                                     <>
                                       <div className="flex justify-between"><span className="text-muted-foreground">名称/AppID</span><span>{ch.name || '-'}</span></div>
                                       <div className="flex justify-between"><span className="text-muted-foreground">配置</span><span className="font-mono">******</span></div>
-                                      {ch.last_check_at && <div className="flex justify-between"><span className="text-muted-foreground">最近检测</span><span>{new Date(ch.last_check_at).toLocaleString()}</span></div>}
+                                      {ch.last_check_at && <div className="flex justify-between"><span className="text-muted-foreground">最近检测</span><span>{formatTime(ch.last_check_at)}</span></div>}
                                       <Separator />
                                       <div className="flex gap-2">
                                         <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => { setEditingChannelId(ch.id); setEditChannelForm({ type: ch.type, name: ch.name || '', config: '' }) }}>

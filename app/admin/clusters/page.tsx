@@ -18,6 +18,7 @@ import {
 import {
   useClusterOverview, useClusterHealth, useClusterNodeMetrics, useClusterEvents,
 } from '@/hooks/use-api'
+import { formatTime } from '@/lib/utils'
 
 // 格式化字节
 function formatBytes(bytes: number): string {
@@ -440,7 +441,7 @@ export default function ClustersPage() {
                         </TableCell>
                         <TableCell>
                           <span className="text-xs text-muted-foreground">
-                            {evt.last_timestamp ? new Date(evt.last_timestamp).toLocaleString('zh-CN') : '-'}
+                            {evt.last_timestamp ? formatTime(evt.last_timestamp) : '-'}
                           </span>
                         </TableCell>
                       </TableRow>

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { useBalance, useWebSocketStatus } from '@/hooks/use-api'
+import { useBalance, useWebSocketStatus, useTransactions } from '@/hooks/use-api'
 import api from '@/lib/api'
 
 const presetAmounts = [50, 100, 200, 500, 1000, 2000]
@@ -35,6 +35,8 @@ export default function BillingPage() {
   const [checkingStatus, setCheckingStatus] = useState(false)
 
   const { balance, testMode, loading, refresh } = useBalance()
+  // 消费统计（size=1 仅为携带 month_consumption/total_consumption 统计字段）
+  const { monthConsumption, totalConsumption } = useTransactions(1, 1)
 
   // 用 ref 防止充值成功的 toast/refresh 重复触发
   const successHandledRef = useRef(false)
@@ -180,6 +182,15 @@ export default function BillingPage() {
                     <div className={cn('text-3xl font-bold', balance < 0 ? 'text-red-500' : 'text-primary')}>
                       ¥{balance.toFixed(2)}
                     </div>
+                  </div>
+                  <div className="h-10 w-px bg-border" />
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">本月消费</span>
+                    <div className="text-2xl font-bold text-orange-500">¥{monthConsumption.toFixed(2)}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">消费总计</span>
+                    <div className="text-2xl font-bold text-red-500">¥{totalConsumption.toFixed(2)}</div>
                   </div>
                 </div>
               )}

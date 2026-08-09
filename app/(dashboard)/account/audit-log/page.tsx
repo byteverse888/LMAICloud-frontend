@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuditLog } from '@/hooks/use-api'
 import { History, Search, Loader2, Monitor } from 'lucide-react'
+import { formatTime } from '@/lib/utils'
 
 function parseDevice(ua: string) {
   if (!ua) return ''
@@ -69,7 +70,7 @@ export default function AuditLogPage() {
                 const detailText = isAuth && l.detail ? parseDevice(l.detail) : (l.detail || '-')
                 return (
                 <div key={l.id} className="grid grid-cols-[140px_60px_90px_120px_100px_1fr] gap-1 text-sm py-2 border-b border-border/50 items-start">
-                  <span className="text-muted-foreground whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleString('zh-CN') : ''}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">{l.created_at ? formatTime(l.created_at) : ''}</span>
                   <span>
                     {l.action === 'login' ? (
                       <span className="text-blue-600 dark:text-blue-400">{actionLabels[l.action]}</span>

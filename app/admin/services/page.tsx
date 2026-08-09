@@ -19,6 +19,7 @@ import {
 import { Search, RefreshCw, Trash2, Loader2, Network, Eye } from 'lucide-react'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { formatTime } from '@/lib/utils'
 
 function formatPorts(ports: any[]) {
   if (!ports || ports.length === 0) return '-'
@@ -160,7 +161,7 @@ export default function ServicesPage() {
                       {formatPorts(svc.ports)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {svc.created_at ? new Date(svc.created_at).toLocaleString() : '-'}
+                      {svc.created_at ? formatTime(svc.created_at) : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
