@@ -13,7 +13,7 @@ import { formatTime } from '@/lib/utils'
 export function Header() {
   const t = useTranslations('header')
   const { count: unreadCount, refresh: refreshUnread } = useUnreadCount()
-  const { notifications } = useNotifications(1, 5)
+  const { notifications, refresh: refreshNotifications } = useNotifications(1, 5)
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -31,11 +31,13 @@ export function Header() {
   const handleMarkRead = async (id: string) => {
     await markAsRead(id)
     refreshUnread()
+    refreshNotifications()
   }
 
   const handleMarkAllRead = async () => {
     await markAllRead()
     refreshUnread()
+    refreshNotifications()
   }
 
   return (
@@ -90,7 +92,13 @@ export function Header() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 relative hover:bg-muted/80"
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={() => {
+              const next = !showDropdown
+              setShowDropdown(next)
+              // 列表只在 Header 挂载时拉过一次，新通知（如实例挂起）产生后不会自动更新；
+              // 每次展开时刷新，避免角标有未读但下拉显示“暂无通知”
+              if (next) refreshNotifications()
+            }}
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (

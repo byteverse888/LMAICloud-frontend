@@ -133,7 +133,7 @@ export default function InstanceDetailPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, nodeNotReady = false) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string }> = {
       running: { label: '运行中', variant: 'success', dotClass: 'bg-emerald-500' },
       stopped: { label: '已停止', variant: 'secondary', dotClass: 'bg-gray-400' },
@@ -145,9 +145,13 @@ export default function InstanceDetailPage() {
       node_offline: { label: '节点离线', variant: 'warning', dotClass: 'bg-orange-500' },
       error: { label: '异常', variant: 'destructive', dotClass: 'bg-red-500' },
     }
-    const { label, variant, dotClass } = config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' }
+    // Pod 仍为 Running/Starting 但所在节点已 NotReady：降级为 warning，
+    // 与列表页同口径，避免用户误以为实例正常可用
+    const { label, variant, dotClass } = (nodeNotReady && ['running', 'starting'].includes(status))
+      ? { label: '节点失联', variant: 'warning' as const, dotClass: 'bg-orange-500' }
+      : (config[status] || { label: status, variant: 'secondary' as const, dotClass: 'bg-gray-400' })
     const isTransient = ['creating', 'starting', 'stopping', 'releasing'].includes(status)
-    const isActive = status === 'running'
+    const isActive = status === 'running' && !nodeNotReady
     return (
       <Badge variant={variant} className="gap-1.5">
         <span className="relative flex h-2 w-2">
@@ -188,7 +192,7 @@ export default function InstanceDetailPage() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{instance.name}</h1>
-            {getStatusBadge(instance.status)}
+            {getStatusBadge(instance.status, instance.node_ready === false)}
             <Button variant="ghost" size="icon" onClick={refresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -196,11 +200,17 @@ export default function InstanceDetailPage() {
           <p className="text-sm text-muted-foreground mt-1">
             实例ID: {instance.id} · Deployment: {instance.deployment_name || instance.deployment_info?.name || '-'} · 节点: {instance.node_id || instance.pod_info?.[0]?.node_name || '-'}
           </p>
+          {instance.node_ready === false && (
+            <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
+              实例所在节点已离线，WebShell 等容器内操作暂不可用；节点 5 分钟内未恢复，系统将自动挂起该实例（挂起期间不计费）。
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {instance.status === 'running' ? (
             <>
-              <Button variant="outline" onClick={() => setTerminalOpen(true)}>
+              <Button variant="outline" onClick={() => setTerminalOpen(true)} disabled={instance.node_ready === false}
+                title={instance.node_ready === false ? '所在节点已离线，终端暂不可用' : undefined}>
                 <Terminal className="h-4 w-4 mr-2" />
                 登录终端
               </Button>

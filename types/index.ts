@@ -168,6 +168,10 @@ export interface Instance {
   memory_usage_bytes?: number | null
   gpu_util?: number | null
   gpu_memory?: number | null
+
+  // 节点健康：false = 实例状态为运行中/启动中但所在节点已 NotReady
+  //（webshell 不可用），前端状态列降级为 warning 展示
+  node_ready?: boolean
 }
 
 // 资源配置（创建实例时的资源选择表格行）

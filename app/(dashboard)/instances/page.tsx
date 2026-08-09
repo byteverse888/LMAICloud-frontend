@@ -314,7 +314,7 @@ export default function InstancesPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, nodeNotReady = false) => {
     const cfg: Record<string, { label: string; variant: any; dot: string }> = {
       running: { label: '运行中', variant: 'success', dot: 'bg-emerald-500' },
       stopped: { label: '已停止', variant: 'secondary', dot: 'bg-gray-400' },
@@ -326,11 +326,19 @@ export default function InstancesPage() {
       node_offline: { label: '节点离线', variant: 'warning', dot: 'bg-orange-500' },
       error: { label: '异常', variant: 'destructive', dot: 'bg-red-500' },
     }
-    const c = cfg[status] || { label: status, variant: 'secondary', dot: 'bg-gray-400' }
+    // Pod 仍为 Running/Starting 但所在节点已 NotReady（webshell 不可用）：
+    // 降级为 warning，避免用户误以为实例正常可用
+    const c = (nodeNotReady && ['running', 'starting'].includes(status))
+      ? { label: '节点失联', variant: 'warning', dot: 'bg-orange-500' }
+      : (cfg[status] || { label: status, variant: 'secondary', dot: 'bg-gray-400' })
     const isTransient = ['creating', 'starting', 'stopping', 'releasing'].includes(status)
-    const isActive = status === 'running'
+    const isActive = status === 'running' && !nodeNotReady
     return (
-      <Badge variant={c.variant} className="gap-1.5">
+      <Badge
+        variant={c.variant}
+        className="gap-1.5"
+        title={nodeNotReady ? '实例所在节点已离线，WebShell 等容器内操作暂不可用；节点 5 分钟内未恢复系统将自动挂起实例' : undefined}
+      >
         <span className="relative flex h-2 w-2">
           {(isActive || isTransient) && (
             <span className={`absolute inline-flex h-full w-full rounded-full ${c.dot} ${isTransient ? 'animate-ping' : 'animate-pulse'}`} />
@@ -566,7 +574,7 @@ export default function InstancesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(inst.status)}
+                      {getStatusBadge(inst.status, inst.node_ready === false)}
                       {inst.ready_replicas != null && inst.replicas != null && (
                         <span className="text-xs text-muted-foreground">{inst.ready_replicas}/{inst.replicas}</span>
                       )}
@@ -639,7 +647,7 @@ export default function InstancesPage() {
                         <DropdownMenuItem onClick={() => setLogInstance({ id: inst.id, name: inst.name })}>
                           <FileText className="h-4 w-4 mr-2" />查看日志
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setTermInstance({ id: inst.id, name: inst.name })} disabled={inst.status !== 'running'}>
+                        <DropdownMenuItem onClick={() => setTermInstance({ id: inst.id, name: inst.name })} disabled={inst.status !== 'running' || inst.node_ready === false}>
                           <Terminal className="h-4 w-4 mr-2" />WebShell
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
