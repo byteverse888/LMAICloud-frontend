@@ -6,6 +6,11 @@
 # even when checked out on Windows (this overrides core.autocrlf=true).
 *.sh text eol=lf
 
+# Env files must be LF too: sourcing a CRLF .env keeps a trailing CR in the value,
+# which silently corrupts credentials passed on to curl or psql.
+*.env text eol=lf
+.env.example text eol=lf
+
 # Binary files - never touch line endings
 *.png binary
 *.ico binary

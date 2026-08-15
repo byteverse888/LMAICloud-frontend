@@ -94,6 +94,7 @@ PORT=3001 npm run dev
 ```
 
 访问：http://localhost:3000
+访问：http://gpucloud.byteverse.vip
 
 邮箱	密码	角色
 test@example.com	Test@1234	普通用户
