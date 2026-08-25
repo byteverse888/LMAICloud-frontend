@@ -144,6 +144,23 @@ export default function InstanceDetailPage() {
     }
   }
 
+  // 强制删除：无论实例当前状态，直接清理 K8s 资源并标记已删除（后端 POST 兼容入口）
+  const [showForceDeleteDialog, setShowForceDeleteDialog] = useState(false)
+  const [forceDeleting, setForceDeleting] = useState(false)
+  const handleForceDelete = async () => {
+    try {
+      setForceDeleting(true)
+      await api.post(`/instances/${instanceId}/force`)
+      toast.success('实例已强制删除')
+      setShowForceDeleteDialog(false)
+      setTimeout(() => router.push('/instances'), 1000)
+    } catch {
+      toast.error('强制删除失败')
+    } finally {
+      setForceDeleting(false)
+    }
+  }
+
   const getStatusBadge = (status: string, nodeNotReady = false) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'warning' | 'destructive'; dotClass: string }> = {
       running: { label: '运行中', variant: 'success', dotClass: 'bg-emerald-500' },
@@ -255,9 +272,18 @@ export default function InstanceDetailPage() {
             <SlidersHorizontal className="h-4 w-4 mr-2" />
             调整规格
           </Button>
-          <Button variant="destructive" onClick={handleRelease} disabled={instance.status === 'releasing' || instance.status === 'released'}>
+          {/* 普通删除仅限关机态（与列表页/后端同口径）；任意状态清理走强制删除 */}
+          <Button variant="destructive" onClick={handleRelease}
+            disabled={!['stopped', 'error', 'expired'].includes(instance.status)}
+            title={!['stopped', 'error', 'expired'].includes(instance.status) ? '运行中的实例请先关机；如需直接清理请使用强制删除' : undefined}>
             <Trash2 className="h-4 w-4 mr-2" />
             删除
+          </Button>
+          <Button variant="outline" onClick={() => setShowForceDeleteDialog(true)}
+            disabled={instance.status === 'released' || instance.status === 'releasing'}
+            className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-950/50">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            强制删除
           </Button>
         </div>
       </div>
@@ -658,6 +684,27 @@ export default function InstanceDetailPage() {
           refresh()
         }}
       />
+
+      {/* 强制删除确认弹窗：任意状态直接清理，危险等级高于普通删除，必须二次确认 */}
+      <AlertDialog open={showForceDeleteDialog} onOpenChange={(open) => { if (!open) setShowForceDeleteDialog(false) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" /> 强制删除
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要强制删除实例 <strong>{instance?.name}</strong> 吗？
+              此操作将直接清理 K8s 资源并标记删除，无论实例当前状态如何（含运行中）。<strong>此操作不可恢复！</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={forceDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceDelete} disabled={forceDeleting} className="bg-red-600 hover:bg-red-700 text-white">
+              {forceDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} 确认强制删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 关机确认弹窗：与实例列表页保持同一套风险告知口径 */}
       <AlertDialog open={showStopDialog} onOpenChange={(open) => { if (!open) setShowStopDialog(false) }}>

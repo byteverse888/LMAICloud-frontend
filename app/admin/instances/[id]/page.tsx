@@ -176,6 +176,14 @@ export default function AdminInstanceDetailPage() {
         </div>
       </div>
 
+      {/* 失败原因：运维排查开机失败的关键信息，与用户端同口径展示（后端 last_error 字段） */}
+      {(instance.status === 'error' || instance.last_error) && instance.last_error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
+          <p className="text-sm font-medium text-red-500 mb-1">最近一次失败原因</p>
+          <p className="text-sm text-red-400 whitespace-pre-wrap break-words">{instance.last_error}</p>
+        </div>
+      )}
+
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="bg-muted/50 p-1 rounded-full">
           <TabsTrigger value="overview" className="rounded-full px-4">概览</TabsTrigger>

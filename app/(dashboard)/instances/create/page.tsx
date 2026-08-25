@@ -142,7 +142,7 @@ export default function InstanceCreatePage() {
   const [selectedGpu, setSelectedGpu] = useState<GpuModelOption | null>(null)
   const [instanceCount, setInstanceCount] = useState(1)
   const [dataDiskEnabled, setDataDiskEnabled] = useState(true)
-  const [dataDiskMountPath, setDataDiskMountPath] = useState('/root/data')
+  const [dataDiskMountPath, setDataDiskMountPath] = useState('/mnt/data')
   const [storageMounts, setStorageMounts] = useState<{ name: string; mount_path: string; size_gb: number }[]>([])
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([])
   const [imageCategory, setImageCategory] = useState('app')
@@ -298,7 +298,7 @@ export default function InstanceCreatePage() {
       if (envVars.length > 0) payload.env_vars = envVars.filter(e => e.key)
       if (storageMounts.length > 0) payload.storage_mounts = storageMounts.filter(s => s.name).map(s => ({ ...s, persistent: true }))
       payload.data_disk_enabled = dataDiskEnabled
-      payload.data_disk_mount_path = dataDiskMountPath.trim() || '/root/data'
+      payload.data_disk_mount_path = dataDiskMountPath.trim() || '/mnt/data'
       await api.post<{ id: string }>('/instances', payload)
       toast.success('实例创建中，请稍候...')
       router.push('/instances')
@@ -642,8 +642,8 @@ export default function InstanceCreatePage() {
             </FormRow>
             {dataDiskEnabled && (
               <FormRow label="挂载路径">
-                <Input className="max-w-xs font-mono" value={dataDiskMountPath} onChange={e => setDataDiskMountPath(e.target.value)} placeholder="/root/data" />
-                <p className="text-xs text-muted-foreground mt-1.5">持久数据盘在容器内的挂载路径，默认 /root/data。</p>
+                <Input className="max-w-xs font-mono" value={dataDiskMountPath} onChange={e => setDataDiskMountPath(e.target.value)} placeholder="/mnt/data" />
+                <p className="text-xs text-muted-foreground mt-1.5">持久数据盘在容器内的挂载路径，默认 /mnt/data。</p>
               </FormRow>
             )}
 
@@ -663,7 +663,8 @@ export default function InstanceCreatePage() {
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" onClick={() => setStorageMounts(storageMounts.filter((_, j) => j !== i))}><X className="h-3.5 w-3.5" /></Button>
                       </div>
                     ))}
-                    <Button variant="outline" size="sm" className="text-xs border-dashed" onClick={() => setStorageMounts([...storageMounts, { name: '', mount_path: '/mnt/data', size_gb: 50 }])}>
+                    {/* 额外挂载默认路径避开数据盘默认的 /mnt/data，防止两个卷挂同一挂载点互相遮盖 */}
+                    <Button variant="outline" size="sm" className="text-xs border-dashed" onClick={() => setStorageMounts([...storageMounts, { name: '', mount_path: '/mnt/storage', size_gb: 50 }])}>
                       <Plus className="h-3 w-3 mr-1" />添加存储挂载
                     </Button>
                     <p className="text-xs text-muted-foreground">额外挂载卷同样持久化保存，实例重启后数据不丢失。</p>

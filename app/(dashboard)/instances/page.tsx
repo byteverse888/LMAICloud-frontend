@@ -4,7 +4,6 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { useTranslations } from 'next-intl'
 import {
   RefreshCw, Plus, Search, Filter, MoreHorizontal,
   Power, PowerOff, Trash2, Terminal, Loader2,
@@ -49,7 +48,7 @@ const WebTerminal = dynamic(
 )
 
 export default function InstancesPage() {
-  const t = useTranslations('instances')
+  // 本页文案全为硬编码中文，i18n 待统一收口时再接线（key 已留存于 messages/*.json）
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
@@ -218,7 +217,10 @@ export default function InstancesPage() {
   const selectedInstances = instances.filter(i => selectedIds.includes(i.id))
   const selectedRunning = selectedInstances.filter(i => stoppableStatuses.includes(i.status)).length
   const selectedStopped = selectedInstances.filter(i => ['stopped', 'error'].includes(i.status)).length
-  const selectedCanDelete = selectedInstances.filter(i => !['releasing', 'released'].includes(i.status)).length
+  // 普通删除仅限关机态（运行中要先关机；节点离线时 Pod 可能仍在节点上运行同样禁删），
+  // 任意状态清理走「强制删除」；与后端 DELETE /{id} 的状态闸门同口径
+  const deletableStatuses = ['stopped', 'error', 'expired']
+  const selectedCanDelete = selectedInstances.filter(i => deletableStatuses.includes(i.status)).length
 
   const batchActionConfig: Record<string, { title: string; desc: string; action: string; color: string }> = {
     stop: {
@@ -235,7 +237,7 @@ export default function InstancesPage() {
     },
     delete: {
       title: '批量删除',
-      desc: `确定要删除选中的 ${selectedCanDelete} 个实例吗？删除后实例将停止运行并回收资源，此操作不可恢复！`,
+      desc: `确定要删除选中的 ${selectedCanDelete} 个已关机实例吗？删除后资源将被回收，此操作不可恢复！（运行中的实例会被跳过，需先关机或用强制删除）`,
       action: '确认删除',
       color: 'bg-red-600 hover:bg-red-700 text-white',
     },
@@ -256,7 +258,7 @@ export default function InstancesPage() {
           } else if (batchAction === 'start' && ['stopped', 'error'].includes(inst.status)) {
             await startInstance(inst.id)
             successCount++
-          } else if (batchAction === 'delete' && !['releasing', 'released'].includes(inst.status)) {
+          } else if (batchAction === 'delete' && deletableStatuses.includes(inst.status)) {
             await deleteInstance(inst.id)
             successCount++
           }
@@ -691,7 +693,8 @@ export default function InstancesPage() {
                           <Pencil className="h-4 w-4 mr-2" />修改名字
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setDeleteTarget({ id: inst.id, name: inst.name })} disabled={inst.status === 'releasing' || inst.status === 'released'}>
+                        <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setDeleteTarget({ id: inst.id, name: inst.name })} disabled={!deletableStatuses.includes(inst.status)}
+                          title={!deletableStatuses.includes(inst.status) ? '运行中的实例请先关机；如需直接清理请使用强制删除' : undefined}>
                           <Trash2 className="h-4 w-4 mr-2" />删除
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setForceDeleteTarget({ id: inst.id, name: inst.name })} disabled={inst.status === 'released'}>
