@@ -61,8 +61,10 @@ export default function AdminInstanceDetailPage() {
   const [terminalOpen, setTerminalOpen] = useState(false)
 
   const handleStart = async () => {
+    // 开机失败的真实原因（如「所需 GPU 已被其他实例占用」409）已由 api 层按后端 detail 提示，
+    // 再弹一条「启动失败」会盖掉运维定位问题所需的信息
     try { await startInstance(); toast.success('实例启动中'); setTimeout(refresh, 2000) }
-    catch { toast.error('启动失败') }
+    catch { /* 原因已由 api 层提示 */ }
   }
 
   const handleStop = async () => {

@@ -33,6 +33,10 @@ export default function WebTerminal({
   const fitAddonRef = useRef<FitAddon | null>(null)
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  // token 只在建连瞬间读取（后端仅在连接建立时校验一次）：不放入 connect 的依赖，
+  // 否则 access token 后台刷新会导致 connect 重建 → 在用终端被断开重连（shell 被杀死）
+  const tokenRef = useRef(token)
+  tokenRef.current = token
 
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,7 +126,7 @@ export default function WebTerminal({
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
       const wsBase = process.env.NEXT_PUBLIC_WS_URL
         || apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
-      const wsUrl = `${wsBase}${wsPath}/${instanceId}?token=${token}`
+      const wsUrl = `${wsBase}${wsPath}/${instanceId}?token=${tokenRef.current}`
 
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
@@ -187,7 +191,7 @@ export default function WebTerminal({
     }
 
     setTimeout(startTerminal, 30)
-  }, [instanceId, token, safeFit, wsPath])
+  }, [instanceId, safeFit, wsPath])
 
   // 窗口 resize
   useEffect(() => {

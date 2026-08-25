@@ -134,7 +134,16 @@ export default function GpuPanel() {
 
   // 在线但尚未配置定价的型号（快捷添加）
   const pricedKeys = new Set(items.map(i => `${i.model_name}|${i.gpu_memory_gb ?? ''}`))
-  const unpricedModels = onlineModels.filter(m => !pricedKeys.has(`${m.gpu_model}|${m.gpu_memory_gb ?? ''}`))
+  const pricedModelNames = new Set(items.map(i => i.model_name))
+  // Laptop 变体（如 RTX-4070-Laptop-GPU）已按桌面版基础型号价 ×70% 计价，不再列入未定价清单
+  const isLaptopOfPricedBase = (model: string) => {
+    const idx = model.toLowerCase().indexOf('-laptop')
+    if (idx <= 0) return false
+    const base = model.slice(0, idx)
+    return pricedModelNames.has(base) || pricedModelNames.has(base.replace(/-/g, ' '))
+  }
+  const unpricedModels = onlineModels.filter(m =>
+    !pricedKeys.has(`${m.gpu_model}|${m.gpu_memory_gb ?? ''}`) && !isLaptopOfPricedBase(m.gpu_model))
 
   const formatModel = (name: string) => name.replace(/NVIDIA-/i, '').replace(/-/g, ' ')
 
@@ -142,7 +151,8 @@ export default function GpuPanel() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          GPU 实例按型号（+显存规格）计价，型号需与节点上报标签一致；未配置的型号按默认价 ¥1.00/卡/时 计费。
+          GPU 实例按型号（+显存规格）计价；笔记本变体卡按同型号桌面卡价 70% 计费；
+          定价表未收录的型号暂按显存 0.2 元/GB/时兜底计价，无显存信息时按默认价 ¥1.00/卡/时。
         </p>
         <Button onClick={() => openCreate()}><Plus className="h-4 w-4 mr-1.5" />新建定价</Button>
       </div>
@@ -155,7 +165,7 @@ export default function GpuPanel() {
             <div className="h-32 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
           ) : items.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
-              暂未配置定价，未配置的型号按默认价 ¥1.00/卡/时 计费
+              暂未配置定价，未收录型号暂按显存 0.2 元/GB/时兜底计价
             </div>
           ) : (
             <Table>

@@ -10,7 +10,7 @@ import {
   Power, PowerOff, Trash2, Terminal, Loader2,
   ChevronDown, ChevronUp, List, Activity, Calendar,
   FileText, XCircle, AlertTriangle, Server, BookOpen, RotateCcw,
-  Play, Square, Cpu, HardDrive, Pencil,
+  Play, Square, Cpu, HardDrive, Pencil, SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,7 +34,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { useInstances, useWebSocketStatus } from '@/hooks/use-api'
+import { useInstances, useWebSocketStatus, type Instance } from '@/hooks/use-api'
+import { StartOptionsDialog } from '@/components/instances/start-options-dialog'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
@@ -181,8 +182,16 @@ export default function InstancesPage() {
   const [deleting, setDeleting] = useState(false)
 
   // 单个关机确认
-  const [stopTarget, setStopTarget] = useState<{ id: string; name: string } | null>(null)
+  // 关机确认弹窗需要按 GPU/无卡实例给出不同的资源释放说明，故一并带上规格
+  const [stopTarget, setStopTarget] = useState<{ id: string; name: string; gpuModel?: string; gpuCount?: number } | null>(null)
   const [stopping, setStopping] = useState(false)
+
+  // 单个开机（带开机选项）
+  // 选项表单、默认值回填与校验全在 StartOptionsDialog 里，与详情页共用一份
+  const [startTarget, setStartTarget] = useState<Instance | null>(null)
+
+  // 单个调整规格（关机态预先改规格，不开机，下次开机生效），与开机共用同一弹窗组件
+  const [specTarget, setSpecTarget] = useState<Instance | null>(null)
 
   // 修改名字
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null)
@@ -214,7 +223,7 @@ export default function InstancesPage() {
   const batchActionConfig: Record<string, { title: string; desc: string; action: string; color: string }> = {
     stop: {
       title: '批量关机',
-      desc: `确定要关机选中的 ${selectedRunning} 个活跃状态的实例吗？已停止等其他状态的实例将被跳过。`,
+      desc: `确定要关机选中的 ${selectedRunning} 个活跃状态的实例吗？已停止等其他状态的实例将被跳过。关机后这些实例占用的 GPU / CPU / 内存会立即释放到公共资源池，可能被其他用户占用；实例只能在原节点重新开机，届时资源不足会导致开机失败。`,
       action: '确认关机',
       color: 'bg-amber-600 hover:bg-amber-700 text-white',
     },
@@ -377,9 +386,10 @@ export default function InstancesPage() {
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">容器实例</h1>
               </div>
-              <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-                容器实例提供 1卡、2卡、4卡、8卡的实例。多个实例之间内网互通。可按需和包年包月购买，按需实例关机不计费，开机自动重建。
-                连续关机 15 天会自动删除实例。
+              <p className="text-sm text-muted-foreground max-w-4xl leading-relaxed">
+                容器实例运行在社区贡献的边缘节点上，可按需购买，按需实例关机不计费。
+                边缘节点的网络与供电可能存在不稳定，且通常没有公网 IP（无法从外网直接访问），不适合运行长期任务，建议用于短时实验、推理等可随时中断的任务。
+                关机后 GPU / CPU / 内存释放回该节点资源池，数据盘保留在原节点，实例也只能在原节点开机 —— 若届时该节点资源已被占满，开机会失败，需等待资源释放后重试。
               </p>
             </div>
             <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
@@ -579,13 +589,35 @@ export default function InstancesPage() {
                         <span className="text-xs text-muted-foreground">{inst.ready_replicas}/{inst.replicas}</span>
                       )}
                     </div>
+                    {/* 异常状态下把失败原因展出来，否则用户只看到一个“异常”不知道下一步该做什么 */}
+                    {inst.status === 'error' && inst.last_error && (
+                      <div className="text-xs text-destructive mt-1 max-w-[220px] line-clamp-2" title={inst.last_error}>
+                        {inst.last_error}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm space-y-0.5">
+                      {/* 运行态规格可能低于购买规格（无卡模式 / 降配开机），
+                          此时必须展示实际生效的规格，否则用户会以为自己仍在按购买规格运行和付费 */}
                       {inst.gpu_model && inst.gpu_count > 0 && (
-                        <div className="font-medium">{inst.gpu_model} x {inst.gpu_count}</div>
+                        inst.runtime_gpu_count === 0 ? (
+                          <div className="flex items-center gap-1">
+                            <span className="line-through text-muted-foreground">{inst.gpu_model} x {inst.gpu_count}</span>
+                            <Badge variant="outline" className="px-1 py-0 text-[10px] border-amber-300 text-amber-600 dark:text-amber-400">无卡模式</Badge>
+                          </div>
+                        ) : (
+                          <div className="font-medium">{inst.gpu_model} x {inst.gpu_count}</div>
+                        )
                       )}
-                      <div className="flex items-center gap-1"><Cpu className="h-3 w-3 text-muted-foreground" />{inst.cpu_cores}核 / {inst.memory}GB</div>
+                      <div className="flex items-center gap-1">
+                        <Cpu className="h-3 w-3 text-muted-foreground" />
+                        {inst.runtime_cpu_cores ?? inst.cpu_cores}核 / {inst.runtime_memory ?? inst.memory}GB
+                        {(inst.runtime_cpu_cores != null || inst.runtime_memory != null) && (
+                          <Badge variant="outline" className="px-1 py-0 text-[10px] border-amber-300 text-amber-600 dark:text-amber-400"
+                            title={`购买规格 ${inst.cpu_cores}核 / ${inst.memory}GB，本次开机已调整`}>已调配</Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1"><HardDrive className="h-3 w-3 text-muted-foreground" />{inst.disk || '-'}GB</div>
                     </div>
                   </TableCell>
@@ -637,10 +669,14 @@ export default function InstancesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => startInstance(inst.id)} disabled={!['stopped', 'error'].includes(inst.status)}>
+                        <DropdownMenuItem onClick={() => setStartTarget(inst)} disabled={!['stopped', 'error'].includes(inst.status)}>
                           <Power className="h-4 w-4 mr-2" />开机
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setStopTarget({ id: inst.id, name: inst.name })} disabled={!stoppableStatuses.includes(inst.status)}>
+                        <DropdownMenuItem onClick={() => setSpecTarget(inst)} disabled={!['stopped', 'error'].includes(inst.status)}
+                          title={!['stopped', 'error'].includes(inst.status) ? '仅关机状态的实例可调整规格' : undefined}>
+                          <SlidersHorizontal className="h-4 w-4 mr-2" />调整规格
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setStopTarget({ id: inst.id, name: inst.name, gpuModel: inst.gpu_model, gpuCount: inst.gpu_count })} disabled={!stoppableStatuses.includes(inst.status)}>
                           <PowerOff className="h-4 w-4 mr-2" />关机
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -764,8 +800,23 @@ export default function InstancesPage() {
               <PowerOff className="h-5 w-5" /> 关机实例
             </AlertDialogTitle>
             <AlertDialogDescription>
-              确定要关闭实例 <strong>{stopTarget?.name}</strong> 吗？实例将停止运行，但资源会保留，可以重新开机。
+              确定要关闭实例 <strong>{stopTarget?.name}</strong> 吗？关机后按量计费停止扣费，数据盘内容保留。
             </AlertDialogDescription>
+            {/* 关机会立即释放算力配额，而实例的数据盘在节点本地、Deployment 绑定原节点无法迁移，
+                因此再次开机可能因该节点资源被占满而失败。必须在用户决策前告知，不能只在开机失败时才报错 */}
+            <div className="flex items-start gap-2.5 text-sm py-2.5 px-3 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-medium">关机后原有资源可能被分配给其他用户，再次开机存在启动失败的可能性。</span>
+                <span className="block mt-0.5">
+                  {stopTarget?.gpuModel && (stopTarget?.gpuCount ?? 0) > 0
+                    ? `本实例的 ${stopTarget.gpuModel} × ${stopTarget.gpuCount} 及 CPU / 内存会立即释放到公共资源池；`
+                    : '本实例占用的 CPU / 内存会立即释放到公共资源池；'}
+                  数据盘保存在当前节点本地，实例只能在同一节点重新开机，若届时该节点资源已被其他实例占满，开机将失败，需等待资源释放后重试。
+                </span>
+                <span className="block mt-0.5">若短时间内还要继续使用，建议保持开机；长时间不用请先备份容器内的重要数据。</span>
+              </div>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={stopping}>取消</AlertDialogCancel>
@@ -775,6 +826,27 @@ export default function InstancesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 开机选项弹窗：原节点资源被占时的降级开机入口（无卡模式 / 调整规格） */}
+      <StartOptionsDialog
+        instance={startTarget}
+        onClose={() => setStartTarget(null)}
+        onConfirm={async (opts) => {
+          await startInstance(startTarget!.id, opts)
+          silentRefresh()
+        }}
+      />
+
+      {/* 调整规格弹窗：关机态预先改规格（无卡↔带卡 / CPU / 内存），不开机，下次开机生效 */}
+      <StartOptionsDialog
+        mode="adjust"
+        instance={specTarget}
+        onClose={() => setSpecTarget(null)}
+        onConfirm={async (opts) => {
+          await api.patch(`/instances/${specTarget!.id}/spec`, opts)
+          silentRefresh()
+        }}
+      />
 
       {/* 删除确认弹窗 */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>

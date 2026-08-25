@@ -102,7 +102,7 @@
   },
   "instances": {
     "title": "Container Instances",
-    "warning": "Instances will be released after 15 days of consecutive shutdown. Data will be cleared and cannot be recovered.",
+    "warning": "After shutdown, the GPU / CPU / memory are released back to the shared pool while the data disk stays on the original node, so the instance can only be started on that same node. If the node is full by then, startup will fail and you will need to retry after resources are freed.",
     "rentNew": "Rent New Instance",
     "batchRenew": "Batch Renew",
     "gpuNotification": "GPU Notification",

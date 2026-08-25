@@ -26,6 +26,26 @@ import { useImages } from '@/hooks/use-api'
 import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 
+// ============ 环境变量校验 ============
+// 与后端 schemas.EnvVarItem 的规则保持一致（后端才是真正的防线，
+// 这里只是提前告知，避免用户填完一整页才在提交时报错）
+const RESERVED_ENV_PREFIXES = ['NVIDIA_']
+const RESERVED_ENV_KEYS = ['INSTANCE_ID', 'HOST_IP', 'PIP_SOURCE', 'CONDA_SOURCE', 'APT_SOURCE']
+
+function validateEnvKey(rawKey: string): string | null {
+  const key = rawKey.trim()
+  if (!key) return null  // 空行提交时会被过滤，不报错
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    return '只允许字母、数字和下划线，且不能以数字开头'
+  }
+  const upper = key.toUpperCase()
+  if (RESERVED_ENV_KEYS.includes(upper)) return '该变量由平台注入，不可自定义'
+  if (RESERVED_ENV_PREFIXES.some(p => upper.startsWith(p))) {
+    return 'NVIDIA_ 开头的变量由平台管理：GPU 设备可见性按实例规格分配'
+  }
+  return null
+}
+
 // ============ GPU 型号目录 hook（按标签调度，不暴露节点信息） ============
 interface GpuModelOption {
   gpu_model: string
@@ -116,6 +136,8 @@ export default function InstanceCreatePage() {
   const [billingMode, setBillingMode] = useState('hourly')
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
   const [resourceTypeFilter, setResourceTypeFilter] = useState('vGPU')
+  // 云端（中心）节点资源目前很少、暂不对普通用户开放，普通用户只开放边缘调度；
+  // 管理端保留全部选项便于内部验证。后续放开时把下面的 isAdmin 分支去掉即可
   const [nodeTypeFilter, setNodeTypeFilter] = useState('all')
   const [selectedGpu, setSelectedGpu] = useState<GpuModelOption | null>(null)
   const [instanceCount, setInstanceCount] = useState(1)
@@ -177,6 +199,14 @@ export default function InstanceCreatePage() {
   // 管理端用户可指定部署节点（普通用户由系统自动调度）
   const { user } = useAuthStore()
   const isAdmin = user?.role === 'admin'
+  // 普通用户隐藏「全部 / 中心」：选「全部」后端仍可能调度到中心节点，所以不能只隐藏「中心」选项，
+  // 需要把值也强制到 'edge'，否则初始值 'all' 会绕过限制
+  const nodeTypeOptions = isAdmin
+    ? [{ value: 'all', label: '全部' }, { value: 'center', label: '中心' }, { value: 'edge', label: '边缘' }]
+    : [{ value: 'edge', label: '边缘节点' }]
+  useEffect(() => {
+    if (!isAdmin && nodeTypeFilter !== 'edge') setNodeTypeFilter('edge')
+  }, [isAdmin, nodeTypeFilter])
   const [nodeOptions, setNodeOptions] = useState<{ node_id: string; node_name: string; node_type: string }[]>([])
   const [selectedNode, setSelectedNode] = useState('')  // 空 = 自动调度
   useEffect(() => {
@@ -219,10 +249,20 @@ export default function InstanceCreatePage() {
   // 当前规格分组（切换 tab 用）
   const currentGroup = specGroups.find(g => g.key === specType) || specGroups[0]
 
+  // 边缘节点由第三方提供算力、稳定性不受平台控制，预付整月/整年后节点长期离线只能走退款，
+  // 因此只提供按量计费。选到边缘后自动回退，避免带着包月的选择提交被后端 400 拒绝
+  const edgeOnly = nodeTypeFilter === 'edge'
+  useEffect(() => {
+    if (edgeOnly && billingMode !== 'hourly') setBillingMode('hourly')
+  }, [edgeOnly, billingMode])
+
   const handleCreate = async () => {
     if (!instanceName.trim()) { toast.error('请输入实例名称'); return }
     if (resourceTypeFilter !== 'no_gpu' && !selectedGpu) { toast.error('请选择 GPU 型号'); return }
     if (!selectedImage) { toast.error('请选择镜像'); return }
+    // 环境变量名在提交前再校一次：后端会 422 拒绝，提前拦下避免一次无效请求
+    const badEnv = envVars.map(e => ({ key: e.key.trim(), err: validateEnvKey(e.key) })).find(x => x.err)
+    if (badEnv) { toast.error(`环境变量 ${badEnv.key}：${badEnv.err}`); return }
     setCreating(true)
     try {
       const isNoGpu = resourceTypeFilter === 'no_gpu'
@@ -452,11 +492,14 @@ export default function InstanceCreatePage() {
           <CardContent className="space-y-5">
             <FormRow label="计费模式">
               <div className="space-y-1.5">
-                <ToggleGroup value={billingMode} onChange={setBillingMode} options={[{ value: 'hourly', label: '按需计费' }, { value: 'monthly', label: '包年包月' }]} />
+                <ToggleGroup value={billingMode} onChange={setBillingMode} options={edgeOnly ? [{ value: 'hourly', label: '按需计费' }] : [{ value: 'hourly', label: '按需计费' }, { value: 'monthly', label: '包年包月' }]} />
                 <p className="text-xs text-muted-foreground">
                   {billingMode === 'hourly' ? '按小时单价计费，按实际运行时长扣费，停止/删除即结清。' : '按月/年一次性付费，到期自动续费，价格更优惠。'}
                   <button type="button" onClick={() => setBillingDialogOpen(true)} className="text-primary ml-1 hover:underline">计费说明</button>
                 </p>
+                {edgeOnly && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400">边缘节点暂不支持包年包月：算力由第三方节点提供，稳定性无法保证，按量计费只对实际在线时长收费。</p>
+                )}
               </div>
             </FormRow>
 
@@ -466,11 +509,7 @@ export default function InstanceCreatePage() {
               <ToggleGroup
                 value={nodeTypeFilter}
                 onChange={setNodeTypeFilter}
-                options={[
-                  { value: 'all', label: '全部' },
-                  { value: 'center', label: '中心' },
-                  { value: 'edge', label: '边缘' },
-                ]}
+                options={nodeTypeOptions}
               />
               {nodeTypeFilter === 'edge' ? (
                 <div className="mt-2 rounded-md border border-orange-300/70 bg-orange-50 dark:bg-orange-950/30 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-300 space-y-1">
@@ -489,6 +528,9 @@ export default function InstanceCreatePage() {
                 <p className="text-xs text-muted-foreground mt-1.5">
                   {nodeTypeFilter === 'center' ? '中心节点提供高性能 GPU 算力，适合大规模训练。' : '显示所有可用节点（含边缘节点，边缘节点可能随时离线，请留意稳定性提示）。'}
                 </p>
+              )}
+              {!isAdmin && (
+                <p className="text-xs text-muted-foreground mt-1.5">云端节点算力建设中，暂未开放调度，当前仅提供边缘节点。</p>
               )}
             </FormRow>
 
@@ -686,18 +728,24 @@ export default function InstanceCreatePage() {
           <CardContent className="space-y-4">
             <FormRow label="环境变量">
               <div className="space-y-2">
-                {envVars.map((ev, i) => (
-                  <div key={i} className="flex gap-2 items-center p-2 rounded-lg bg-muted/30 border border-dashed">
-                    <Input className="w-36 h-8 text-sm bg-background font-mono" placeholder="KEY" value={ev.key} onChange={e => { const arr = [...envVars]; arr[i].key = e.target.value; setEnvVars(arr) }} />
-                    <span className="text-muted-foreground">=</span>
-                    <Input className="flex-1 h-8 text-sm bg-background font-mono" placeholder="VALUE" value={ev.value} onChange={e => { const arr = [...envVars]; arr[i].value = e.target.value; setEnvVars(arr) }} />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" onClick={() => setEnvVars(envVars.filter((_, j) => j !== i))}><X className="h-3.5 w-3.5" /></Button>
-                  </div>
-                ))}
+                {envVars.map((ev, i) => {
+                  const keyError = validateEnvKey(ev.key)
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex gap-2 items-center p-2 rounded-lg bg-muted/30 border border-dashed">
+                        <Input className={`w-36 h-8 text-sm bg-background font-mono ${keyError ? 'border-red-500 focus-visible:ring-red-500' : ''}`} placeholder="KEY" value={ev.key} onChange={e => { const arr = [...envVars]; arr[i].key = e.target.value; setEnvVars(arr) }} />
+                        <span className="text-muted-foreground">=</span>
+                        <Input className="flex-1 h-8 text-sm bg-background font-mono" placeholder="VALUE" value={ev.value} onChange={e => { const arr = [...envVars]; arr[i].value = e.target.value; setEnvVars(arr) }} />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" onClick={() => setEnvVars(envVars.filter((_, j) => j !== i))}><X className="h-3.5 w-3.5" /></Button>
+                      </div>
+                      {keyError && <p className="text-xs text-red-400 pl-2">{keyError}</p>}
+                    </div>
+                  )
+                })}
                 <Button variant="outline" size="sm" className="text-xs border-dashed" onClick={() => setEnvVars([...envVars, { key: '', value: '' }])}>
                   <Plus className="h-3 w-3 mr-1" />添加环境变量
                 </Button>
-                <p className="text-xs text-muted-foreground">系统会向容器计算环境注入相应的环境变量。</p>
+                <p className="text-xs text-muted-foreground">系统会向容器计算环境注入相应的环境变量。NVIDIA_ 开头的变量由平台管理，不可自定义。</p>
               </div>
             </FormRow>
           </CardContent>

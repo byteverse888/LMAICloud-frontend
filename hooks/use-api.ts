@@ -27,6 +27,11 @@ export interface Instance {
   image_id?: string
   billing_type: string
   hourly_price: number
+  // 运行态规格：本次实际下发给容器的规格，null = 与购买规格一致。
+  // runtime_gpu_count === 0 即当前无卡模式（hourly_price 已不含 GPU 费用）
+  runtime_gpu_count?: number | null
+  runtime_cpu_cores?: number | null
+  runtime_memory?: number | null
   created_at: string
   started_at?: string
   node_id: string
@@ -48,6 +53,8 @@ export interface Instance {
   auto_release_type?: string
   auto_release_minutes?: number
   deployment_yaml?: string
+  // 数据盘在节点上的实际目录（持久数据盘 hostPath，未启用时为空）
+  data_disk_path?: string
   // Deployment 运行时信息（由后端 K8s 查询注入）
   deployment_name?: string
   replicas?: number | null
@@ -83,6 +90,17 @@ export interface Instance {
   // 节点健康：false = 状态为运行中/启动中但所在节点已 NotReady（webshell 不可用），
   // 前端状态列降级为 warning 展示
   node_ready?: boolean
+  // 最近一次失败原因（后端 InstanceResponse.last_error），异常状态下展给用户
+  last_error?: string | null
+}
+
+// 开机选项：原节点 GPU/CPU/内存被其他实例占住时的补救手段。
+// 数据盘是节点本地目录，换节点等于丢数据，所以只能降规格留在原节点开机。
+// 字段全不传 = 按上次运行态原样开机；no_gpu 传 false = 恢复带卡
+export interface InstanceStartOptions {
+  no_gpu?: boolean
+  cpu_cores?: number
+  memory_gb?: number
 }
 
 // 镜像类型定义
@@ -146,8 +164,9 @@ export function useInstances() {
     const { data: newInstance } = await api.post<Instance>('/instances', data)
     setInstances(prev => [...prev, newInstance]); return newInstance
   }
-  const startInstance = async (id: string) => {
-    await api.post(`/instances/${id}/start`)
+  // opts 不传 = 按上次运行态原样开机；no_gpu / cpu_cores / memory_gb 用于原节点资源被占时降级开机
+  const startInstance = async (id: string, opts?: InstanceStartOptions) => {
+    await api.post(`/instances/${id}/start`, opts)
     setInstances(prev => prev.map(i => i.id === id ? { ...i, status: 'starting' as const } : i))
   }
   const stopInstance = async (id: string) => {
@@ -336,7 +355,7 @@ export function useInstance(instanceId: string) {
     finally { setLoading(false) }
   }, [instanceId])
   useEffect(() => { fetchInstance() }, [fetchInstance])
-  const startInstance = async () => { await api.post(`/instances/${instanceId}/start`); setInstance(prev => prev ? { ...prev, status: 'starting' } : null) }
+  const startInstance = async (opts?: InstanceStartOptions) => { await api.post(`/instances/${instanceId}/start`, opts); setInstance(prev => prev ? { ...prev, status: 'starting' } : null) }
   const stopInstance = async () => { await api.post(`/instances/${instanceId}/stop`); setInstance(prev => prev ? { ...prev, status: 'stopping' } : null) }
   const releaseInstance = async () => { await api.delete(`/instances/${instanceId}`); setInstance(prev => prev ? { ...prev, status: 'releasing' } : null) }
   return { instance, loading, error, refresh: fetchInstance, startInstance, stopInstance, releaseInstance }

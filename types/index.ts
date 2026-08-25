@@ -133,6 +133,13 @@ export interface Instance {
   hourlyPrice: number
   hourly_price?: number
 
+  // 运行态规格：本次实际下发给容器的规格，null/undefined = 与上面的购买规格一致。
+  // 原节点资源被别人占住时可以「无卡模式」或降配开机（数据盘在节点本地，换节点会丢数据），
+  // runtime_gpu_count === 0 即当前处于无卡模式，此时 hourly_price 已不含 GPU 费用
+  runtime_gpu_count?: number | null
+  runtime_cpu_cores?: number | null
+  runtime_memory?: number | null
+
   // 自动关机/释放
   autoShutdownType?: AutoShutdownType
   auto_shutdown_type?: string
@@ -149,6 +156,8 @@ export interface Instance {
 
   healthStatus?: 'healthy' | 'unhealthy' | 'unknown'
   health_status?: string
+  // 最近一次失败原因（准入被拒/驱逐/创建超时等），ERROR 状态下向用户解释原因
+  last_error?: string | null
   deploymentYaml?: string
   deployment_yaml?: string
 
