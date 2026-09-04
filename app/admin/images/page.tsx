@@ -36,7 +36,7 @@ const CATEGORIES = [
   { value: 'base', label: '基础镜像' },
   { value: 'app', label: '应用镜像' },
   { value: 'framework', label: 'AI框架' },
-  { value: 'openclaw', label: '智能体' },
+  { value: 'agent', label: '智能体' },
 ]
 
 // CUDA 最小版本可选项（支持下拉选择，也支持手动输入任意版本，留空表示不限制）
@@ -461,10 +461,15 @@ export default function ImagesPage() {
               <Textarea 
                 value={formData.config} 
                 onChange={(e) => setFormData(prev => ({ ...prev, config: e.target.value }))} 
-                placeholder='{"ports": [], "envs": {}, "volumes": []}'
-                rows={4}
+                placeholder={formData.category === 'agent'
+                  ? '{"capabilities": {"model_keys": true, "channels": true, "skills": false, "monitor": true}, "port": 8642, "health_path": "/health", "dashboard": {"enabled": true, "port": 9119}, "channel_env_template": {}}'
+                  : '{"ports": [], "envs": {}, "volumes": []}'}
+                rows={formData.category === 'agent' ? 8 : 4}
                 className="font-mono text-sm"
               />
+              {formData.category === 'agent' && (
+                <p className="text-xs text-muted-foreground">智能体镜像配置：capabilities 控制详情页显示的能力模块（model_keys/channels/skills/monitor）；port 为 API 服务端口；health_path 为健康检查路径；dashboard 为控制台端口配置；channel_env_template 声明各通道所需环境变量字段。</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

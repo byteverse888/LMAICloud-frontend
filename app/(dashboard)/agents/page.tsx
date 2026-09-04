@@ -1,15 +1,13 @@
-// @ts-nocheck
-// 龙虾实例功能暂时屏蔽（恢复时删除 @ts-nocheck 与组件顶部 redirect，见 TODO.md）
 'use client'
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter, redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import {
   RefreshCw, Plus, Search, MoreHorizontal,
   Power, PowerOff, RotateCw, Trash2, Loader2, Bot,
-  Cpu, HardDrive, Globe, Server, CreditCard, Clock, Cloud, Radio,
+  Cpu, HardDrive, CreditCard, Cloud, Radio,
   FileText, Terminal, XCircle, AlertTriangle, Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -40,7 +38,7 @@ import {
 } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
-import { useOpenClawInstances } from '@/hooks/use-openclaw'
+import { useAgentInstances } from '@/hooks/use-agents'
 import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -87,15 +85,13 @@ const getBillingBadge = (billingType?: string) => {
   return <Badge variant={c.variant} className="text-xs gap-1"><CreditCard className="h-3 w-3" />{c.label}</Badge>
 }
 
-export default function OpenClawPage() {
-  // 龙虾实例功能暂时屏蔽：直接重定向回实例列表（恢复时删除本行，见 TODO.md）
-  redirect('/instances')
+export default function AgentsPage() {
   const router = useRouter()
-  const { instances, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance, forceDeleteInstance } = useOpenClawInstances()
+  const { instances, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance, forceDeleteInstance } = useAgentInstances()
   const { token } = useAuthStore()
 
   // 轮询：有过渡态实例时每 5s 静默刷新（不触发 loading 动画）
-  const hasTransientInstances = instances.some((i: any) =>
+  const hasTransientInstances = instances.some(i =>
     ['creating', 'starting', 'stopping', 'releasing'].includes(i.status)
   )
   useEffect(() => {
@@ -126,7 +122,7 @@ export default function OpenClawPage() {
     if (!renameTarget || !renameValue.trim()) return
     try {
       setRenaming(true)
-      await api.patch(`/openclaw/instances/${renameTarget.id}/rename`, { name: renameValue.trim() })
+      await api.patch(`/agents/instances/${renameTarget.id}/rename`, { name: renameValue.trim() })
       toast.success('名称已修改')
       setRenameTarget(null)
       silentRefresh()
@@ -181,7 +177,7 @@ export default function OpenClawPage() {
   }
 
   const handleRestart = async (id: string) => {
-    try { await api.post(`/openclaw/instances/${id}/restart`); toast.success('重启中') } catch { toast.error('重启失败') }
+    try { await api.post(`/agents/instances/${id}/restart`); toast.success('重启中') } catch { toast.error('重启失败') }
   }
 
   const handleForceDelete = async () => {
@@ -199,7 +195,7 @@ export default function OpenClawPage() {
   const fetchInstanceLogs = useCallback(async (instanceId: string, tail: number) => {
     try {
       setLogsLoading(true)
-      const { data } = await api.get<{ logs: string }>(`/openclaw/instances/${instanceId}/logs`, { tail })
+      const { data } = await api.get<{ logs: string }>(`/agents/instances/${instanceId}/logs`, { tail })
       setInstanceLogs(data.logs || '')
     } catch { setInstanceLogs('[Error] 获取日志失败') }
     finally { setLogsLoading(false) }
@@ -233,7 +229,7 @@ export default function OpenClawPage() {
 
       {/* 搜索和筛选 */}
       <div className="flex items-center gap-3">
-        <Button size="sm" onClick={() => router.push('/openclaw/create')}>
+        <Button size="sm" onClick={() => router.push('/agents/create')}>
           <Plus className="h-4 w-4 mr-1" /> 创建实例
         </Button>
         <div className="relative flex-1 max-w-sm">
@@ -264,7 +260,7 @@ export default function OpenClawPage() {
               <TableRow>
                 <TableHead className="min-w-[120px]">名称</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead>镜像</TableHead>
+                <TableHead>类型</TableHead>
                 <TableHead>节点</TableHead>
                 <TableHead>计费</TableHead>
                 <TableHead>配置</TableHead>
@@ -286,7 +282,7 @@ export default function OpenClawPage() {
                     <div className="flex flex-col items-center gap-2">
                       <Bot className="h-10 w-10 text-muted-foreground/40" />
                       <p className="text-muted-foreground font-medium">暂无智能体实例</p>
-                      <Button size="sm" className="mt-1" onClick={() => router.push('/openclaw/create')}>
+                      <Button size="sm" className="mt-1" onClick={() => router.push('/agents/create')}>
                         <Plus className="h-4 w-4 mr-1" /> 创建实例
                       </Button>
                     </div>
@@ -297,7 +293,7 @@ export default function OpenClawPage() {
                   <TableRow key={inst.id} className="hover:bg-primary/3 transition-colors">
                     <TableCell>
                       <div>
-                        <Link href={`/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">
+                        <Link href={`/agents/${inst.id}`} className="font-medium hover:text-primary transition-colors">
                           {inst.name}
                         </Link>
                         <div className="text-xs text-muted-foreground mt-0.5">
@@ -307,13 +303,21 @@ export default function OpenClawPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(inst.status)}</TableCell>
                     <TableCell>
-                      <span className="text-xs font-mono text-muted-foreground max-w-[140px] truncate block" title={inst.image_url || ''}>
-                        {inst.image_url ? inst.image_url.split('/').pop() : '-'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {inst.image_icon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={inst.image_icon} alt="" className="h-4 w-4 rounded-sm object-cover" />
+                        ) : (
+                          <Bot className="h-4 w-4 text-primary" />
+                        )}
+                        <span className="text-xs font-medium truncate max-w-[120px]" title={inst.image_name || inst.agent_type || ''}>
+                          {inst.image_name || inst.agent_type || '智能体'}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
-                        {(inst as any).node_type === 'edge' ? (
+                        {inst.node_type === 'edge' ? (
                           <Badge variant="outline" className="gap-1 text-xs border-orange-300 text-orange-600 dark:text-orange-400">
                             <Radio className="h-3 w-3" />边缘
                           </Badge>
@@ -322,21 +326,21 @@ export default function OpenClawPage() {
                             <Cloud className="h-3 w-3" />云端
                           </Badge>
                         )}
-                        {(inst as any).node_name && (
+                        {inst.node_name && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-xs text-muted-foreground font-mono max-w-[80px] truncate block">
-                                  {(inst as any).node_name}
+                                  {inst.node_name}
                                 </span>
                               </TooltipTrigger>
-                              <TooltipContent><p className="font-mono text-xs">{(inst as any).node_name}</p></TooltipContent>
+                              <TooltipContent><p className="font-mono text-xs">{inst.node_name}</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getBillingBadge((inst as any).billing_type)}</TableCell>
+                    <TableCell>{getBillingBadge(inst.billing_type)}</TableCell>
                     <TableCell>
                       <div className="text-sm space-y-0.5">
                         <div className="flex items-center gap-1"><Cpu className="h-3 w-3 text-muted-foreground" />{inst.cpu_cores}核 / {inst.memory_gb}GB</div>
@@ -347,8 +351,8 @@ export default function OpenClawPage() {
                       <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded font-mono">{inst.internal_ip || '-'}</code>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {(inst as any).expired_at
-                        ? formatTime((inst as any).expired_at, true)
+                      {inst.expired_at
+                        ? formatTime(inst.expired_at, true)
                         : <span className="text-xs">-</span>}
                     </TableCell>
                     <TableCell className="text-right">
@@ -367,6 +371,9 @@ export default function OpenClawPage() {
                             <RotateCw className="h-4 w-4 mr-2" />重启
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => router.push(`/agents/${inst.id}?tab=apps`)}>
+                            <Bot className="h-4 w-4 mr-2" />应用管理
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setLogInstance({ id: inst.id, name: inst.name })}>
                             <FileText className="h-4 w-4 mr-2" />查看日志
                           </DropdownMenuItem>
@@ -449,8 +456,8 @@ export default function OpenClawPage() {
             <DialogDescription>为实例 <strong>{renameTarget?.name}</strong> 设置新名称</DialogDescription>
           </DialogHeader>
           <div className="py-3">
-            <Label htmlFor="oc-rename-input" className="mb-2 block">新名称</Label>
-            <Input id="oc-rename-input" value={renameValue} onChange={e => setRenameValue(e.target.value)} placeholder="输入新名称" maxLength={64} onKeyDown={e => { if (e.key === 'Enter') handleRename() }} />
+            <Label htmlFor="ag-rename-input" className="mb-2 block">新名称</Label>
+            <Input id="ag-rename-input" value={renameValue} onChange={e => setRenameValue(e.target.value)} placeholder="输入新名称" maxLength={64} onKeyDown={e => { if (e.key === 'Enter') handleRename() }} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={renaming}>取消</Button>
@@ -470,7 +477,7 @@ export default function OpenClawPage() {
               instanceId={termInstance.id}
               token={token}
               instanceName={termInstance.name}
-              wsPath="/ws/openclaw/terminal"
+              wsPath="/ws/agents/terminal"
               onClose={() => setTermInstance(null)}
             />
           )}

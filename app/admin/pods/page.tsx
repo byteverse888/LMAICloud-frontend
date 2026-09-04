@@ -390,8 +390,8 @@ export default function PodsPage() {
                                 <Link href={`/admin/instances/${pod.instance_id}`} className="block truncate text-primary hover:underline">
                                   {pod.instance_name}
                                 </Link>
-                              ) : pod.openclaw_instance_id ? (
-                                <Link href={`/admin/openclaw/${pod.openclaw_instance_id}`} className="block truncate text-primary hover:underline">
+                              ) : pod.agent_instance_id ? (
+                                <Link href={`/admin/agents/${pod.agent_instance_id}`} className="block truncate text-primary hover:underline">
                                   {pod.instance_name}
                                 </Link>
                               ) : (

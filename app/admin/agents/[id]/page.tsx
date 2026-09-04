@@ -18,9 +18,9 @@ import { toast } from 'react-hot-toast'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import {
-  useOpenClawInstance, useOpenClawModelKeys, useOpenClawChannels,
-  useOpenClawSkills, useOpenClawLogs,
-} from '@/hooks/use-openclaw'
+  useAgentInstance, useAgentModelKeys, useAgentChannels,
+  useAgentSkills, useAgentLogs,
+} from '@/hooks/use-agents'
 import { formatTime } from '@/lib/utils'
 
 const WebTerminal = dynamic(
@@ -54,18 +54,17 @@ const getStatusBadge = (status: string) => {
   )
 }
 
-export default function AdminOpenClawDetailPage() {
+export default function AdminAgentDetailPage() {
   const params = useParams()
   const router = useRouter()
   const instanceId = params.id as string
   const { token } = useAuthStore()
 
-  const { instance: _instance, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance } = useOpenClawInstance(instanceId)
-  const instance = _instance as any
-  const { keys, loading: keysLoading, refresh: refreshKeys } = useOpenClawModelKeys(instanceId)
-  const { channels, loading: channelsLoading } = useOpenClawChannels(instanceId)
-  const { skills, loading: skillsLoading } = useOpenClawSkills(instanceId)
-  const { logs, loading: logsLoading, refresh: refreshLogs } = useOpenClawLogs(instanceId)
+  const { instance: _instance, loading, refresh, silentRefresh, startInstance, stopInstance, deleteInstance } = useAgentInstance(instanceId)
+  const { keys, loading: keysLoading } = useAgentModelKeys(instanceId)
+  const { channels, loading: channelsLoading } = useAgentChannels(instanceId)
+  const { skills, loading: skillsLoading } = useAgentSkills(instanceId)
+  const { logs } = useAgentLogs(instanceId)
 
   const isTransient = _instance && ['creating', 'starting', 'stopping', 'releasing'].includes(_instance.status)
   useEffect(() => {
@@ -78,10 +77,10 @@ export default function AdminOpenClawDetailPage() {
 
   const handleStart = async () => { try { await startInstance(); toast.success('启动中'); setTimeout(refresh, 2000) } catch { toast.error('启动失败') } }
   const handleStop = async () => { try { await stopInstance(); toast.success('已停止') } catch { toast.error('停止失败') } }
-  const handleRestart = async () => { try { await api.post(`/openclaw/instances/${instanceId}/restart`); toast.success('重启中'); setTimeout(refresh, 3000) } catch { toast.error('重启失败') } }
+  const handleRestart = async () => { try { await api.post(`/agents/instances/${instanceId}/restart`); toast.success('重启中'); setTimeout(refresh, 3000) } catch { toast.error('重启失败') } }
   const handleDelete = async () => {
-    if (!confirm('确定要删除该 OpenClaw 实例吗？删除后数据将无法恢复。')) return
-    try { await deleteInstance(); toast.success('删除中'); setTimeout(() => router.push('/admin/openclaw'), 1000) } catch { toast.error('删除失败') }
+    if (!confirm('确定要删除该智能体实例吗？删除后数据将无法恢复。')) return
+    try { await deleteInstance(); toast.success('删除中'); setTimeout(() => router.push('/admin/agents'), 1000) } catch { toast.error('删除失败') }
   }
 
   if (loading) return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -94,6 +93,8 @@ export default function AdminOpenClawDetailPage() {
       </div>
     )
   }
+
+  const instance = _instance
 
   return (
     <div className="space-y-6">
@@ -188,7 +189,7 @@ export default function AdminOpenClawDetailPage() {
                 <Separator />
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground flex items-center gap-2"><Globe className="h-4 w-4" /> 服务端口</span>
-                  <span>{instance.port || 18789}</span>
+                  <span>{instance.port || 8642}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -226,13 +227,13 @@ export default function AdminOpenClawDetailPage() {
               <CardContent>
                 {keysLoading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : keys && keys.length > 0 ? (
                   <div className="space-y-2">
-                    {keys.map((k: any) => (
+                    {keys.map((k) => (
                       <div key={k.id} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
                         <div>
                           <span className="font-medium">{k.alias || k.provider}</span>
                           <span className="text-xs text-muted-foreground ml-2">{k.model_name || ''}</span>
                         </div>
-                        <Badge variant={k.status === 'active' ? 'success' : 'secondary'} className="text-xs">{k.status || 'active'}</Badge>
+                        <Badge variant={k.is_active ? 'success' : 'secondary'} className="text-xs">{k.is_active ? '启用' : '停用'}</Badge>
                       </div>
                     ))}
                   </div>
@@ -246,10 +247,10 @@ export default function AdminOpenClawDetailPage() {
               <CardContent>
                 {channelsLoading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : channels && channels.length > 0 ? (
                   <div className="space-y-2">
-                    {channels.map((ch: any) => (
+                    {channels.map((ch) => (
                       <div key={ch.id} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
                         <span className="font-medium">{ch.name || ch.type}</span>
-                        <Badge variant={ch.status === 'active' ? 'success' : 'secondary'} className="text-xs">{ch.status || 'active'}</Badge>
+                        <Badge variant={ch.is_active ? 'success' : 'secondary'} className="text-xs">{ch.online_status || (ch.is_active ? '启用' : '停用')}</Badge>
                       </div>
                     ))}
                   </div>
@@ -263,7 +264,7 @@ export default function AdminOpenClawDetailPage() {
               <CardContent>
                 {skillsLoading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : skills && skills.length > 0 ? (
                   <div className="space-y-2">
-                    {skills.map((s: any) => (
+                    {skills.map((s) => (
                       <div key={s.id} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
                         <span className="font-medium">{s.name}</span>
                         <span className="text-xs text-muted-foreground">v{s.version || '1.0'}</span>
@@ -294,7 +295,7 @@ export default function AdminOpenClawDetailPage() {
         <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden">
           <DialogTitle className="sr-only">WebShell 终端</DialogTitle>
           {terminalOpen && token && (
-            <WebTerminal instanceId={instanceId} token={token} instanceName={instance?.name} wsPath="/ws/openclaw/admin/terminal" onClose={() => setTerminalOpen(false)} />
+            <WebTerminal instanceId={instanceId} token={token} instanceName={instance?.name} wsPath="/ws/agents/admin/terminal" onClose={() => setTerminalOpen(false)} />
           )}
         </DialogContent>
       </Dialog>

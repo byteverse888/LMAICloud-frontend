@@ -34,7 +34,7 @@ export default function AuditLogPage() {
     create: '创建', delete: '删除', update: '更新', start: '启动', stop: '停止', restart: '重启', login: '登录', login_failed: '登录失败', logout: '登出', register: '注册', recharge: '充值',
   }
   const resourceLabels: Record<string, string> = {
-    instance: '实例', openclaw: 'OpenClaw', storage: '存储', image: '镜像', account: '账号', billing: '计费',
+    instance: '实例', agent: '智能体', storage: '存储', image: '镜像', account: '账号', billing: '计费',
   }
 
   return (

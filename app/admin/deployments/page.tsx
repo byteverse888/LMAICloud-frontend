@@ -270,8 +270,8 @@ export default function DeploymentsPage() {
                                 <Link href={`/admin/instances/${dep.instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
                                   {dep.instance_name}
                                 </Link>
-                              ) : dep.openclaw_instance_id ? (
-                                <Link href={`/admin/openclaw/${dep.openclaw_instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
+                              ) : dep.agent_instance_id ? (
+                                <Link href={`/admin/agents/${dep.agent_instance_id}`} className="block truncate text-primary hover:underline" target="_blank">
                                   {dep.instance_name}
                                 </Link>
                               ) : (

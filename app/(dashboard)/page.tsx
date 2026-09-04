@@ -23,11 +23,12 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useInstances, useBalance, useStorageQuota, useSiteInfo, useCurrentUser, usePoints } from '@/hooks/use-api'
-// 智能体（OpenClaw）功能随整体屏蔽暂时隐藏，恢复时还原 useOpenClawInstances 引入（见 TODO.md）
+import { useAgentInstances } from '@/hooks/use-agents'
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard')
   const { instances, loading: instancesLoading } = useInstances()
+  const { instances: agentInstances, loading: agentLoading } = useAgentInstances()
   const { balance, loading: balanceLoading } = useBalance()
   const { quota: storageQuota, loading: storageLoading } = useStorageQuota()
   const { siteInfo } = useSiteInfo()
@@ -35,8 +36,10 @@ export default function DashboardPage() {
   const { points } = usePoints()
 
   // 计算统计数据（全部来自真实 API）
-  // 有效实例 = 排除已释放/错误状态
-  const activeInstances = instances.filter(i => !['released', 'error'].includes(i.status))
+  // 配额口径与后端 count_active_instances 一致：容器 + 智能体，仅排除 released
+  // （error 实例仍持有节点绑定与副本，后端计入配额，前端也须计入，否则显示余量偏大）
+  const containerCount = instances.filter(i => i.status !== 'released').length
+  const agentCount = agentInstances.filter(i => i.status !== 'released').length
   const runningCount = instances.filter(i => i.status === 'running').length
   const stoppedCount = instances.filter(i => i.status === 'stopped').length
   const totalDiskGB = storageQuota ? +(storageQuota.total / (1024 ** 3)).toFixed(1) : 0
@@ -44,8 +47,9 @@ export default function DashboardPage() {
   const nickname = currentUser?.nickname || currentUser?.email?.split('@')[0] || '--'
   const verified = currentUser?.verified ?? false
   const instanceQuota = (currentUser as any)?.instance_quota ?? 20
+  const quotaUsed = containerCount + agentCount
 
-  const loading = instancesLoading || balanceLoading || storageLoading
+  const loading = instancesLoading || balanceLoading || storageLoading || agentLoading
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -86,10 +90,14 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('containerInstances')}</div>
-                  <div className="text-2xl font-bold text-primary">{activeInstances.length}</div>
+                  <div className="text-2xl font-bold text-primary">{containerCount}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm text-muted-foreground">{t('agentInstances')}</div>
+                  <div className="text-2xl font-bold text-primary">{agentCount}</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('running')}</div>
@@ -102,7 +110,7 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('instanceQuota')}</div>
                   <div className="text-2xl font-bold">
-                    {activeInstances.length}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
+                    {quotaUsed}<span className="text-base font-normal text-muted-foreground"> / {instanceQuota}</span>
                   </div>
                 </div>
               </div>

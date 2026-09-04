@@ -456,7 +456,7 @@ export default function UsersPage() {
                 onChange={(e) => setQuotaValue(e.target.value)} 
                 placeholder="实例配额上限，如 20"
               />
-              <p className="text-xs text-muted-foreground">配额范围 0 - 1000，包含容器实例和 OpenClaw 实例总数</p>
+              <p className="text-xs text-muted-foreground">配额范围 0 - 1000，包含容器实例和智能体实例总数</p>
             </div>
           </div>
           <DialogFooter>

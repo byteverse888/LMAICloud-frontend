@@ -17,7 +17,7 @@ const actionLabels: Record<string, string> = {
 }
 
 const resourceTypeLabels: Record<string, string> = {
-  instance: '实例', openclaw: 'OpenClaw', storage: '存储', image: '镜像', account: '账号', billing: '计费',
+  instance: '实例', agent: '智能体', storage: '存储', image: '镜像', account: '账号', billing: '计费',
 }
 
 export default function AdminAuditLogPage() {
@@ -73,7 +73,7 @@ export default function AdminAuditLogPage() {
           <SelectContent>
             <SelectItem value="all">全部类型</SelectItem>
             <SelectItem value="instance">实例</SelectItem>
-            <SelectItem value="openclaw">OpenClaw</SelectItem>
+            <SelectItem value="agent">智能体</SelectItem>
             <SelectItem value="storage">存储</SelectItem>
             <SelectItem value="image">镜像</SelectItem>
           </SelectContent>

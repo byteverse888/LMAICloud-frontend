@@ -33,7 +33,7 @@ import {
   Shield,
   Users,
   Settings,
-  Bot, // 龙虾实例菜单暂时屏蔽，恢复时启用
+  Bot, // 智能体实例菜单图标
   Coins,
   Share2,
   ClipboardList,
@@ -70,8 +70,7 @@ export function Sidebar() {
   const navItems: NavItem[] = [
     { title: t('home'), href: '/', icon: Home },
     { title: t('instances'), href: '/instances', icon: Server },
-    // 龙虾实例（OpenClaw）暂时屏蔽，功能完善后恢复（见 TODO.md）
-    // { title: t('openclaw'), href: '/openclaw', icon: Bot },
+    { title: t('agents'), href: '/agents', icon: Bot },
     { title: t('storage'), href: '/storage', icon: HardDrive },
     { title: t('images'), href: '/images', icon: Layers },
     { title: t('publicData'), href: '/public-data', icon: Database },

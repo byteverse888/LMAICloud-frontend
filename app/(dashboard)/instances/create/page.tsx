@@ -89,7 +89,7 @@ const imageCategories = [
   { value: 'base', label: '基础镜像' },
   { value: 'app', label: '应用镜像' },
   { value: 'framework', label: 'AI框架' },
-  // 智能体（openclaw）分类随功能屏蔽暂时隐藏，恢复时还原（见 TODO.md）
+  // 智能体（agent）分类在「智能体实例」专区管理，不在容器镜像选择器展示
 ]
 
 // ============ 容器实例规格（规格与定价由管理端配置，前端按 CPU:内存比例分组展示） =============

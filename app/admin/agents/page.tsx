@@ -30,7 +30,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Pagination, paginateArray } from '@/components/ui/pagination'
-import { useAdminOpenClawInstances } from '@/hooks/use-openclaw'
+import { useAdminAgentInstances } from '@/hooks/use-agents'
 import { useAuthStore } from '@/stores/auth-store'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -66,8 +66,8 @@ const getStatusBadge = (status: string) => {
   )
 }
 
-export default function AdminOpenClawPage() {
-  const { instances, loading, refresh } = useAdminOpenClawInstances()
+export default function AdminAgentsPage() {
+  const { instances, loading, refresh } = useAdminAgentInstances()
   const { token } = useAuthStore()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -122,7 +122,7 @@ export default function AdminOpenClawPage() {
     try {
       setDetailLoading(true)
       setDetailOpen(true)
-      const { data } = await api.get<any>(`/admin/openclaw/instances/${id}`)
+      const { data } = await api.get<any>(`/admin/agents/instances/${id}`)
       setDetailData(data)
     } catch { toast.error('获取详情失败') }
     finally { setDetailLoading(false) }
@@ -134,7 +134,7 @@ export default function AdminOpenClawPage() {
     setLogsOpen(true)
     try {
       setLogsLoading(true)
-      const { data } = await api.get<{ logs: string }>(`/admin/openclaw/instances/${id}/logs`, { tail: logTail })
+      const { data } = await api.get<{ logs: string }>(`/admin/agents/instances/${id}/logs`, { tail: logTail })
       setLogs(data.logs || '')
     } catch { setLogs('[Error] 获取日志失败') }
     finally { setLogsLoading(false) }
@@ -144,7 +144,7 @@ export default function AdminOpenClawPage() {
     if (!logsInstance) return
     try {
       setLogsLoading(true)
-      const { data } = await api.get<{ logs: string }>(`/admin/openclaw/instances/${logsInstance.id}/logs`, { tail: logTail })
+      const { data } = await api.get<{ logs: string }>(`/admin/agents/instances/${logsInstance.id}/logs`, { tail: logTail })
       setLogs(data.logs || '')
     } catch { setLogs('[Error] 获取日志失败') }
     finally { setLogsLoading(false) }
@@ -161,7 +161,7 @@ export default function AdminOpenClawPage() {
     if (!deleteTarget) return
     try {
       setDeleting(true)
-      await api.delete(`/admin/openclaw/instances/${deleteTarget.id}`)
+      await api.delete(`/admin/agents/instances/${deleteTarget.id}`)
       toast.success('实例已删除')
       setDeleteTarget(null)
       refresh()
@@ -265,13 +265,13 @@ export default function AdminOpenClawPage() {
               ) : pagedInstances.map(inst => (
                 <TableRow key={inst.id} className="hover:bg-primary/3">
                   <TableCell>
-                    <Link href={`/admin/openclaw/${inst.id}`} className="font-medium hover:text-primary transition-colors">{inst.name}</Link>
+                    <Link href={`/admin/agents/${inst.id}`} className="font-medium hover:text-primary transition-colors">{inst.name}</Link>
                     <div className="text-xs text-muted-foreground mt-0.5 font-mono">{inst.id.slice(0, 8)}...</div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <User className="h-3 w-3" />
-                      <span className="max-w-[100px] truncate" title={(inst as any).user_email || '-'}>{(inst as any).user_email || '-'}</span>
+                      <span className="max-w-[100px] truncate" title={inst.user_email || '-'}>{inst.user_email || '-'}</span>
                     </div>
                   </TableCell>
                   <TableCell><code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">{inst.namespace || '-'}</code></TableCell>
@@ -285,23 +285,23 @@ export default function AdminOpenClawPage() {
                           {inst.node_type === 'edge' ? '边缘' : '云端'}
                         </Badge>
                       </div>
-                      {(inst.node_name || (inst as any).pod_node) && (
+                      {(inst.node_name || inst.pod_node) && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="block truncate font-medium cursor-default">
-                                {(inst as any).pod_node || inst.node_name}
+                                {inst.pod_node || inst.node_name}
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>节点: {(inst as any).pod_node || inst.node_name}</p>
-                              {(inst as any).pod_ip && <p>Pod IP: {(inst as any).pod_ip}</p>}
+                              <p>节点: {inst.pod_node || inst.node_name}</p>
+                              {inst.pod_ip && <p>Pod IP: {inst.pod_ip}</p>}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      {(inst as any).pod_ip && (
-                        <code className="text-muted-foreground font-mono">{(inst as any).pod_ip}</code>
+                      {inst.pod_ip && (
+                        <code className="text-muted-foreground font-mono">{inst.pod_ip}</code>
                       )}
                     </div>
                   </TableCell>
@@ -463,13 +463,13 @@ export default function AdminOpenClawPage() {
       {/* ── WebShell 终端弹窗 ── */}
       <Dialog open={!!termInstance} onOpenChange={(open) => { if (!open) setTermInstance(null) }}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden [&>button]:hidden" onEscapeKeyDown={(e) => e.preventDefault()}>
-          <DialogTitle className="sr-only">OpenClaw 终端</DialogTitle>
+          <DialogTitle className="sr-only">智能体终端</DialogTitle>
           {termInstance && token && (
             <WebTerminal
               instanceId={termInstance.id}
               token={token}
               instanceName={termInstance.name}
-              wsPath="/ws/openclaw/admin/terminal"
+              wsPath="/ws/agents/admin/terminal"
               onClose={() => setTermInstance(null)}
             />
           )}

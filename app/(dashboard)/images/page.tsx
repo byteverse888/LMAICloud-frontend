@@ -24,14 +24,14 @@ const categoryOptions = [
   { value: 'base', label: '基础镜像' },
   { value: 'framework', label: 'AI框架' },
   { value: 'app', label: '应用镜像' },
-  // 智能体（openclaw）分类随功能屏蔽暂时隐藏，恢复时还原（见 TODO.md）
+  // 智能体（agent）镜像在「智能体实例」专区管理，不在通用镜像市场展示
 ]
 
 const categoryLabelMap: Record<string, string> = {
   base: '基础镜像',
   framework: 'AI框架',
   app: '应用镜像',
-  openclaw: '智能体',
+  agent: '智能体',
 }
 
 export default function ImagesPage() {
@@ -41,9 +41,9 @@ export default function ImagesPage() {
   const [categoryFilter, setCategoryFilter] = useState('__all__')
   const { images, loading, refresh } = useImages(categoryFilter === '__all__' ? undefined : categoryFilter)
 
-  // 扩展镜像数据（openclaw 分类镜像随功能屏蔽一并隐藏，避免点部署跳到已重定向的创建页）
+  // 智能体（agent）分类镜像在专区管理，通用镜像市场不展示，避免与 GPU 实例创建流程混淆
   const displayImages = images
-    .filter(img => (img.category || img.type) !== 'openclaw')
+    .filter(img => (img.category || img.type) !== 'agent')
     .map(img => ({
     ...img,
     displayName: img.name,
@@ -61,8 +61,8 @@ export default function ImagesPage() {
   )
 
   const handleDeploy = (image: typeof displayImages[0]) => {
-    if (image.category === 'openclaw' || image.type === 'openclaw') {
-      router.push(`/openclaw/create?imageId=${image.id}`)
+    if (image.category === 'agent' || image.type === 'agent') {
+      router.push(`/agents/create?imageId=${image.id}`)
     } else {
       router.push(`/instances/create?imageId=${image.id}`)
     }

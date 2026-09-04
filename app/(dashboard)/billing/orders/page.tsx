@@ -28,7 +28,7 @@ import { useOrders } from '@/hooks/use-api'
 const productOptions = [
   { value: 'all', label: '全部产品' },
   { value: 'instance', label: '容器实例' },
-  { value: 'openclaw', label: 'OpenClaw' },
+  { value: 'agent', label: '智能体' },
   { value: 'storage', label: '文件存储' },
   { value: 'image', label: '镜像' },
   { value: 'disk', label: '数据盘扩容' },

@@ -109,7 +109,7 @@ export interface Image {
   name: string
   tag: string
   size_gb: number
-  type: 'base' | 'app' | 'community' | 'custom' | 'openclaw' | 'framework'
+  type: 'base' | 'app' | 'community' | 'custom' | 'agent' | 'framework'
   category?: string
   description?: string
   image_url?: string

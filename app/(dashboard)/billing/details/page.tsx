@@ -156,13 +156,13 @@ export default function BillingDetailsPage() {
                     <TableCell>
                       {item.resource_type ? (
                         <div className="flex items-center gap-1.5">
-                          {item.resource_type === 'openclaw'
+                          {item.resource_type === 'agent'
                             ? <Bot className="h-3.5 w-3.5 text-purple-500" />
                             : <Server className="h-3.5 w-3.5 text-blue-500" />}
                           <span className="text-sm">
                             {item.resource_name && item.resource_name !== 'N/A'
                               ? item.resource_name
-                              : (item.resource_type === 'openclaw' ? 'OpenClaw实例' : '容器实例')}
+                              : (item.resource_type === 'agent' ? '智能体实例' : '容器实例')}
                           </span>
                         </div>
                       ) : (
