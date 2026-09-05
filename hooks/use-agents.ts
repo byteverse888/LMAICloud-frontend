@@ -41,6 +41,7 @@ export interface AgentInstance {
   cpu_cores: number
   memory_gb: number
   disk_gb: number
+  data_mount_path?: string
   image_url?: string
   port: number
   deployment_name?: string

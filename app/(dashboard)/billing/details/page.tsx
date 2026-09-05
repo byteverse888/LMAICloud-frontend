@@ -17,6 +17,20 @@ export default function BillingDetailsPage() {
   const [pageSize, setPageSize] = useState(20)
   const [goToPage, setGoToPage] = useState('')
 
+  // 交易状态中文映射 + 着色（兼容充值与消费两类流水）
+  const statusLabelMap: Record<string, string> = {
+    pending: '待支付', success: '成功', failed: '失败', paid: '已支付',
+    cancelled: '已取消', refunded: '已退款',
+  }
+  const statusClassMap: Record<string, string> = {
+    success: 'text-emerald-600 border-emerald-300 dark:text-emerald-400',
+    paid: 'text-emerald-600 border-emerald-300 dark:text-emerald-400',
+    pending: 'text-amber-600 border-amber-300 dark:text-amber-400',
+    failed: 'text-red-600 border-red-300 dark:text-red-400',
+    cancelled: 'text-muted-foreground',
+    refunded: 'text-muted-foreground',
+  }
+
   const { transactions, loading, total, monthConsumption, totalConsumption } = useTransactions(page, pageSize, typeFilter === 'all' ? undefined : typeFilter)
   const { balance } = useBalance()
 
@@ -176,7 +190,9 @@ export default function BillingDetailsPage() {
                       {item.amount > 0 ? '+' : ''}¥{Math.abs(item.amount).toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs">{item.status}</Badge>
+                      <Badge variant="outline" className={`text-xs ${statusClassMap[item.status] || ''}`}>
+                        {statusLabelMap[item.status] || item.status}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}

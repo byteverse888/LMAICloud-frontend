@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -54,6 +54,28 @@ const CUDA_OPTIONS = [
 // CUDA 版本号格式：major / major.minor / major.minor.patch
 const CUDA_VERSION_PATTERN = /^\d+(\.\d+){0,2}$/
 
+// 智能体镜像 config 预设模板：注册时按名称/镜像地址自动带出，或点按钮一键填充。
+// 避免手填漏掉 agent_type / command 导致容器起不来（hermes 缺 command 会回落交互式 TUI 而崩溃）。
+const AGENT_CONFIG_PRESETS: { key: string; label: string; match: RegExp; config: Record<string, any> }[] = [
+  {
+    key: 'hermes',
+    label: 'Hermes 智能体',
+    match: /hermes/i,
+    config: {
+      agent_type: 'hermes',
+      command: ['gateway', 'run'],
+      port: 8642,
+      health_path: '/health',
+    },
+  },
+]
+
+// 按镜像名称/地址匹配对应的智能体预设（无匹配返回 undefined）
+function detectAgentPreset(name: string, imageUrl: string) {
+  const hay = `${name || ''} ${imageUrl || ''}`
+  return AGENT_CONFIG_PRESETS.find(p => p.match.test(hay))
+}
+
 export default function ImagesPage() {
   const [images, setImages] = useState<AppImage[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,6 +105,9 @@ export default function ImagesPage() {
     sort_order: 0,
   })
 
+  // 每次打开弹窗只自动带出一次预设，避免覆盖管理员后续手改
+  const autoFilledRef = useRef(false)
+
   const fetchImages = useCallback(async () => {
     try {
       setLoading(true)
@@ -105,8 +130,22 @@ export default function ImagesPage() {
     fetchImages()
   }, [fetchImages])
 
+  // 注册智能体镜像时，按名称/镜像地址自动带出对应 config 预设
+  // （仅在 config 仍为空默认、且本次弹窗未自动填过时，避免覆盖手填/既有镜像配置）
+  useEffect(() => {
+    if (!dialogOpen || formData.category !== 'agent' || autoFilledRef.current) return
+    const cfg = formData.config.trim()
+    if (cfg !== '{}' && cfg !== '') return
+    const preset = detectAgentPreset(formData.name, formData.image_url)
+    if (preset) {
+      autoFilledRef.current = true
+      setFormData(prev => ({ ...prev, config: JSON.stringify(preset.config, null, 2) }))
+    }
+  }, [dialogOpen, formData.category, formData.name, formData.image_url, formData.config])
+
   const openCreateDialog = () => {
     setEditingImage(null)
+    autoFilledRef.current = false
     setFormData({
       name: '',
       tag: 'latest',
@@ -125,6 +164,7 @@ export default function ImagesPage() {
 
   const openEditDialog = (image: AppImage) => {
     setEditingImage(image)
+    autoFilledRef.current = false
     setFormData({
       name: image.name,
       tag: image.tag,
@@ -164,6 +204,11 @@ export default function ImagesPage() {
     } finally {
       setFetchingSize(false)
     }
+  }
+
+  // 一键填充 config 预设模板（覆盖当前内容）
+  const applyConfigPreset = (preset: { config: Record<string, any> }) => {
+    setFormData(prev => ({ ...prev, config: JSON.stringify(preset.config, null, 2) }))
   }
 
   const handleSave = async () => {
@@ -216,8 +261,9 @@ export default function ImagesPage() {
       await api.delete(`/admin/images/${id}`)
       toast.success('镜像已删除')
       fetchImages()
-    } catch (err) {
-      toast.error('删除失败')
+    } catch {
+      // 删除失败的具体原因（如「镜像仍被智能体实例引用，无法删除」）已由 api 层
+      // 统一弹出后端 detail，此处不再重复提示，避免「删除失败」+详细原因两条 toast
     }
   }
 
@@ -457,18 +503,31 @@ export default function ImagesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>配置 (JSON)</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>配置 (JSON)</Label>
+                {formData.category === 'agent' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">快速填充：</span>
+                    {AGENT_CONFIG_PRESETS.map(p => (
+                      <Button key={p.key} type="button" variant="outline" size="sm"
+                        onClick={() => applyConfigPreset(p)}>
+                        {p.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Textarea 
                 value={formData.config} 
                 onChange={(e) => setFormData(prev => ({ ...prev, config: e.target.value }))} 
                 placeholder={formData.category === 'agent'
-                  ? '{"capabilities": {"model_keys": true, "channels": true, "skills": false, "monitor": true}, "port": 8642, "health_path": "/health", "dashboard": {"enabled": true, "port": 9119}, "channel_env_template": {}}'
+                  ? '{"agent_type": "hermes", "command": ["gateway", "run"], "port": 8642, "health_path": "/health", "capabilities": {"model_keys": true, "channels": true}, "dashboard": {"enabled": true, "port": 9119}}'
                   : '{"ports": [], "envs": {}, "volumes": []}'}
                 rows={formData.category === 'agent' ? 8 : 4}
                 className="font-mono text-sm"
               />
               {formData.category === 'agent' && (
-                <p className="text-xs text-muted-foreground">智能体镜像配置：capabilities 控制详情页显示的能力模块（model_keys/channels/skills/monitor）；port 为 API 服务端口；health_path 为健康检查路径；dashboard 为控制台端口配置；channel_env_template 声明各通道所需环境变量字段。</p>
+                <p className="text-xs text-muted-foreground">智能体镜像配置：<strong>agent_type</strong> 决定环境变量注入（hermes 注入 API_SERVER_* 启用 8642）；<strong>command</strong> 是容器启动子命令（映射为 K8s args，hermes 为 ["gateway","run"]，填错会起不来）；port 为 API 端口；health_path 健康检查路径；capabilities 控制详情页能力模块；dashboard 控制台端口。名称或镜像地址含 "hermes" 时会自动带出模板。</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">

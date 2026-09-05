@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Bot, Check, ChevronRight, Loader2,
   Key, Radio, Trash2, Settings2, ExternalLink,
-  Cpu, HardDrive, Zap, CreditCard, Calendar,
+  Cpu, HardDrive, Zap, CreditCard, Calendar, FolderInput,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -111,6 +111,7 @@ export default function AgentsCreatePage() {
   const [durationMonths, setDurationMonths] = useState(1)
   const [selectedSpec, setSelectedSpec] = useState<AgentSpec>(agentSpecs[1])
   const [diskGb, setDiskGb] = useState(50)  // 数据盘默认 50G，可调
+  const [dataMountPath, setDataMountPath] = useState('/opt/data')  // 数据盘容器内挂载点，默认 /opt/data（智能体数据目录），可改
   const [selectedImageId, setSelectedImageId] = useState('')
   const [instanceName, setInstanceName] = useState('')
   const [nodeType, setNodeType] = useState('center')
@@ -136,6 +137,8 @@ export default function AgentsCreatePage() {
   const handleSelectImage = (img: AgentImage) => {
     setSelectedImageId(img.id)
     if (img.config.port) setPort(img.config.port)
+    // 挂载路径默认带出镜像声明的 data_mount_path（无则 /opt/data），用户仍可改
+    setDataMountPath(img.config.data_mount_path || '/opt/data')
   }
 
   // 镜像只有一个时自动选中，或通过 URL 参数自动选中
@@ -234,6 +237,7 @@ export default function AgentsCreatePage() {
         cpu_cores: selectedSpec.cpu,
         memory_gb: selectedSpec.memory,
         disk_gb: diskGb,
+        data_mount_path: dataMountPath.trim() || '/opt/data',
         billing_type: billingType,
       }
       if (port) body.port = port
@@ -433,6 +437,20 @@ export default function AgentsCreatePage() {
                     className="w-32"
                   />
                   <span className="text-xs text-muted-foreground">默认 50GB，用于持久化智能体配置与会话数据</span>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2">
+                <Label className="flex items-center gap-1.5 text-sm">
+                  <FolderInput className="h-3.5 w-3.5 text-muted-foreground" /> 挂载路径
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={dataMountPath}
+                    onChange={e => setDataMountPath(e.target.value)}
+                    placeholder="/opt/data"
+                    className="max-w-xs font-mono"
+                  />
+                  <span className="text-xs text-muted-foreground">数据盘在容器内的挂载点，默认 /opt/data（智能体数据目录），可修改</span>
                 </div>
               </div>
             </CardContent>
@@ -650,6 +668,10 @@ export default function AgentsCreatePage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">数据盘</span>
                   <span>{diskGb}GB</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">挂载路径</span>
+                  <span className="font-mono text-xs truncate max-w-[150px]" title={dataMountPath}>{dataMountPath || '/opt/data'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">计费</span>

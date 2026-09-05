@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Plus, Minus, Loader2, X, Server, Cpu, HardDrive,
@@ -53,11 +53,20 @@ interface GpuModelOption {
   gpu_total: number
   gpu_available: number
   hourly_price: number
+  series: string
 }
 
 function formatGpuLabel(model: string, memGb: number | null) {
   const name = model.replace(/NVIDIA-/i, '').replace(/-/g, ' ')
   return memGb ? `${name} ${memGb}G` : name
+}
+
+// 系列展示排序权重（值越大越靠前）：RTX 新→旧 > GTX > 数据中心/专业卡 > 其他
+function seriesRank(series: string): number {
+  const m = series.match(/^(RTX|GTX)\s?(\d+)/)
+  if (m) return (m[1] === 'RTX' ? 10000 : 5000) + parseInt(m[2], 10)
+  if (series === '其他') return -1
+  return 1000  // H100/A100/L40… 统一档，同档内按名称字母序
 }
 
 function useGpuModels(nodeType?: string) {
@@ -167,6 +176,24 @@ export default function InstanceCreatePage() {
     nodeTypeFilter !== 'all' ? nodeTypeFilter : undefined
   )
   const { images } = useImages()
+
+  // 选卡按系列分组（RTX 40 / H100 …），组内按显存从大到小；系列按 seriesRank 降序
+  // 分组仅为展示层组织，用户仍选具体型号+显存，提交与调度（精确型号匹配）不受影响
+  const gpuGroups = useMemo(() => {
+    const map = new Map<string, GpuModelOption[]>()
+    gpuOptions.forEach(opt => {
+      const s = opt.series || '其他'
+      if (!map.has(s)) map.set(s, [])
+      map.get(s)!.push(opt)
+    })
+    return [...map.entries()]
+      .map(([series, items]) => ({
+        series,
+        items: items.sort((a, b) =>
+          (b.gpu_memory_gb || 0) - (a.gpu_memory_gb || 0) || a.gpu_model.localeCompare(b.gpu_model)),
+      }))
+      .sort((a, b) => seriesRank(b.series) - seriesRank(a.series) || a.series.localeCompare(b.series))
+  }, [gpuOptions])
 
   // 规格与定价：从管理端配置拉取（替代前端硬编码），按 CPU:内存比例分组
   useEffect(() => {
@@ -578,35 +605,46 @@ export default function InstanceCreatePage() {
               ) : gpuOptions.length === 0 ? (
                 <div className="h-24 flex items-center justify-center text-sm text-muted-foreground">暂无可用 GPU 型号</div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {gpuOptions.map(opt => {
-                    const sel = selectedGpu?.gpu_model === opt.gpu_model && selectedGpu?.gpu_memory_gb === opt.gpu_memory_gb
-                    const disabled = opt.gpu_available <= 0
-                    return (
-                      <div
-                        key={`${opt.gpu_model}-${opt.gpu_memory_gb ?? 0}`}
-                        onClick={() => !disabled && setSelectedGpu(sel ? null : opt)}
-                        className={`relative flex flex-col gap-1.5 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                          sel
-                            ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                            : disabled
-                              ? 'border-border opacity-50 cursor-not-allowed'
-                              : 'border-border hover:border-primary/40 hover:shadow-sm'
-                        }`}
-                      >
-                        {sel && <div className="absolute top-2 right-2"><Check className="h-4 w-4 text-primary" /></div>}
-                        <div className="text-base font-bold text-foreground">{formatGpuLabel(opt.gpu_model, opt.gpu_memory_gb)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          可用 <span className={opt.gpu_available > 4 ? 'text-emerald-500 font-medium' : 'text-amber-500 font-medium'}>{opt.gpu_available}</span> 卡 · 共 {opt.gpu_total} 卡
-                        </div>
-                        <div className="mt-1">
-                          <span className="text-primary font-bold text-sm">¥{opt.hourly_price.toFixed(2)}</span>
-                          <span className="text-[10px] text-muted-foreground">/卡/时</span>
-                        </div>
-                        {disabled && <p className="text-[10px] text-red-400 flex items-center gap-0.5"><AlertCircle className="h-3 w-3" />暂无空闲卡</p>}
+                <div className="space-y-5">
+                  {gpuGroups.map(group => (
+                    <div key={group.series}>
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <span className="text-sm font-semibold text-foreground">{group.series}</span>
+                        <span className="text-[11px] text-muted-foreground">系列 · {group.items.length} 款</span>
+                        <div className="flex-1 border-t border-border/60" />
                       </div>
-                    )
-                  })}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {group.items.map(opt => {
+                          const sel = selectedGpu?.gpu_model === opt.gpu_model && selectedGpu?.gpu_memory_gb === opt.gpu_memory_gb
+                          const disabled = opt.gpu_available <= 0
+                          return (
+                            <div
+                              key={`${opt.gpu_model}-${opt.gpu_memory_gb ?? 0}`}
+                              onClick={() => !disabled && setSelectedGpu(sel ? null : opt)}
+                              className={`relative flex flex-col gap-1.5 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                                sel
+                                  ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                                  : disabled
+                                    ? 'border-border opacity-50 cursor-not-allowed'
+                                    : 'border-border hover:border-primary/40 hover:shadow-sm'
+                              }`}
+                            >
+                              {sel && <div className="absolute top-2 right-2"><Check className="h-4 w-4 text-primary" /></div>}
+                              <div className="text-base font-bold text-foreground">{formatGpuLabel(opt.gpu_model, opt.gpu_memory_gb)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                可用 <span className={opt.gpu_available > 4 ? 'text-emerald-500 font-medium' : 'text-amber-500 font-medium'}>{opt.gpu_available}</span> 卡 · 共 {opt.gpu_total} 卡
+                              </div>
+                              <div className="mt-1">
+                                <span className="text-primary font-bold text-sm">¥{opt.hourly_price.toFixed(2)}</span>
+                                <span className="text-[10px] text-muted-foreground">/卡/时</span>
+                              </div>
+                              {disabled && <p className="text-[10px] text-red-400 flex items-center gap-0.5"><AlertCircle className="h-3 w-3" />暂无空闲卡</p>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )
             ) : (

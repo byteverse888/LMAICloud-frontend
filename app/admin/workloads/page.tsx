@@ -25,6 +25,15 @@ import api from '@/lib/api'
 import toast from 'react-hot-toast'
 import { formatTime } from '@/lib/utils'
 
+// 容器镜像完整引用（registry/命名空间/name:tag）通常很长，列宽有限时 truncate 会从尾部截断，
+// 恰好把最有辨识度的 name:tag（如 ubuntu:24.04）切掉。列表只展示尾段 name:tag，完整地址保留在 tooltip。
+function formatImageShort(img: string): string {
+  if (!img) return img
+  const path = img.split('@')[0]  // 去掉 @sha256:... digest
+  const seg = path.substring(path.lastIndexOf('/') + 1)
+  return seg || img
+}
+
 export default function WorkloadsPage() {
   const [activeTab, setActiveTab] = useState('deployments')
 
@@ -190,7 +199,7 @@ function DeploymentsTab() {
                       </span>
                     </TableCell>
                     <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground">
-                      <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(dep.images || []).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(dep.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(dep.images || []).map(formatImageShort).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(dep.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{dep.strategy || 'RollingUpdate'}</Badge></TableCell>
                     <TableCell className="text-sm text-muted-foreground">{dep.created_at ? formatTime(dep.created_at) : '-'}</TableCell>
@@ -356,7 +365,7 @@ function DaemonSetsTab() {
                       </span>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                      <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(ds.images || []).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(ds.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(ds.images || []).map(formatImageShort).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(ds.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{ds.created_at ? formatTime(ds.created_at) : '-'}</TableCell>
                     <TableCell className="text-right">
@@ -520,7 +529,7 @@ function StatefulSetsTab() {
                     <TableCell>{ss.ready_replicas}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{ss.service_name || '-'}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                      <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(ss.images || []).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(ss.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild><span className="block truncate">{(ss.images || []).map(formatImageShort).join(', ') || '-'}</span></TooltipTrigger><TooltipContent className="max-w-sm"><p className="break-all">{(ss.images || []).join(', ')}</p></TooltipContent></Tooltip></TooltipProvider>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{ss.created_at ? formatTime(ss.created_at) : '-'}</TableCell>
                     <TableCell className="text-right">
