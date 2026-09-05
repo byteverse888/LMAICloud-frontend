@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, Pause, Play, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getWsBase } from '@/lib/api'
 
 interface LogStreamProps {
   instanceId: string
@@ -34,10 +35,7 @@ export default function LogStream({
     setLogs([])
     setError(null)
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-    // 优先用 NEXT_PUBLIC_WS_URL，否则从 API URL 推导
-    const wsBase = process.env.NEXT_PUBLIC_WS_URL 
-      || apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+    const wsBase = getWsBase()
     const wsUrl = `${wsBase}/ws/logs/${instanceId}?token=${token}&follow=true`
     
     const ws = new WebSocket(wsUrl)

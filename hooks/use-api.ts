@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import api from '@/lib/api'
+import api, { getWsBase } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 
 /** 从 zustand persist 存储中获取 token（兼容组件外调用） */
@@ -631,8 +631,7 @@ export function useWebSocketStatus(onMessage?: (data: any) => void) {
     if (typeof window === 'undefined') return
     const token = getPersistedToken()
     if (!token) return
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-    const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+    const baseWsUrl = getWsBase()
     let socket: WebSocket
     try {
       socket = new WebSocket(`${baseWsUrl}/ws/status?token=${token}`)
@@ -664,8 +663,7 @@ export function useInstanceWebSocket(instanceId: string, onStatusChange?: (statu
     if (!instanceId || typeof window === 'undefined') return
     const token = getPersistedToken()
     if (!token) return
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-    const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+    const baseWsUrl = getWsBase()
     let socket: WebSocket
     try {
       socket = new WebSocket(`${baseWsUrl}/ws/instance/${instanceId}/status?token=${token}`)

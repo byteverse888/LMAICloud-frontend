@@ -33,6 +33,13 @@ interface SystemSettings {
   copyright_text: string
   captcha_enabled: boolean
   announcement_text: string
+  // 微信订阅号登录
+  wechat_sub_login_enabled: boolean
+  wechat_sub_oa_name: string
+  wechat_sub_qr_image_url: string
+  wechat_sub_qr_guide: string
+  wechat_sub_welcome_reply: string
+  wechat_sub_login_success_reply: string
 }
 
 interface EmailConfig {
@@ -72,6 +79,12 @@ export default function SettingsPage() {
     copyright_text: '',
     captcha_enabled: true,
     announcement_text: '',
+    wechat_sub_login_enabled: false,
+    wechat_sub_oa_name: '',
+    wechat_sub_qr_image_url: '',
+    wechat_sub_qr_guide: '',
+    wechat_sub_welcome_reply: '',
+    wechat_sub_login_success_reply: '',
   })
 
   // 协议已迁移至静态文件，无需编辑状态
@@ -210,6 +223,7 @@ export default function SettingsPage() {
           <TabsTrigger value="billing">计费设置</TabsTrigger>
           <TabsTrigger value="email">邮件配置</TabsTrigger>
           <TabsTrigger value="security">安全设置</TabsTrigger>
+          <TabsTrigger value="wechat">微信登录</TabsTrigger>
         </TabsList>
 
         {/* 基本设置 */}
@@ -260,6 +274,80 @@ export default function SettingsPage() {
                   checked={settings.registration_enabled} 
                   onCheckedChange={(v) => updateSetting('registration_enabled', v)} 
                 />
+              </div>
+              <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                保存设置
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 微信订阅号登录 */}
+        <TabsContent value="wechat">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">微信订阅号登录</CardTitle>
+              <CardDescription>扫码关注订阅号 + 发送 4 位验证码登录。凭证（AppID/Token）需在服务器 .env 配置</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">启用微信登录</div>
+                  <p className="text-sm text-muted-foreground">开启后登录页展示「微信扫码」页签（需 .env 配齐 AppID/Token 才生效）</p>
+                </div>
+                <Switch
+                  checked={settings.wechat_sub_login_enabled}
+                  onCheckedChange={(v) => updateSetting('wechat_sub_login_enabled', v)}
+                />
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Label>公众号名称</Label>
+                <Input
+                  value={settings.wechat_sub_oa_name}
+                  onChange={(e) => updateSetting('wechat_sub_oa_name', e.target.value)}
+                  placeholder="用于登录页展示，如：XX云订阅号"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>静态关注二维码地址</Label>
+                <Input
+                  value={settings.wechat_sub_qr_image_url}
+                  onChange={(e) => updateSetting('wechat_sub_qr_image_url', e.target.value)}
+                  placeholder="如 /static/wxsub-qr.png，或完整公网 URL"
+                />
+                <p className="text-xs text-muted-foreground">从微信公众平台下载「公众号二维码」，可放后端 static/ 目录并填 /static/wxsub-qr.png（相对路径自动适配域名），或填其他公网可访问的完整 URL</p>
+              </div>
+              <div className="space-y-2">
+                <Label>扫码引导文案</Label>
+                <Input
+                  value={settings.wechat_sub_qr_guide}
+                  onChange={(e) => updateSetting('wechat_sub_qr_guide', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>关注欢迎语</Label>
+                <Input
+                  value={settings.wechat_sub_welcome_reply}
+                  onChange={(e) => updateSetting('wechat_sub_welcome_reply', e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">用户首次关注订阅号时自动回复</p>
+              </div>
+              <div className="space-y-2">
+                <Label>登录成功回复</Label>
+                <Input
+                  value={settings.wechat_sub_login_success_reply}
+                  onChange={(e) => updateSetting('wechat_sub_login_success_reply', e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">用户发送验证码确认登录后回复</p>
+              </div>
+              <Separator />
+              <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground space-y-1">
+                <div className="font-medium text-foreground">部署提示</div>
+                <div>1. 服务器 .env 配置 WECHAT_SUB_APP_ID、WECHAT_SUB_TOKEN（必填）</div>
+                <div>2. 微信订阅号后台「消息推送」回调 URL：https://你的域名/api/v1/wechat/sub/callback，Token 与 .env 一致，明文模式</div>
+                <div>3. 服务器需公网可达 + HTTPS + 域名已备案</div>
               </div>
               <Button onClick={saveSettings} disabled={saving} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

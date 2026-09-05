@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { Search, RefreshCw, Trash2, Loader2, Container, Eye, FileText, Terminal as TerminalIcon, Cpu, MemoryStick, Eraser } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
-import api from '@/lib/api'
+import api, { getWsBase } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import toast from 'react-hot-toast'
 import { formatTime } from '@/lib/utils'
@@ -764,8 +764,7 @@ function PodTerminal({ ns, name, instanceName, onClose }: { ns: string; name: st
       safeFit()
       term.writeln('\x1b[33m正在连接终端...\x1b[0m')
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-      const wsBase = apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+      const wsBase = getWsBase()
       const wsUrl = `${wsBase}/api/v1/admin/pods/ws/${ns}/${name}/exec?token=${token}`
       const socket = new WebSocket(wsUrl)
       wsRef.current = socket

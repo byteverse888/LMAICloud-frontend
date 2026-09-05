@@ -8,6 +8,7 @@ import '@xterm/xterm/css/xterm.css'
 import { Button } from '@/components/ui/button'
 import { RotateCcw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getWsBase } from '@/lib/api'
 
 interface WebTerminalProps {
   instanceId: string
@@ -123,9 +124,7 @@ export default function WebTerminal({
       safeFit()
       term.writeln('\x1b[33m正在连接终端...\x1b[0m')
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-      const wsBase = process.env.NEXT_PUBLIC_WS_URL
-        || apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
+      const wsBase = getWsBase()
       const wsUrl = `${wsBase}${wsPath}/${instanceId}?token=${tokenRef.current}`
 
       const ws = new WebSocket(wsUrl)

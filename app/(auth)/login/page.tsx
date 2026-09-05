@@ -21,12 +21,20 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || '/'
   const [isLoading, setIsLoading] = useState(false)
-  const [loginType, setLoginType] = useState<'password' | 'code'>('password')
+  const [loginType, setLoginType] = useState<'password' | 'code' | 'wechat'>('password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [countdown, setCountdown] = useState(0)
   const { login, checkAuth, setToken, setRefreshToken } = useAuthStore()
+  // 微信订阅号验证码登录
+  const [wechatEnabled, setWechatEnabled] = useState(false)
+  const [wechatOaName, setWechatOaName] = useState('')
+  const [wechatQrGuide, setWechatQrGuide] = useState('')
+  const [wxSessionId, setWxSessionId] = useState('')
+  const [wxCode, setWxCode] = useState('')
+  const [wxQrUrl, setWxQrUrl] = useState('')
+  const [wxStatus, setWxStatus] = useState<'idle' | 'waiting' | 'confirmed' | 'expired'>('idle')
   const [captchaId, setCaptchaId] = useState('')
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaImage, setCaptchaImage] = useState('')
@@ -64,7 +72,7 @@ export default function LoginPage() {
 
   // 检查验证码是否启用
   useEffect(() => {
-    api.get<{ captcha_enabled?: boolean; site_name?: string; copyright_text?: string; footer_text?: string; site_logo?: string; icp_number?: string; icp_link?: string }>('/system/site-info')
+    api.get<{ captcha_enabled?: boolean; site_name?: string; copyright_text?: string; footer_text?: string; site_logo?: string; icp_number?: string; icp_link?: string; wechat_sub_login_enabled?: boolean; wechat_sub_oa_name?: string; wechat_sub_qr_guide?: string }>('/system/site-info')
       .then(({ data }) => {
         const enabled = data.captcha_enabled !== false
         setCaptchaEnabled(enabled)
@@ -78,6 +86,9 @@ export default function LoginPage() {
         if (data.site_logo) setSiteLogo(data.site_logo)
         if (data.icp_number) setIcpNumber(data.icp_number)
         if (data.icp_link) setIcpLink(data.icp_link)
+        if (data.wechat_sub_login_enabled) setWechatEnabled(true)
+        if (data.wechat_sub_oa_name) setWechatOaName(data.wechat_sub_oa_name)
+        if (data.wechat_sub_qr_guide) setWechatQrGuide(data.wechat_sub_qr_guide)
       })
       .catch(() => {})
   }, [])
@@ -119,6 +130,10 @@ export default function LoginPage() {
     e.preventDefault()
     if (!email) {
       toast.error('请输入邮箱地址')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('请输入有效的邮箱地址')
       return
     }
     if (loginType === 'password' && !password) {
@@ -171,6 +186,68 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+
+  // 领取微信订阅号登录会话（4 位验证码 + 静态关注二维码）
+  const startWechatSession = async () => {
+    setWxStatus('idle')
+    setWxCode('')
+    setWxQrUrl('')
+    try {
+      const res = await fetch(`${API_BASE}/wechat/sub/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.detail || '获取登录会话失败')
+      }
+      const data = await res.json()
+      setWxSessionId(data.session_id)
+      setWxCode(data.code)
+      setWxQrUrl(data.qr_image_url)
+      setWxStatus('waiting')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '微信登录初始化失败')
+      setWxStatus('expired')
+    }
+  }
+
+  // 切到微信页签且已启用时自动发起会话
+  useEffect(() => {
+    if (loginType === 'wechat' && wechatEnabled && !wxSessionId && wxStatus === 'idle') {
+      startWechatSession()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loginType, wechatEnabled])
+
+  // 轮询扫码状态：confirmed 换登录态并跳转，expired 提示刷新
+  useEffect(() => {
+    if (loginType !== 'wechat' || !wxSessionId || wxStatus !== 'waiting') return
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/wechat/sub/session/status?session_id=${wxSessionId}`)
+        const data = await res.json()
+        if (data.status === 'confirmed' && data.token) {
+          clearInterval(timer)
+          setWxStatus('confirmed')
+          setToken(data.token)
+          if (data.refresh_token) setRefreshToken(data.refresh_token)
+          await checkAuth()
+          toast.success('登录成功')
+          const loggedInUser = useAuthStore.getState().user
+          const isAdmin = loggedInUser?.role === 'admin'
+          router.push(isAdmin ? (redirectUrl.startsWith('/admin') ? redirectUrl : '/admin') : redirectUrl)
+        } else if (data.status === 'expired') {
+          clearInterval(timer)
+          setWxStatus('expired')
+        }
+      } catch { /* 轮询失败静默重试 */ }
+    }, 2000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loginType, wxSessionId, wxStatus])
 
   return (
     <div className="min-h-screen flex">
@@ -250,15 +327,22 @@ export default function LoginPage() {
             <p className="text-muted-foreground mt-2">登录您的 {siteName} 账号</p>
           </div>
 
-          <Tabs value={loginType} onValueChange={(v) => setLoginType(v as 'password' | 'code')} className="w-full">
-            {/* 验证码登录暂时隐藏 */}
+          <Tabs value={loginType} onValueChange={(v) => setLoginType(v as 'password' | 'code' | 'wechat')} className="w-full">
+            {/* 邮箱验证码登录暂时隐藏；微信订阅号登录启用时展示「密码/微信」切换 */}
             {/* <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="code">验证码登录</TabsTrigger>
               <TabsTrigger value="password">密码登录</TabsTrigger>
             </TabsList> */}
+            {wechatEnabled && (
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="password">密码登录</TabsTrigger>
+                <TabsTrigger value="wechat">微信扫码</TabsTrigger>
+              </TabsList>
+            )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="space-y-4">
+                {loginType !== 'wechat' && (
                 <div className="space-y-2">
                   <Label htmlFor="email">邮箱地址</Label>
                   <div className="relative">
@@ -273,6 +357,7 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
+                )}
 
                 <TabsContent value="code" className="mt-0 space-y-4">
                   <div className="space-y-2">
@@ -325,8 +410,40 @@ export default function LoginPage() {
                   </div>
                 </TabsContent>
 
-                {/* 图形验证码 */}
-                {captchaEnabled && (
+                <TabsContent value="wechat" className="mt-0">
+                  <div className="flex flex-col items-center space-y-4 py-2">
+                    {wxQrUrl ? (
+                      <img
+                        src={toFullUrl(wxQrUrl)}
+                        alt="订阅号二维码"
+                        className="w-48 h-48 rounded-lg border object-contain bg-white"
+                      />
+                    ) : (
+                      <div className="w-48 h-48 rounded-lg border flex items-center justify-center text-muted-foreground text-sm">
+                        {wxStatus === 'expired' ? '二维码已过期' : '加载中...'}
+                      </div>
+                    )}
+                    <div className="text-center space-y-2">
+                      <div className="text-sm text-muted-foreground">
+                        {wechatQrGuide || '扫码关注订阅号，将下方验证码发送到公众号完成登录'}
+                      </div>
+                      <div className="text-3xl font-bold tracking-[0.3em] text-primary">{wxCode || '----'}</div>
+                      {wechatOaName && <div className="text-xs text-muted-foreground">公众号：{wechatOaName}</div>}
+                    </div>
+                    <div className="text-sm h-5">
+                      {wxStatus === 'waiting' && <span className="text-muted-foreground">等待扫码并发送验证码...</span>}
+                      {wxStatus === 'confirmed' && <span className="text-green-600">登录成功，正在跳转...</span>}
+                      {wxStatus === 'expired' && (
+                        <Button type="button" variant="outline" size="sm" onClick={startWechatSession}>
+                          刷新二维码
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* 图形验证码（微信页签不展示） */}
+                {captchaEnabled && loginType !== 'wechat' && (
                   <div className="space-y-2">
                     <Label>验证码</Label>
                     <div className="flex gap-3 items-center">
@@ -354,10 +471,12 @@ export default function LoginPage() {
                   </div>
                 )}
 
+                {loginType !== 'wechat' && (
                 <Button type="submit" className="w-full h-11 text-base rounded-lg" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   登录
                 </Button>
+                )}
               </div>
             </form>
           </Tabs>

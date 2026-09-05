@@ -235,3 +235,17 @@ export function toFullUrl(path?: string): string {
   const origin = idx > 0 ? API_BASE_URL.substring(0, idx) : API_BASE_URL
   return `${origin}${path}`
 }
+
+/**
+ * 计算 WebSocket 基址。new WebSocket() 不接受相对路径，必须是 ws(s)://host/path 绝对地址。
+ * 规则：显式配了绝对 NEXT_PUBLIC_WS_URL 就用它；否则运行时按当前页面 origin 拼接，
+ * 前缀从 NEXT_PUBLIC_API_URL 推导（去掉 /api/v1）。用 IP 或域名访问都自适应、同源无跨域。
+ */
+export function getWsBase(): string {
+  if (typeof window === 'undefined') return ''
+  const envWs = process.env.NEXT_PUBLIC_WS_URL
+  if (envWs && /^wss?:\/\//i.test(envWs)) return envWs.replace(/\/+$/, '')
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const prefix = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/api\/v1$/, '')
+  return `${proto}//${window.location.host}${prefix}`
+}
