@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { useUIStore } from '@/stores/ui-store'
+import { useUIStore, SIDEBAR_COLLAPSED_WIDTH } from '@/stores/ui-store'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
+import { SidebarResizeHandle } from '@/components/layout/sidebar-resize-handle'
+import { useSidebarResponsive } from '@/hooks/use-sidebar-responsive'
 import {
   Tooltip,
   TooltipContent,
@@ -52,7 +54,11 @@ interface NavItem {
 export function Sidebar() {
   const pathname = usePathname()
   const t = useTranslations('nav')
-  const { sidebarCollapsed, toggleSidebar } = useUIStore()
+  const { sidebarCollapsed, toggleSidebar, sidebarWidth, isResizing } = useUIStore()
+  useSidebarResponsive()
+
+  // 折叠时固定为图标宽度，展开时用可拖拽的持久化宽度
+  const effectiveWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth
   const [expandedItems, setExpandedItems] = useState<string[]>(['billing', 'account'])
   const [siteName, setSiteName] = useState('')
   const [siteLogo, setSiteLogo] = useState('')
@@ -206,9 +212,10 @@ export function Sidebar() {
 
   return (
     <aside
+      style={{ width: effectiveWidth }}
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r border-border/60 bg-sidebar transition-all duration-300',
-        sidebarCollapsed ? 'w-16' : 'w-56'
+        'fixed left-0 top-0 z-40 h-screen border-r border-border/60 bg-sidebar',
+        isResizing ? 'transition-none' : 'transition-[width] duration-300'
       )}
     >
       {/* Logo */}
@@ -239,6 +246,9 @@ export function Sidebar() {
           {navItems.map((item) => renderNavItem(item))}
         </nav>
       </ScrollArea>
+
+      {/* 拖拽分割线：仅展开态可调宽 */}
+      {!sidebarCollapsed && <SidebarResizeHandle />}
     </aside>
   )
 }

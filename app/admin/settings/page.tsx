@@ -315,9 +315,10 @@ export default function SettingsPage() {
                 <Input
                   value={settings.wechat_sub_qr_image_url}
                   onChange={(e) => updateSetting('wechat_sub_qr_image_url', e.target.value)}
-                  placeholder="如 /static/wxsub-qr.png，或完整公网 URL"
+                  disabled
+                  placeholder="由后端 .env 的 WECHAT_SUB_QR_IMAGE_URL 统一配置"
                 />
-                <p className="text-xs text-muted-foreground">从微信公众平台下载「公众号二维码」，可放后端 static/ 目录并填 /static/wxsub-qr.png（相对路径自动适配域名），或填其他公网可访问的完整 URL</p>
+                <p className="text-xs text-muted-foreground">此项已锁定：二维码地址统一由后端 .env 的 WECHAT_SUB_QR_IMAGE_URL 配置（图片可放后端 static/ 目录随代码部署），管理端不再单独维护，避免误填覆盖</p>
               </div>
               <div className="space-y-2">
                 <Label>扫码引导文案</Label>

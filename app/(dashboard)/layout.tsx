@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useUIStore } from '@/stores/ui-store'
+import { useUIStore, SIDEBAR_COLLAPSED_WIDTH } from '@/stores/ui-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
@@ -15,7 +15,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { sidebarCollapsed } = useUIStore()
+  const { sidebarCollapsed, sidebarWidth, isResizing } = useUIStore()
+
+  // 主内容区让位宽度：折叠时用图标宽度，展开时跟随可拖拽的持久化宽度
+  const effectiveMargin = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth
   const { isLoading, isAuthenticated, token, checkAuth } = useAuthStore()
   const router = useRouter()
   const [footerText, setFooterText] = useState('')
@@ -66,13 +69,13 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <Sidebar />
       <div
+        style={{ marginLeft: effectiveMargin }}
         className={cn(
-          'transition-all duration-300',
-          sidebarCollapsed ? 'ml-16' : 'ml-56'
+          isResizing ? 'transition-none' : 'transition-[margin] duration-300'
         )}
       >
         <Header />
-        <main className="p-5 lg:p-7">{children}</main>
+        <main className="overflow-x-auto p-5 lg:p-7">{children}</main>
         {/* 版权页脚 */}
         {(footerText || copyrightText || icpNumber) && (
           <footer className="py-4 text-center text-xs text-muted-foreground border-t mx-5 lg:mx-7 space-y-1">

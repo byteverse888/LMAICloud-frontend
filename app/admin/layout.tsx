@@ -64,6 +64,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useTheme } from 'next-themes'
 import { useAuthStore } from '@/stores/auth-store'
+import { useUIStore } from '@/stores/ui-store'
+import { SidebarResizeHandle } from '@/components/layout/sidebar-resize-handle'
+import { useSidebarResponsive } from '@/hooks/use-sidebar-responsive'
 import api, { toFullUrl } from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -129,6 +132,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const { user, isLoading, isAuthenticated, logout, checkAuth } = useAuthStore()
   const { theme, setTheme } = useTheme()
+  const { sidebarWidth, isResizing } = useUIStore()
+  useSidebarResponsive()
   const [countdown, setCountdown] = useState(3)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ '/admin/resources': true, '/admin/products': true, '/admin/operations': true })
   const [footerText, setFooterText] = useState('')
@@ -282,8 +287,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen">
-      {/* 侧边栏 */}
-      <aside className="w-64 border-r bg-card flex flex-col">
+      {/* 侧边栏：宽度可拖拽调整（持久化），小屏默认更窄 */}
+      <aside
+        style={{ width: sidebarWidth }}
+        className={cn(
+          'relative flex flex-col flex-shrink-0 border-r bg-card',
+          isResizing ? 'transition-none' : 'transition-[width] duration-200'
+        )}
+      >
         <div className="flex h-16 items-center justify-between px-4 border-b">
           <Link href="/admin" className="flex items-center gap-2 font-bold text-lg">
             <img src={siteLogo ? toFullUrl(siteLogo) : '/logo.png'} alt="Logo" className="h-7 w-7 rounded object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
@@ -366,10 +377,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )
           })}
         </nav>
+
+        {/* 拖拽分割线：调整侧边栏宽度 */}
+        <SidebarResizeHandle />
       </aside>
 
       {/* 主内容区 */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto">
         {/* 顶部栏 */}
         <header className="h-16 border-b bg-card flex items-center justify-between px-6">
           <div></div>
